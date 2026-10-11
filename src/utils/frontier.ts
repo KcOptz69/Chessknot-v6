@@ -564,6 +564,7 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
             detail = `${c === 'w' ? 'White' : 'Black'} used ${ITEM_NAMES[item.type]}.`;
         }
         else if (m.type === 'frontier_self_destruct') {
+            const invalid=golemSelfDestructError(d,c,m.from);if(invalid)throw Error(invalid);
             const g = fd.golems.find(g => g.square === m.from && g.owner === c);
             if (!g || blockedActor(d, g.square) || d.grounds?.disarm.some(x => x.square === g.square))
                 throw Error('Golem cannot self-destruct now.');
@@ -985,4 +986,17 @@ export function traverseTargets(s:GameState,c:PlayerColor,from:string) {
 export function starTargets(s:GameState,c:PlayerColor,from:string) {
  if(occupant(s,from)?.color!==c||occupant(s,from)?.type==='golem'||blockedActor(s,from))return [];
  return frontierMoves(s,from);
+}
+
+export function monolithPlacementSquare(s:GameState,q:string) {
+ return emptyFrontierSquare(s,q)&&!s.frontier?.pois[q]&&s.grounds?.tiles[q]!=='portal';
+}
+export function golemBlastSquares(s:GameState,from:string){return adjacent(from,s.fen,true);}
+export function golemSelfDestructError(s:GameState,c:PlayerColor,from:string):string|undefined {
+ const golem=s.frontier?.golems.find(g=>g.square===from&&g.owner===c);
+ if(!golem||blockedActor(s,from)||s.grounds?.disarm.some(d=>d.square===from))return 'This Golem cannot self-destruct while restricted, stunned, or disarmed.';
+ const draft=structuredClone(s);
+ for(const q of adjacent(from,draft.fen))if(occupant(draft,q)&&!captureProtected(draft,q))removeEntity(draft,q,c);
+ removeEntity(draft,from,c,false);
+ if(!frontierKingSafe(draft,c))return 'The explosion would remove your King or leave it unsafe.';
 }

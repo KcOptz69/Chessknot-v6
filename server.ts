@@ -1,4 +1,4 @@
-import {executeFrontier,finishFrontierTurn,checkExpansion,handLimit,frontierClockRestore,frontierKingSafe,canExpand,frontierUltimate,emptyFrontierSquare,frontierLanding,trimBagHands} from './src/utils/frontier.ts';
+import {executeFrontier,finishFrontierTurn,checkExpansion,handLimit,frontierClockRestore,frontierKingSafe,canExpand,frontierUltimate,emptyFrontierSquare,frontierLanding,trimBagHands,monolithPlacementSquare} from './src/utils/frontier.ts';
 import {isExtendedFen,adjacent,xy,squareAt,allSquares,ranksFor} from './src/utils/frontierBoard.ts';
 import {viewingGameState,isArbiter} from './src/utils/roomViewing.ts';
 import { randomBytes } from 'node:crypto';
@@ -86,17 +86,23 @@ const rooms = new Map<string, RoomState>();
 const chatLastSent = new Map<string, number>();
 const socketMeta = new Map<WebSocket, { roomId: string; playerId: string }>();
 const socketAlive=new WeakMap<WebSocket,number>();
-setInterval(()=>{for(const ws of wss.clients){if(Date.now()-(socketAlive.get(ws)||0)>30000)ws.terminate();else if(ws.readyState===WebSocket.OPEN)ws.ping();}},10000).unref?.();
+// Allow brief network stalls; application pings and native pongs both prove liveness.
+setInterval(()=>{for(const ws of wss.clients){if(Date.now()-(socketAlive.get(ws)||0)>75000){ws.terminate();continue;}if(ws.readyState===WebSocket.OPEN)try{ws.ping(error=>{if(error)ws.terminate();});}catch{ws.terminate();}}},10000).unref?.();
+wss.on('error',error=>console.error('WebSocket server transport error:',error));
 
 // Credentials remain server-private; room broadcasts never contain resume tokens.
 const seatCredentials=new Map<string,{token:string;code:string}>();
 const viewerBans=new Map<string,Set<string>>();
 const viewingDismissals=new Map<string,Record<string,string>>();
 const disconnects=new Map<string,{deadline:number}>();
+const lobbyDisconnectTimers=new Map<string,ReturnType<typeof setTimeout>>();
+const LOBBY_RECONNECT_GRACE_MS=30000;
+function clearLobbyDisconnect(roomId:string,id:string){const key=seatKey(roomId,id),timer=lobbyDisconnectTimers.get(key);if(timer)clearTimeout(timer);lobbyDisconnectTimers.delete(key);}
 const seatKey=(roomId:string,playerId:string)=>roomId+':'+playerId;
 function recoveryCode(roomId:string){let code:string;do{code=randomBytes(2).toString('hex').toUpperCase();}while([...seatCredentials].some(([key,value])=>key.startsWith(roomId+':')&&value.code===code));return code;}
 function credentials(room:RoomState,id:string){const key=seatKey(room.roomId,id);let saved=seatCredentials.get(key);if(!saved){saved={token:randomBytes(24).toString('hex'),code:recoveryCode(room.roomId)};seatCredentials.set(key,saved);}return saved;}
 function releaseLobbySeat(room:RoomState,id:string){
+ clearLobbyDisconnect(room.roomId,id);
  delete room.players[id];viewingDismissals.delete(seatKey(room.roomId,id));seatCredentials.delete(seatKey(room.roomId,id));disconnects.delete(seatKey(room.roomId,id));
  if(room.lobbyConfig.hostId===id)room.lobbyConfig.hostId=Object.keys(room.players).find(key=>room.players[key].connected&&room.players[key].color!=='spectator')||'';
  for(const player of Object.values(room.players)){player.isHost=player.id===room.lobbyConfig.hostId;if(player.isHost)player.isReady=false;}
@@ -105,6 +111,7 @@ function roomIsPaused(room:RoomState){return room.arbiterClockPaused || room.mod
 function releaseArbiterPause(room:RoomState){if(!room.arbiterClockPaused)return;room.arbiterClockPaused=false;if(!roomIsPaused(room)&&!room.gameState.pendingSummon&&room.gameState.status==='playing'&&room.gameState.clock.enabled){room.gameState.clock.isRunning=true;room.gameState.clock.lastTick=Date.now();}}
 function recoveryView(room:RoomState,viewerId:string){return Object.values(room.players).filter(p=>p.color!=='spectator'&&!p.connected&&room.gameState.status==='playing').map(p=>({playerId:p.id,name:p.name,color:p.color as PlayerColor,deadline:disconnects.get(seatKey(room.roomId,p.id))?.deadline||Date.now()+300000,...(room.players[viewerId]?.color!=='spectator'&&viewerId!==p.id?{code:credentials(room,p.id).code}:{})}));}
 function reconnectSeat(room:RoomState,id:string,ws:WebSocket){
+ clearLobbyDisconnect(room.roomId,id);
  if(room.players[id].color!=='spectator'&&room.gameState.clock.isRunning)pauseGameClock(room.gameState);
  for(const old of wss.clients){const meta=socketMeta.get(old);if(old!==ws&&meta?.roomId===room.roomId&&meta.playerId===id){socketMeta.delete(old);old.close(4000,'Seat resumed elsewhere');}}
  socketMeta.set(ws,{roomId:room.roomId,playerId:id});room.players[id].connected=true;disconnects.delete(seatKey(room.roomId,id));
@@ -196,7 +203,7 @@ function broadcastRoom(roomId: string) {
           state: { ...room, arbiterRecovery: (yourColor!=='spectator'||isArbiter(player))?(()=>{const a=Object.values(room.players).find(isArbiter);return a?{name:a.name,code:credentials(room,a.id).code}:undefined;})():undefined, recovery:recoveryView(room,meta.playerId), gameState: viewingGameState(room.gameState,player,viewingDismissals.get(seatKey(roomId,meta.playerId))) },
           yourColor,
         };
-        ws.send(JSON.stringify(msg));
+        sendToSocket(ws,msg);
       }
     }
   });
@@ -204,7 +211,7 @@ function broadcastRoom(roomId: string) {
 
 function sendToSocket(ws: WebSocket, msg: ServerMessage) {
   if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg));
+    try{ws.send(JSON.stringify(msg),error=>{if(error){console.warn('Socket send failed:',error.message);ws.terminate();}});}catch(error){console.warn('Socket send failed:',error);ws.terminate();}
   }
 }
 
@@ -232,7 +239,9 @@ app.post('/api/rooms', (req, res) => {
 // WebSocket message handling
 wss.on('connection', (ws: WebSocket) => {
   socketAlive.set(ws,Date.now());ws.on('pong',()=>socketAlive.set(ws,Date.now()));
+  ws.on('error',error=>{console.warn('WebSocket transport error:',error.message);ws.terminate();});
   ws.on('message', (data: string) => {
+    socketAlive.set(ws,Date.now());
     try {
       const msg: ClientMessage = JSON.parse(data.toString());
 
@@ -726,9 +735,15 @@ wss.on('connection', (ws: WebSocket) => {
       const room = rooms.get(meta.roomId);
       if (room && room.players[meta.playerId]) {
         const stillConnected=[...wss.clients].some(other=>other!==ws&&other.readyState===WebSocket.OPEN&&socketMeta.get(other)?.roomId===meta.roomId&&socketMeta.get(other)?.playerId===meta.playerId);
-        if(stillConnected)return;
+        if(stillConnected){socketMeta.delete(ws);return;}
         if(isArbiter(room.players[meta.playerId]))releaseArbiterPause(room);
-        if(room.gameState.status==='lobby'&&!isArbiter(room.players[meta.playerId])){releaseLobbySeat(room,meta.playerId);broadcastRoom(meta.roomId);socketMeta.delete(ws);return;}
+        if(room.gameState.status==='lobby'&&room.players[meta.playerId].color!=='spectator'){
+          room.players[meta.playerId].connected=false;
+          clearLobbyDisconnect(meta.roomId,meta.playerId);
+          const timer=setTimeout(()=>{lobbyDisconnectTimers.delete(seatKey(meta.roomId,meta.playerId));if(rooms.get(meta.roomId)===room&&room.gameState.status==='lobby'&&room.players[meta.playerId]&&!room.players[meta.playerId].connected){releaseLobbySeat(room,meta.playerId);broadcastRoom(meta.roomId);}},LOBBY_RECONNECT_GRACE_MS);
+          timer.unref?.();lobbyDisconnectTimers.set(seatKey(meta.roomId,meta.playerId),timer);
+          broadcastRoom(meta.roomId);socketMeta.delete(ws);return;
+        }
         if(room.players[meta.playerId].color==='spectator'&&!isArbiter(room.players[meta.playerId])){releaseLobbySeat(room,meta.playerId);broadcastRoom(meta.roomId);socketMeta.delete(ws);return;}
         room.players[meta.playerId].connected = false;
         if(room.mode==='online'&&room.gameState.status==='playing'&&room.players[meta.playerId].color!=='spectator'){
@@ -3131,7 +3146,7 @@ function executeGameAction(
       }
       return;
     }
-    if (state.frontier?.expanded && (!emptyFrontierSquare(state,target)||!!state.frontier.pois[target]) || isSquareBlocked(target, state.restrictedSquares, null) || chess.get(target as Square) ||
+    if (state.frontier?.expanded && !monolithPlacementSquare(state,target) || isSquareBlocked(target, state.restrictedSquares, null) || chess.get(target as Square) ||
         state.champions?.w?.square === target || state.champions?.b?.square === target) {
       return; // Cannot place on occupied/restricted/champion square
     }

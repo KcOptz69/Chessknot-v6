@@ -13,6 +13,8 @@ try{
  for(let i=0;i<100&&!logs.includes('server running');i++)await pause(40);
  const host=await connect('Alice');await wait(host,m=>m.type==='room_state');
  const guest=await connect('Bob');await wait(guest,m=>m.type==='room_state');guest.events=[];
+ send(host,{type:'leave_lobby'});
+ const released=await wait(guest,m=>m.state?.lobbyConfig.hostId==='Bob');guest.events.push(released);
  host.close();await once(host,'close');
  const handed=await wait(guest,m=>m.state?.lobbyConfig.hostId==='Bob');
  assert.equal(handed.state.players.Alice,undefined);assert.equal(handed.state.players.Bob.isHost,true);

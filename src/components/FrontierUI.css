@@ -29,6 +29,14 @@
 .frontier-bind-badge>svg{width:12px;height:12px;flex-shrink:0}
 .vision-card-grid button:disabled{opacity:.4}
 .frontier-cooldown{font-variant-numeric:tabular-nums;color:#bfe9ff}
+.golem-action-panel{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;width:min(540px,100%);margin:10px auto;padding:10px 12px;border:1px solid #477eb4;border-radius:12px;background:#102b49;color:#e6f5ff;font-size:13px}
+.golem-action-panel>small{flex-basis:100%;text-align:center;color:#ffd29a;font-size:12px}
+.golem-action-panel .ui-button{min-height:40px}
+.golem-action-panel button:disabled{opacity:.45;cursor:not-allowed}
+.golem-blast-preview{position:absolute;inset:1px;border:2px solid #ff715e;box-shadow:inset 0 0 18px #ff423955;background:#e6473826;z-index:38;pointer-events:none}
+.golem-self-destruct-confirm .ui-button--danger{background:#ae3028;color:#fff;border-color:#ff796a}
+:root:not(.dark) .golem-action-panel{background:#edf6ff;color:#174674;border-color:#79b6e8}
+:root:not(.dark) .golem-action-panel>small{color:#92450e}
 .dock-player-tag{position:relative}
 .chest-key-notice{position:absolute;bottom:calc(100% + 8px);left:0;z-index:65;width:max-content;max-width:min(280px,85vw);padding:7px 10px;border:1px solid #efb65d;border-radius:9px;background:#132943;color:#ffe2ac;font-size:12px;box-shadow:0 4px 14px #0005}
 .ground-dialog.grounds-intro.awakening-intro{width:min(620px,92vw);max-height:min(720px,84dvh);overflow-y:auto;padding:18px}

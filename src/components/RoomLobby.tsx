@@ -544,14 +544,14 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
           </div>
           <div className="ck-menu-players ck-menu-seats" aria-label="Seats in room">
             {(['w','b'] as const).map(color=>{
-              const p=playerList.find(p=>p.color===color&&p.connected);
+              const p=playerList.find(p=>p.color===color);
               const canClaim=!p&&myPlayer?.role==='arbiter';
               return <div key={color}>
                 <User size={15}/>
                 <strong>{p?.name||`Waiting for ${color==='w'?'White':'Black'} player`}</strong>
                 {p&&(p.id===myPlayerId||isHost)&&<button className="ck-menu-icon-button" aria-label={`Rename ${p.name}`} onClick={()=>openRename(p.id,p.name)}><Edit2 size={13}/></button>}
-                {canClaim?<button type="button" className="ck-seat-claim" onClick={()=>onReturnAsPlayer?.(color)}>CLAIM</button>:<span>{p?.isHost?'Host':p?.isReady?'Ready':p?'Not ready':''}</span>}
-                <i className={p?.isHost||p?.isReady?'is-ready':''}/>
+                {canClaim?<button type="button" className="ck-seat-claim" onClick={()=>onReturnAsPlayer?.(color)}>CLAIM</button>:<span>{p&&!p.connected?'Reconnecting…':p?.isHost?'Host':p?.isReady?'Ready':p?'Not ready':''}</span>}
+                <i className={p?.connected&&(p.isHost||p.isReady)?'is-ready':''}/>
               </div>;
             })}
             {lobbyConfig.allowArbiter&&<div className="ck-arbiter-seat-row">

@@ -1,5 +1,5 @@
 import {bishopCircleTargets} from '../utils/summoning.ts';
-import {frontierMoves,frontierKingSafe,executeLandingMove,occupant,frontierUltimateTargets,emptyFrontierSquare} from '../utils/frontier.ts';
+import {frontierMoves,frontierKingSafe,executeLandingMove,occupant,frontierUltimateTargets,emptyFrontierSquare,monolithPlacementSquare} from '../utils/frontier.ts';
 import {FrontierArt,GolemIdleArt} from './FrontierUI.tsx';
 import {ranksFor,isExtendedFen} from '../utils/frontierBoard.ts';
 import {ChampionInfoDialog} from './ChampionInfoDialog.tsx';
@@ -83,6 +83,7 @@ interface ChessBoardProps {
   pieceIds?: Record<string,string>;
   grounds?: Grounds;
   capturedPieceTypes?: StandardPieceType[];
+  blastSquares?:string[];
   groundTargets?: string[];
   onGroundSquare?: (square:string)=>boolean;
   onOpenChat?: () => void;
@@ -163,7 +164,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   myColor,
   turn,
   turnNumber,
-  capturedPieceTypes,grounds,groundTargets=[],onGroundSquare,groundNotice,onDismissGroundNotice,
+  capturedPieceTypes,grounds,blastSquares=[],groundTargets=[],onGroundSquare,groundNotice,onDismissGroundNotice,
   isMyTurn,
   hand = [],
   selectedCard,
@@ -1646,7 +1647,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
               !piece &&
               !championPiece &&
               !isRestricted &&
-              !isMonolith && !summoningCircles.some(c=>c.square===square&&!c.finished&&!c.interrupted);
+              !isMonolith && !summoningCircles.some(c=>c.square===square&&!c.finished&&!c.interrupted)&&(!frontierGame||monolithPlacementSquare(frontierGame,square));
             const isRestrictTarget =
               selectedCard?.type === 'restrict' &&
               !piece &&
@@ -1775,6 +1776,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                   {frontierGolem||frontierPOI==='boss'?<GolemIdleArt type={frontierGolem?(frontierGolem.owner==='w'?'golem':'black_golem'):frontier?.boss?.health===1?'weakened':'boss'} weakened={frontierPOI==='boss'&&frontier?.boss?.health===1}/>:<FrontierArt type={frontierPOI!}/>}
                   {frontierPOI==='boss'&&frontier?.ready&&<div className={`frontier-boss-hp ${frontier.boss?.health===1?'weakened':''}`} role="progressbar" aria-label="Arcane Golem health" aria-valuenow={frontier.boss?.health===1?50:100} aria-valuemin={0} aria-valuemax={100}><span style={{width:frontier.boss?.health===1?'50%':'100%'}}/></div>}
                 </div>}
+                {blastSquares.includes(square)&&<div className='golem-blast-preview' aria-label='Golem explosion area'/>}
                 {/* Monolith Piece */}
                 {isMonolith && (
                   <div data-motion-piece="monolith" className="w-[98%] h-[98%] z-10 flex items-center justify-center transition-transform hover:scale-105 pointer-events-none">

@@ -10,7 +10,7 @@ import {PlayerPanel} from '../src/components/UI.tsx';
 import {GameLog} from '../src/components/GameLog.tsx';
 import {ThemeProvider} from '../src/context/ThemeContext.tsx';
 import {activityInfoNotices} from '../src/components/MatchActivityNotices.tsx';
-import {FrontierExpandOffer} from '../src/components/FrontierUI.tsx';
+import {FrontierExpandOffer,FrontierInventory,GolemActionPanel} from '../src/components/FrontierUI.tsx';
 import {PowerUpsBar} from '../src/components/PowerUpsBar.tsx';
 import {createCard,createInitialGameState} from '../src/utils/chessLogic.ts';
 import type {GameLogEntry} from '../src/types.ts';
@@ -77,3 +77,6 @@ test('expansion offer appears only for an eligible player on their turn and wait
 });
 test('bound cards display a chain marker and are disabled for play',()=>{const card=createCard('clock',31);const html=renderToStaticMarkup(<ThemeProvider><CardHand hand={[card]} selectedCardId={null} boundCardId={card.id} onSelectCard={()=>{}} isMyTurn playerColor="w" lastMovedPiece={null}/></ThemeProvider>);assert.match(html,/data-bound="true"/);assert.match(html,/aria-disabled="true"/);assert.match(html,/frontier-bind-badge/);assert.match(html,/lucide-link/);assert.match(html,/BOUND/);});
 test('Eye replaces the Vision control with a distinct Bind icon and revealed-card instructions',()=>{const html=renderToStaticMarkup(<ThemeProvider><PowerUpsBar hasEye powerUps={{draw:1,monolith:1,wild:1,vision:2}} isMyTurn isWildActive={false} isMonolithMode={false} onUseDraw={()=>{}} onUseMonolith={()=>{}} onUseWild={()=>{}} onUseVision={()=>{}}/></ThemeProvider>);assert.match(html,/frontier-bind-icon/);assert.match(html,/revealed-cards popup/);assert.match(html,/>Bind</);});
+
+test('Backpack and Key render matching inventory boxes with passive status',()=>{const s=createInitialGameState();s.frontier!.bags.w=true;s.frontier!.keys.w=2;const html=renderToStaticMarkup(<FrontierInventory state={s} color="w" disabled={false} send={()=>{}} onIntro={()=>{}} onDeployGolem={()=>{}} onUseLens={()=>{}} onUseWings={()=>{}} onUseFeather={()=>{}} onUseBoardItem={()=>{}}/>);assert.match(html,/frontier-item-list/);assert.match(html,/Backpack/);assert.match(html,/Hand capacity: 7/);assert.match(html,/×2/);assert.ok(!html.includes('frontier-passives'));assert.ok(!html.includes('Self-destruct Golem'));});
+test('selected Golem panel offers Self-destruct and Cancel; unsafe explosions explain the block',()=>{const s=createInitialGameState();s.frontier!.golems=[{id:'g',owner:'w',square:'d4'}];const render=(square:string)=>renderToStaticMarkup(<GolemActionPanel state={s} color="w" square={square} disabled={false} onSelfDestruct={()=>{}} onCancel={()=>{}}/>);assert.match(render('d4'),/Golem · d4/);assert.match(render('d4'),/Self-destruct/);assert.match(render('d4'),/Cancel/);s.frontier!.golems[0].square='d1';assert.match(render('d1'),/King/);assert.match(render('d1'),/disabled=""/);});

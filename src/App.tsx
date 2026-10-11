@@ -1,5 +1,6 @@
-import {FrontierExpandOffer,FrontierDropNotices,FrontierIntro,FrontierInventory,FrontierArt} from './components/FrontierUI.tsx';
-import {featherReviveChoice,wingsTargets,starTargets,traverseTargets,frontierUltimateTargets,frontierMoves,occupant,emptyFrontierSquare,frontierKingSafe} from './utils/frontier.ts';
+import {createRoomConnection} from './utils/roomConnection.ts';
+import {GolemActionPanel,FrontierExpandOffer,FrontierDropNotices,FrontierIntro,FrontierInventory,FrontierArt} from './components/FrontierUI.tsx';
+import {golemBlastSquares,golemSelfDestructError,featherReviveChoice,wingsTargets,starTargets,traverseTargets,frontierUltimateTargets,frontierMoves,occupant,emptyFrontierSquare,frontierKingSafe} from './utils/frontier.ts';
 import {allSquares} from './utils/frontierBoard.ts';
 import {ViewerTools} from './components/ViewerTools.tsx';
 import {MainTutorialOverlay} from './components/MainTutorialOverlay.tsx';
@@ -258,9 +259,11 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const [featherChoice,setFeatherChoice]=React.useState<ReturnType<typeof featherReviveChoice>>(undefined);
   const [lensMode,setLensMode]=React.useState(false);
   const [lensCandidate,setLensCandidate]=React.useState<Card|null>(null);
+  const [golemActionSquare,setGolemActionSquare]=React.useState<string|null>(null);
+  const [selfDestructConfirm,setSelfDestructConfirm]=React.useState<string|null>(null);
   const [golemPlacement,setGolemPlacement]=React.useState(false);
   const [frontierZoomOut,setFrontierZoomOut]=React.useState(false);
-  React.useEffect(()=>{setGolemPlacement(false);setLensMode(false);setLensCandidate(null);setFrontierItemMode(null);setWingsFrom(null);setFeatherConfirm(undefined);setFeatherChoice(undefined);setChannelMoveConfirm(null);setBoardItemFrom(null);setBoardItemTargets([]);setBannerConfirm(null);},[gameState.turn,gameState.status,roomId]);
+  React.useEffect(()=>{setGolemPlacement(false);setLensMode(false);setLensCandidate(null);setFrontierItemMode(null);setWingsFrom(null);setFeatherConfirm(undefined);setFeatherChoice(undefined);setChannelMoveConfirm(null);setBoardItemFrom(null);setBoardItemTargets([]);setBannerConfirm(null);setGolemActionSquare(null);setSelfDestructConfirm(null);},[gameState.turn,gameState.status,roomId]);
   React.useEffect(()=>{const fresh=(gameState.frontier?.events||[]).filter(e=>!chestSeen.current.has(e.id));gameState.frontier?.events.forEach(e=>chestSeen.current.add(e.id));const locked=fresh.find(e=>e.kind==='chest_locked'&&e.recipient===myColor);if(!locked)return;setChestNotice(locked.detail);clearTimeout(chestNoticeTimer.current);chestNoticeTimer.current=setTimeout(()=>setChestNotice(null),3500);},[gameState.frontier?.events,myColor]);
   const [frontierFrom,setFrontierFrom]=React.useState<string|null>(null);
   const frontierSeen=React.useRef('');
@@ -316,6 +319,8 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
 
   const [rematchRequest,setRematchRequest]=React.useState<import('./types.ts').RoomState['rematchRequest']>();
   const socketRef = React.useRef<WebSocket | null>(null);
+  const connectionRef=React.useRef<ReturnType<typeof createRoomConnection>|null>(null);
+  const identityRef=React.useRef({playerId,playerName});identityRef.current={playerId,playerName};
 
   // Send message helper
   const sendMessage = React.useCallback((msg: ClientMessage) => {
@@ -325,52 +330,30 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
       if(msg.type==='send_chat'){setChatMessages(old=>[...old,{id:'practice-chat-'+old.length,senderId:playerId,senderName:playerName,senderColor:'w',text:msg.text,timestamp:Date.now()}]);return;}
       const action=tutorialClientAction(msg);if(action)tutorialDispatch(action);return;
     }
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(msg));
-    }
+    if(!connectionRef.current?.send(msg))setUiNotice('Connection interrupted. Please wait to reconnect, then try that action again.');
   }, [tutorialMode,onExitTutorial,playerId,playerName]);
 
-  // Connect to WebSocket with auto-reconnect and heartbeat
-  React.useEffect(() => {
+  // Renames and adopted credentials update refs without reopening the socket.
+  React.useEffect(()=>{
     if(tutorialMode)return;
-    let isMounted = true;
-    let reconnectTimeout: any = null;
-    let pingInterval: any = null;
-
-    function connect() {
-      if (!isMounted) return;
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}`;
-      const ws = new WebSocket(wsUrl);
-      socketRef.current = ws;
-
-      ws.onopen = () => {
-        if (!isMounted) {
-          ws.close();
-          return;
-        }
-        setConnected(true);
-        const joinMsg: ClientMessage = {
-          type: 'join_room',
-          roomId,
-          playerId:(()=>{try{return JSON.parse(localStorage.getItem('chessknot_resume_'+roomId)||'null')?.playerId||playerId;}catch{return playerId;}})(),
-          playerName,
-          resumeToken:(()=>{try{return JSON.parse(localStorage.getItem("chessknot_resume_"+roomId)||"null")?.resumeToken;}catch{return undefined;}})(),
-          mode: modeRef.current,
-        };
-        ws.send(JSON.stringify(joinMsg));
-      };
-
-      ws.onmessage = (event) => {
+    const protocol=window.location.protocol==='https:'?'wss:':'ws:';
+    const connection=createRoomConnection({roomId,
+      createSocket:()=>new WebSocket(`${protocol}//${window.location.host}`),
+      join:()=>{let saved:any;try{saved=JSON.parse(localStorage.getItem('chessknot_resume_'+roomId)||'null');}catch{}return {type:'join_room',roomId,playerId:saved?.playerId||identityRef.current.playerId,playerName:identityRef.current.playerName,resumeToken:saved?.resumeToken,mode:modeRef.current};},
+      online:()=>navigator.onLine,
+      onSocket:socket=>{socketRef.current=socket;},onConnected:setConnected,
+      onTerminal:code=>setUiNotice(code===4000?'Your seat was resumed in another tab or device.':'The host generated a new room code. Ask the host for the new code to join again.'),
+      onError:error=>console.warn('WebSocket connection interrupted:',error),
+      onMessage:data=>{
         try {
-          const msg: ServerMessage = JSON.parse(event.data);
+          const msg: ServerMessage = JSON.parse(data);
           if(msg.type==='recovery_required'){setRecoveryRequired(true);
           } else if(msg.type==='session_credentials'){
             setRecoveryRequired(false);
             localStorage.setItem('chessknot_resume_'+msg.roomId,JSON.stringify({playerId:msg.playerId,resumeToken:msg.resumeToken}));
             localStorage.setItem('chessknot_last_online_room',msg.roomId);
             sessionStorage.setItem('chessbound_session_player_id',msg.playerId);
-            if(msg.playerId!==playerId)setPlayerId(msg.playerId);
+            if(msg.playerId!==identityRef.current.playerId)setPlayerId(msg.playerId);
           } else if(msg.type==='room_code_changed'){
             setRoomId(msg.roomId);const url=new URL(window.location.href);url.searchParams.set('room',msg.roomId);window.history.replaceState(null,'',url);
           } else if (msg.type === 'room_state') {
@@ -383,7 +366,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
             // Seed existing history on join; an initially empty history still
             // needs to notify for the very first live incoming message.
             const fresh = chatHistoryInitialized.current ? (previous >= 0 ? incoming.slice(previous + 1) : incoming) : [];
-            const opponentMessages = fresh.filter(m => m.senderId !== playerId);
+            const opponentMessages = fresh.filter(m => m.senderId !== identityRef.current.playerId);
             if (!chatVisible.current) setUnreadChat(n => n + opponentMessages.length);
             if (opponentMessages.length > 0) {
               playOpponentChatSound();
@@ -408,54 +391,15 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
         } catch (err) {
           console.error('Failed to parse server message:', err);
         }
-      };
 
-      ws.onerror = (err) => {
-        console.warn('WebSocket connection error:', err);
-      };
-
-      ws.onclose = (event) => {
-        if (!isMounted) return;
-        setConnected(false);
-        if(event.code===4001){if(pingInterval)clearInterval(pingInterval);clearTimeout(reconnectTimeout);setUiNotice("The host generated a new room code. You were removed from the lobby. Ask the host for the new code to join again.");return;}
-        if(event.code===4000){if(pingInterval)clearInterval(pingInterval);setUiNotice("Your seat was resumed in another tab or device.");return;}
-        if (pingInterval) clearInterval(pingInterval);
-        clearTimeout(reconnectTimeout);
-        reconnectTimeout = setTimeout(() => {
-          if (isMounted) {
-            connect();
-          }
-        }, 1500);
-      };
-
-      // Heartbeat ping every 10 seconds to keep connection alive
-      if (pingInterval) clearInterval(pingInterval);
-      pingInterval = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'ping' }));
-        }
-      }, 10000);
-    }
-
-    connect();
-
-    const handleOnline = () => {
-      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-        connect();
-      }
-    };
-    window.addEventListener('online', handleOnline);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener('online', handleOnline);
-      if (pingInterval) clearInterval(pingInterval);
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
-    };
-  }, [roomId, playerId, playerName,tutorialMode]);
+      },
+    });
+    connectionRef.current=connection;connection.start();
+    const wake=()=>connection.wake();
+    const visible=()=>{if(document.visibilityState==='visible')wake();};
+    window.addEventListener('online',wake);window.addEventListener('pageshow',wake);document.addEventListener('visibilitychange',visible);
+    return()=>{window.removeEventListener('online',wake);window.removeEventListener('pageshow',wake);document.removeEventListener('visibilitychange',visible);connection.stop();if(connectionRef.current===connection)connectionRef.current=null;};
+  },[roomId,tutorialMode]);
 
   React.useEffect(()=>{if(tutorialMode)setIsDiscardRedrawModalOpen(tutorialState.panel==='redraw');},[tutorialMode,tutorialState]);
   React.useEffect(()=>{if(tutorialMode&&tutorialState.phase==='play'){setCompactPanel(null);tutorialDispatch({type:'close-panel'});}},[tutorialMode,tutorialState.phase]);
@@ -618,13 +562,13 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
     };
   }, [gameState.status, gameState.turnNumber, gameState.turn, gameState.historyLog?.[0]?.id, gameState.pendingSummon, isMyTurn, connected, recovery.length, awakeningTutorialOpen]);
 
-  const clearFrontierSelection=()=>{setFrontierItemMode(null);setWingsFrom(null);setFeatherChoice(undefined);setFeatherConfirm(undefined);setLensMode(false);setLensCandidate(null);setGolemPlacement(false);setChannelMoveConfirm(null);setBoardItemFrom(null);setBoardItemTargets([]);setBannerConfirm(null);setFrontierFrom(null);};
+  const clearFrontierSelection=()=>{setFrontierItemMode(null);setWingsFrom(null);setFeatherChoice(undefined);setFeatherConfirm(undefined);setLensMode(false);setLensCandidate(null);setGolemPlacement(false);setChannelMoveConfirm(null);setBoardItemFrom(null);setBoardItemTargets([]);setBannerConfirm(null);setFrontierFrom(null);setGolemActionSquare(null);setSelfDestructConfirm(null);};
   const sendFrontierBoardMove=(from:string,msg:ClientMessage)=>{if(gameState.summoningCircles?.some(c=>c.bishopId===gameState.pieceIds?.[from]&&!c.finished&&!c.interrupted)){setChannelMoveConfirm(msg);return;}sendMessage(msg);};
   // Actions
   const handleSelectCard = (card: Card | null) => {
     if(lensMode){if(card&&isMyTurn)setLensCandidate(card);return;}
     setFrontierItemMode(null);setWingsFrom(null);setBoardItemFrom(null);setBoardItemTargets([]);setFrontierFrom(null);
-    setGolemPlacement(false);
+    setGolemPlacement(false);setGolemActionSquare(null);setSelfDestructConfirm(null);
     if(tutorialMode){tutorialDispatch(card?{type:'card',value:card.id}:{type:'deselect'});return;}
     if (!isMyTurn) return;
     setGroundMode(null); setGroundSquare(null); setPortalFrom(null);
@@ -916,6 +860,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
     if (pId === playerId) {
       setPlayerName(clean);
       localStorage.setItem('chessbound_player_name', clean);
+      sessionStorage.setItem('chessbound_session_player_name',clean);
     }
     setRoomPlayers((prev) => {
       const existing = prev[pId];
@@ -988,7 +933,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
     gameState.pendingSummon ||
     (gameState.status === 'playing' && gameState.pendingPortal && isMyTurn) ||
     (groundMode && groundSquare) ||
-    bannerConfirm || channelMoveConfirm || featherConfirm || lensCandidate || frontierIntro || groundsIntro ||
+    selfDestructConfirm || bannerConfirm || channelMoveConfirm || featherConfirm || lensCandidate || frontierIntro || groundsIntro ||
     awakeningTutorialOpen ||
     groundNotice ||
     isRulesModalOpen ||
@@ -1009,7 +954,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const isAnyPopupActive=otherPopupActive||expansionOfferOpen;
   const selectedChampion=gameState.champions[activeColor];
   const boardItemSquares=frontierItemMode==='star'?(boardItemFrom?starTargets(gameState,activeColor,boardItemFrom):allSquares(gameState.fen).filter(q=>starTargets(gameState,activeColor,q).length>0)):frontierItemMode==='banner'?allSquares(gameState.fen).filter(q=>q.slice(1)===(activeColor==='w'?'2':'7')&&emptyFrontierSquare(gameState,q)):frontierItemMode==='sigil'?(selectedChampion?.type==='summoner'&&!boardItemFrom?allSquares(gameState.fen).filter(q=>occupant(gameState,q)?.color===activeColor&&frontierUltimateTargets(gameState,activeColor,q).length>0):frontierUltimateTargets(gameState,activeColor,boardItemFrom||undefined)):[];
-  const itemGuide=frontierItemMode==='star'?(boardItemFrom?'Wishing Star · choose a highlighted destination, then Use':'Wishing Star · choose your piece'):frontierItemMode==='banner'?'Banner · choose an empty square on your second rank':frontierItemMode==='sigil'?(selectedChampion?.type==='summoner'&&!boardItemFrom?'Sigil · choose a friendly piece':'Sigil · choose highlighted ultimate target(s), then Use'):frontierItemMode==='wings'?(wingsFrom?'Wings · click a highlighted empty destination':'Wings · click your piece'):'Feather · choose an empty square on your first rank';
+  const itemGuide=frontierItemMode==='star'?(boardItemFrom?'Wishing Star · choose a highlighted destination, then Activate':'Wishing Star · choose your piece'):frontierItemMode==='banner'?'Banner · choose an empty square on your second rank':frontierItemMode==='sigil'?(selectedChampion?.type==='summoner'&&!boardItemFrom?'Sigil · choose a friendly piece':'Sigil · choose highlighted ultimate target(s), then Activate'):frontierItemMode==='wings'?(wingsFrom?'Wings · click a highlighted empty destination':'Wings · click your piece'):'Feather · choose an empty square on your first rank';
   const submitBoardItem=()=>{if(!isMyTurn||!boardItemTargets.length)return;const to=boardItemTargets[0];if(frontierItemMode==='star'&&boardItemFrom)sendFrontierBoardMove(boardItemFrom,{type:'frontier_item',item:'star',from:boardItemFrom,to});else if(frontierItemMode==='sigil')sendMessage({type:'frontier_item',item:'sigil',targetFriendlySquare:boardItemFrom||undefined,targetSquare:to,targetSquares:boardItemTargets});setFrontierItemMode(null);setBoardItemFrom(null);setBoardItemTargets([]);};
   const tacticalPowers = (<section className="tactical-powers-panel"><PowerUpsBar confirmPlacement={compactUI||tutorialMode}
             isJokerLocked={isJokerLocked} grounds={gameState.grounds} color={activeColor} selectedGround={groundMode} onGround={type=>{clearFrontierSelection();setCompactPanel(null);if(!isMyTurn)return;setGroundMode(groundMode===type?null:type);setGroundSquare(null);setPortalFrom(null);setSelectedCard(null);setIsWildPowerUp(false);setIsMonolithPowerUp(false);}}
@@ -1042,11 +987,12 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
     <div className={`game-app min-h-screen bg-gradient-to-b from-stone-50 via-stone-100 to-blue-50/30 text-stone-800 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950 dark:text-stone-100 flex flex-col font-sans antialiased selection:bg-blue-500 selection:text-white transition-colors duration-200 ${gameState.frontier?.expanded?'frontier-expanded':''} ${frontierZoomOut?'frontier-zoomed-out':''} ${isAnyPopupActive ? 'has-popup-open' : ''} ${phoneLandscape && gameState.status !== 'lobby' ? 'phone-landscape' : ''} ${gameState.status !== 'lobby' ? (compactUI ? 'compact-match' : 'desktop-match') : ''}`}>
       {!tutorialMode&&welcomeTutorial&&gameState.status==='lobby'&&<Modal className="tutorial-welcome-modal"><section className="tutorial-welcome-dialog"><h2>New to ChessKnot?</h2><p>Learn the board, cards, and power-ups with Friendly Joe in an interactive practice match.</p><div><Button className="tutorial-entry-gold" onClick={()=>dismissWelcome(true)}>Play tutorial</Button><Button aria-label="Close dialog" onClick={()=>dismissWelcome(false)}>Skip for now</Button></div><p className="tutorial-welcome-note">You can always start the tutorial from the rulebook.</p></section></Modal>}
       {channelMoveConfirm&&<Modal className="lens-discard-backdrop"><section className="lens-discard-dialog" role="dialog" aria-modal="true"><h2>Cancel the Bishop’s ritual?</h2><p>Moving this Bishop interrupts its summoning circle.</p><div><Button onClick={()=>setChannelMoveConfirm(null)}>Keep channeling</Button><Button disabled={!isMyTurn} onClick={()=>{sendMessage(channelMoveConfirm);setChannelMoveConfirm(null);}}>Move Bishop</Button></div></section></Modal>}
-      {bannerConfirm&&<Modal className="lens-discard-backdrop"><section className="lens-discard-dialog" role="dialog" aria-modal="true"><V5Piece type="p" color={activeColor} className="w-16 h-16 mx-auto"/><h2>Summon Pawn at {bannerConfirm}?</h2><p>Footsoldier’s Banner is a single-use move action.</p><div><Button onClick={()=>setBannerConfirm(null)}>Choose another square</Button><Button variant="primary" disabled={!isMyTurn||!boardItemSquares.includes(bannerConfirm)} onClick={()=>{sendMessage({type:'frontier_item',item:'banner',to:bannerConfirm});clearFrontierSelection();}}>Summon Pawn</Button></div></section></Modal>}
+      {selfDestructConfirm&&<Modal className="golem-self-destruct-confirm"><section className="lens-discard-dialog" role="dialog" aria-modal="true"><FrontierArt type={activeColor==='w'?'golem':'black_golem'} className="lens-confirm-art"/><h2>Self-destruct Golem at {selfDestructConfirm}?</h2><p>Destroys this Golem and captures adjacent unprotected pieces in the highlighted area.</p><small>Move action · This cannot be undone with Activate the Clock.</small><div><Button onClick={()=>setSelfDestructConfirm(null)}>Cancel</Button><Button variant="danger" disabled={!isMyTurn||!!golemSelfDestructError(gameState,activeColor,selfDestructConfirm)} onClick={()=>{sendMessage({type:'frontier_self_destruct',from:selfDestructConfirm});setSelfDestructConfirm(null);setGolemActionSquare(null);}}>Self-destruct</Button></div></section></Modal>}
+      {bannerConfirm&&<Modal className="lens-discard-backdrop"><section className="lens-discard-dialog" role="dialog" aria-modal="true"><V5Piece type="p" color={activeColor} className="w-16 h-16 mx-auto"/><h2>Summon Pawn at {bannerConfirm}?</h2><p>Footsoldier’s Banner is a single-use move action.</p><div><Button onClick={()=>setBannerConfirm(null)}>Choose another square</Button><Button variant="primary" disabled={!isMyTurn||!boardItemSquares.includes(bannerConfirm)} onClick={()=>{sendMessage({type:'frontier_item',item:'banner',to:bannerConfirm});clearFrontierSelection();}}>Activate</Button></div></section></Modal>}
       <FrontierExpandOffer key={`expand-offer-${roomId}`} state={gameState} color={activeColor} enabled={!tutorialMode&&myColor!=='spectator'&&isMyTurn} paused={otherPopupActive} onOpenChange={setExpansionOfferOpen} send={sendMessage}/>
       <FrontierDropNotices key={roomId} state={gameState}/>
-      {featherConfirm&&<Modal className="lens-discard-backdrop"><section className="lens-discard-dialog" role="dialog" aria-modal="true" aria-labelledby="feather-confirm-title"><h2 id="feather-confirm-title">Use Feather of the Fallen?</h2>{featherConfirm.piece.type==='golem'?<FrontierArt type={activeColor==='w'?'golem':'black_golem'} className="lens-confirm-art"/>:<PieceIcon type={featherConfirm.piece.type} color={featherConfirm.piece.color} className="w-16 h-16 mx-auto"/>}<p>Revive <strong>{{p:'Pawn',sp:'Super Pawn',n:'Knight',sn:'Super Knight',b:'Bishop',r:'Rook',q:'Queen',golem:'Golem',berserker:'Berserker',musketeer:'Musketeer',summoner:'Summoner',ninja:'Ninja'}[featherConfirm.piece.type]}</strong>?</p><small>Single-use move action. Choose an empty square on your first rank next.</small><div><Button onClick={()=>setFeatherConfirm(undefined)}>Cancel</Button><Button variant="primary" disabled={!isMyTurn} onClick={()=>{setFeatherChoice(featherConfirm);setFeatherConfirm(undefined);setFrontierItemMode('feather');}}>Choose revival square</Button></div></section></Modal>}
-      {lensCandidate&&<Modal className="lens-discard-backdrop"><section className="lens-discard-dialog" role="dialog" aria-modal="true" aria-labelledby="lens-confirm-title"><FrontierArt type="lens" className="lens-confirm-art"/><h2 id="lens-confirm-title">Use Fateweaver’s Lens?</h2><p>Discard <strong>{lensCandidate.name.toUpperCase()}</strong> and draw a replacement?</p><small>Free action · once per turn</small><div><Button onClick={()=>setLensCandidate(null)}>Choose another card</Button><Button variant="primary" disabled={!isMyTurn||isJokerLocked||!currentHand.some(c=>c.id===lensCandidate.id)} onClick={()=>{sendMessage({type:'frontier_item',item:'lens',cardId:lensCandidate.id});setLensCandidate(null);setLensMode(false);}}>Discard & draw</Button></div></section></Modal>}
+      {featherConfirm&&<Modal className="lens-discard-backdrop"><section className="lens-discard-dialog" role="dialog" aria-modal="true" aria-labelledby="feather-confirm-title"><h2 id="feather-confirm-title">Use Feather of the Fallen?</h2>{featherConfirm.piece.type==='golem'?<FrontierArt type={activeColor==='w'?'golem':'black_golem'} className="lens-confirm-art"/>:<PieceIcon type={featherConfirm.piece.type} color={featherConfirm.piece.color} className="w-16 h-16 mx-auto"/>}<p>Revive <strong>{{p:'Pawn',sp:'Super Pawn',n:'Knight',sn:'Super Knight',b:'Bishop',r:'Rook',q:'Queen',golem:'Golem',berserker:'Berserker',musketeer:'Musketeer',summoner:'Summoner',ninja:'Ninja'}[featherConfirm.piece.type]}</strong>?</p><small>Single-use move action. Choose an empty square on your first rank next.</small><div><Button onClick={()=>setFeatherConfirm(undefined)}>Cancel</Button><Button variant="primary" disabled={!isMyTurn} onClick={()=>{setFeatherChoice(featherConfirm);setFeatherConfirm(undefined);setFrontierItemMode('feather');}}>Activate</Button></div></section></Modal>}
+      {lensCandidate&&<Modal className="lens-discard-backdrop"><section className="lens-discard-dialog" role="dialog" aria-modal="true" aria-labelledby="lens-confirm-title"><FrontierArt type="lens" className="lens-confirm-art"/><h2 id="lens-confirm-title">Use Fateweaver’s Lens?</h2><p>Discard <strong>{lensCandidate.name.toUpperCase()}</strong> and draw a replacement?</p><small>Free action · once per turn</small><div><Button onClick={()=>setLensCandidate(null)}>Choose another card</Button><Button variant="primary" disabled={!isMyTurn||isJokerLocked||!currentHand.some(c=>c.id===lensCandidate.id)} onClick={()=>{sendMessage({type:'frontier_item',item:'lens',cardId:lensCandidate.id});setLensCandidate(null);setLensMode(false);}}>Activate</Button></div></section></Modal>}
       {frontierIntro&&<FrontierIntro onClose={()=>setFrontierIntro(false)}/>}
       {gameState.pendingSummon && (myColor===gameState.pendingSummon.player) && <div className="ground-popup"><section className="ground-dialog summon-choice-dialog" role="dialog" aria-modal="true" aria-label="Choose a piece to revive"><h2>Summoning circle is ready</h2><p>Choose a captured piece to revive on {gameState.summoningCircles?.find(c=>c.id===gameState.pendingSummon!.circleId)?.square}. This is free. The chess clock is paused.</p><div className="revival-options">{eligibleRevives(gameState,gameState.pendingSummon.player).map(({piece,index})=><button className="revival-choice" key={index} onClick={()=>{  sendMessage({type:'resolve_summon',captureIndex:index}); }}><V5Piece type={piece.type} color={gameState.pendingSummon!.player} className="w-16 h-16"/><span>{piece.type==='sp'?'Super Pawn':piece.type==='sn'?'Super Knight':({p:'Pawn',n:'Knight',b:'Bishop',r:'Rook',q:'Queen'} as any)[piece.type]}</span></button>)}</div><div className="flex justify-end mt-3"><button onClick={()=>sendMessage({type:'resolve_summon',captureIndex:null})}>Decline revival</button></div></section></div>}
       {mode==='online'&&(recoveryRequired||(myColor!=='spectator'&&gameState.status==='playing'&&recovery.length>0))&&<RecoveryPanel roomId={roomId} recovery={recovery} myColor={myColor} send={sendMessage} requestCode={recoveryRequired||myColor==='spectator'} onDismiss={()=>setRecoveryRequired(false)} onLeave={()=>{sendMessage({type:'return_to_lobby'});handleJoinRoom(generateRandomRoomCode(),'online');}}/>}
@@ -1175,7 +1121,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
 
           {/* Interactive Chess Board */}
           <div ref={boardViewport} className="board-viewport"><div className="board-stage flex justify-center">
-                          {frontierItemMode&&<div className="ground-controls frontier-deploy-guide"><strong>{itemGuide}</strong>{['star','sigil'].includes(frontierItemMode)&&<button className="ui-button ui-button--primary" disabled={!boardItemTargets.length||!isMyTurn} onClick={submitBoardItem}>Use{boardItemTargets.length?` · ${boardItemTargets.join(', ')}`:''}</button>}<button onClick={()=>{setFrontierItemMode(null);setWingsFrom(null);setFeatherChoice(undefined);}}>Cancel</button></div>}{golemPlacement&&<div className="ground-controls frontier-deploy-guide"><strong>Deploy Golem · choose an empty square on your first rank</strong><button onClick={()=>setGolemPlacement(false)}>Cancel</button></div>}{groundMode&&<div className="ground-controls"><strong>{groundMode==='transport'?'Choose your piece on a portal to warp':groundMode==='portal'&&!portalFrom?'Choose a portal to relocate':`Place ${GROUND_NAMES[groundMode as GroundType]}`}</strong><button onClick={()=>{setGroundMode(null);setGroundSquare(null);}}>Cancel</button></div>}
+                          {frontierItemMode&&<div className="ground-controls frontier-deploy-guide"><strong>{itemGuide}</strong>{['star','sigil'].includes(frontierItemMode)&&<button className="ui-button ui-button--primary" disabled={!boardItemTargets.length||!isMyTurn} onClick={submitBoardItem}>Activate{boardItemTargets.length?` · ${boardItemTargets.join(', ')}`:''}</button>}<button onClick={()=>{setFrontierItemMode(null);setWingsFrom(null);setFeatherChoice(undefined);}}>Cancel</button></div>}{golemPlacement&&<div className="ground-controls frontier-deploy-guide"><strong>Deploy Golem · choose an empty square on your first rank</strong><button onClick={()=>setGolemPlacement(false)}>Cancel</button></div>}{groundMode&&<div className="ground-controls"><strong>{groundMode==='transport'?'Choose your piece on a portal to warp':groundMode==='portal'&&!portalFrom?'Choose a portal to relocate':`Place ${GROUND_NAMES[groundMode as GroundType]}`}</strong><button onClick={()=>{setGroundMode(null);setGroundSquare(null);}}>Cancel</button></div>}
 <ChessBoard
               frontier={gameState.frontier} frontierGame={gameState}
               tutorialGuide={tutorialMode?{from:tutorialState.step<8?TUTORIAL_ROUTE[tutorialState.step][0]:null,to:tutorialState.step<8?TUTORIAL_ROUTE[tutorialState.step][1]:null,guard:square=>{const allowed=tutorialSquareAllowed(tutorialState,square);if(allowed&&createSafeChess(tutorialState.fen).get(square as any)?.color==='w')tutorialDispatch({type:'square',value:square});return allowed;}}:undefined}
@@ -1185,8 +1131,9 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
               grounds={gameState.grounds}
               groundNotice={groundNotice} onDismissGroundNotice={()=>setGroundNotice(null)}
               hands={gameState.hands} historyLog={gameState.historyLog} summoningCircles={gameState.summoningCircles} soulSummons={gameState.soulSummons} pieceIds={gameState.pieceIds}
+              blastSquares={selfDestructConfirm?golemBlastSquares(gameState,selfDestructConfirm):[]}
               groundTargets={['star','banner','sigil'].includes(frontierItemMode||'')?[...boardItemSquares,...boardItemTargets]:frontierItemMode==='wings'?(wingsFrom?wingsTargets(gameState,activeColor,wingsFrom):allSquares(gameState.fen).filter(q=>occupant(gameState,q)?.color===activeColor)):frontierItemMode==='feather'?allSquares(gameState.fen).filter(q=>q.slice(1)===(activeColor==='w'?'1':'8')&&emptyFrontierSquare(gameState,q)):golemPlacement?allSquares(gameState.fen).filter(q=>q.slice(1)===(activeColor==='w'?'1':'8')&&emptyFrontierSquare(gameState,q)):gameState.frontier?.expanded&&selectedCard?.type==='traverse'&&!frontierFrom&&!groundMode?allSquares(gameState.fen).filter(q=>occupant(gameState,q)?.color===activeColor):gameState.frontier?.expanded&&frontierFrom&&!groundMode?(selectedCard?.type==='traverse'?traverseTargets(gameState,activeColor,frontierFrom):frontierMoves(gameState,frontierFrom,occupant(gameState,frontierFrom)?.type==='golem'?({pawn:'k',knight:'n',bishop:'b',rook:'r',queen:'q'} as any)[selectedCard?.type||'']:undefined,occupant(gameState,frontierFrom)?.type==='golem'&&selectedCard?.type!=='pawn')):selectedCard?.type==='soul_release'&&isMyTurn?soulTargets(gameState,selectedCard,activeColor):validGroundTargets}
-              onGroundSquare={q=>{if(['star','banner','sigil'].includes(frontierItemMode||'')){if(!isMyTurn)return true;
+              onGroundSquare={q=>{if(!groundMode&&!selectedCard&&!frontierItemMode&&!lensMode&&!golemPlacement&&!isWildPowerUp&&!isMonolithPowerUp&&isMyTurn){const golem=gameState.frontier?.golems.find(g=>g.square===q&&g.owner===activeColor);if(golem){setGolemActionSquare(q);return true;}if(golemActionSquare){setGolemActionSquare(null);return true;}}if(['star','banner','sigil'].includes(frontierItemMode||'')){if(!isMyTurn)return true;
                 if(frontierItemMode==='star'){if(occupant(gameState,q)?.color===activeColor&&starTargets(gameState,activeColor,q).length){setBoardItemFrom(q);setBoardItemTargets([]);}else if(boardItemFrom&&boardItemSquares.includes(q))setBoardItemTargets([q]);}
                 else if(frontierItemMode==='banner'&&boardItemSquares.includes(q))setBannerConfirm(q);
                 else if(frontierItemMode==='sigil'){if(selectedChampion?.type==='summoner'&&!boardItemFrom&&boardItemSquares.includes(q)){setBoardItemFrom(q);setBoardItemTargets([]);}else if(boardItemSquares.includes(q)){if(selectedChampion?.type==='ninja')setBoardItemTargets(old=>old.includes(q)?old.filter(x=>x!==q):old.length<2?[...old,q]:[old[1],q]);else setBoardItemTargets([q]);}}
@@ -1254,6 +1201,8 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
 
 
 
+
+          {golemActionSquare&&gameState.frontier?.golems.some(g=>g.square===golemActionSquare&&g.owner===activeColor)&&<GolemActionPanel state={gameState} color={activeColor} square={golemActionSquare} disabled={!isMyTurn} onSelfDestruct={()=>setSelfDestructConfirm(golemActionSquare)} onCancel={()=>{setGolemActionSquare(null);setSelfDestructConfirm(null);}}/>}
 
           {/* Player Hand */}
           <div className={`match-hand-dock ${selectedCard?'dock-has-description':''}`}>
