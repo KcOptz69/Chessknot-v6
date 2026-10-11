@@ -1,7 +1,7 @@
 import React from 'react';
 import {Eye,X,MessageSquare} from 'lucide-react';
 import {Modal,Button} from './UI.tsx';
-import type {ClientMessage,GameState,RoomPlayer,RoomState} from '../types.ts';
+import type {Card,ClientMessage,GameState,RoomPlayer,RoomState} from '../types.ts';
 import './ViewerTools.css';
 
 export function ViewerTools({players,myId,roomId,game,allowArbiter,recovery,send,onChat}:{players:Record<string,RoomPlayer>;myId:string;roomId:string;game:GameState;allowArbiter?:boolean;recovery?:RoomState['arbiterRecovery'];send:(m:ClientMessage)=>void;onChat:()=>void}){

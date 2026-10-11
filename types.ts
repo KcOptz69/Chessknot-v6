@@ -362,7 +362,7 @@ export interface RoomState {
 
 export type ClientMessage =
   | {type:'claim_arbiter'}
-  | {type:'return_as_player'}
+  | {type:'return_as_player'; color?: 'w' | 'b'}
   | {type:'quit_viewing'}
   | {type:'kick_spectator';playerId:string}
   | {type:'arbiter_pause';paused:boolean}
