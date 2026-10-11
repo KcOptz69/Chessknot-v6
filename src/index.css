@@ -1336,38 +1336,44 @@ body .move-error-notice>div{margin:0!important;}
  position:relative!important;
 }
 
-/* TCG card frames: original artwork, bottom titles, mobile-safe detail. */
+/* Detailed TCG frames with original sprites and live bottom labels. */
 :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card {
- --tcg-accent:#239cff; --tcg-mid:#123f72; --tcg-deep:#061629;
- position:relative; isolation:isolate; overflow:hidden;
- border:2px solid #a7bdce!important; border-radius:10px!important;
- background:repeating-linear-gradient(135deg,transparent 0 21px,#ffffff05 22px 23px),radial-gradient(ellipse at 50% 30%,var(--tcg-mid),var(--tcg-deep) 85%)!important;
- box-shadow:inset 0 0 0 2px #04101f,inset 0 0 0 4px var(--tcg-accent),inset 0 0 0 5px #aec8de88,0 3px 8px #0004!important;
- color:#f3f7ff!important;
+ --tcg-frame:url('/art/cards/frame-blue.svg');--tcg-accent:#239cff;
+ position:relative;isolation:isolate;overflow:hidden;display:block!important;
+ width:100%;aspect-ratio:5/7;min-height:0!important;height:auto!important;
+ padding:0!important;border:0!important;border-radius:7%!important;
+ background:var(--tcg-frame) center / 100% 100% no-repeat!important;
+ box-shadow:0 3px 8px #0005!important;color:#f3f7ff!important;
 }
-:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type^="awakening_"] {--tcg-accent:#ef475c;--tcg-mid:#7d1729;--tcg-deep:#240710;}
-:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="champion"],:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="static"] {--tcg-accent:#b574ef;--tcg-mid:#542080;--tcg-deep:#1b092d;}
-:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="joker"],:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="clock"],:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-joker-wild] {--tcg-accent:#efbf41;--tcg-mid:#735014;--tcg-deep:#261806;border-color:#f2d78c!important;}
-:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="soul_release"] {--tcg-accent:#89939f;--tcg-mid:#272c33;--tcg-deep:#020305;}
-:root #player-hand-container .compact-hand-card[data-card-type="soul_release"] {background:repeating-linear-gradient(135deg,transparent 0 21px,#ffffff04 22px 23px),radial-gradient(ellipse at 50% 30%,#272c33,#020305 85%)!important;}
-:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card::before,:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card::after {content:"";position:absolute;top:7px;width:6px;height:6px;border:1px solid #d8e8f2;transform:rotate(45deg);box-shadow:2px 2px 0 var(--tcg-accent),-2px -2px 0 var(--tcg-accent);pointer-events:none;}
-:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card::before {left:7px;}
-:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card::after {right:7px;}
-:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .card-art {position:relative;z-index:1;}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type^="awakening_"] {--tcg-frame:url('/art/cards/frame-red.svg');--tcg-accent:#ef475c;}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card:is([data-card-type="champion"],[data-card-type="static"]) {--tcg-frame:url('/art/cards/frame-purple.svg');--tcg-accent:#bd7aef;}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card:is([data-card-type="joker"],[data-card-type="clock"],[data-joker-wild]) {--tcg-frame:url('/art/cards/frame-gold.svg');--tcg-accent:#efbf41;}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="soul_release"] {--tcg-frame:url('/art/cards/frame-black.svg');--tcg-accent:#a7b1bb;}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .card-art {
+ position:absolute!important;inset:9% 12% 20%!important;width:auto!important;height:auto!important;
+ max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;
+ display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 2px #0005);
+}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .card-art > :is(.v5-art,svg) {width:100%!important;height:100%!important;}
 :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .compact-card-name {
- order:3; align-self:stretch; margin-top:auto; padding:4px 2px 3px;
- border-top:1px solid var(--tcg-accent);border-bottom:1px solid #a7bdce88;
- background:linear-gradient(90deg,#020a1399,#0b1c31e6,#020a1399);
- color:#f3f7ff!important;font-weight:900;letter-spacing:.015em;text-shadow:0 1px 2px #000!important;
- overflow-wrap:normal;text-align:center;line-height:1.15;
+ position:absolute!important;left:11%;right:11%;top:85%;bottom:6%;margin:0!important;padding:0!important;
+ display:flex;align-items:center;justify-content:center;background:none!important;border:0!important;
+ color:#f3f7ff!important;font-weight:900;text-shadow:0 1px 2px #000!important;letter-spacing:0;
+ font-size:clamp(8px,1.1vw,13px)!important;line-height:1;white-space:nowrap;overflow-wrap:normal;
 }
-:root #player-hand-container .compact-hand-card[data-selected],:root .vision-card-grid .compact-hand-card[aria-pressed="true"] {border-color:#e3f7ff!important;outline:2px solid var(--tcg-accent);outline-offset:1px;}
-:root #player-hand-container .compact-hand-card {padding:10px 6px 6px;gap:3px;}
-:root .vision-card-grid .compact-hand-card {padding:10px 6px 6px;display:flex;flex-direction:column;gap:3px;}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="soul_release"] .compact-card-name {font-size:clamp(7px,.9vw,11px)!important;}
+:root #player-hand-container .compact-hand-card[data-selected],:root .vision-card-grid .compact-hand-card[aria-pressed="true"] {
+ outline:2px solid var(--tcg-accent);outline-offset:2px;box-shadow:0 0 12px color-mix(in srgb,var(--tcg-accent) 50%,transparent)!important;
+}
+:root #player-hand-container .compact-hand-card .hand-free-action-badge {right:0;bottom:0;font-size:7px;padding:1px 3px;}
+:root #player-hand-container .compact-hand-card > .text-\[7\.5px\] {position:absolute;left:12%;top:5%;z-index:2;}
 @media(max-width:640px) {
- :root #player-hand-container .compact-hand-card {padding:9px 4px 5px;border-radius:8px!important;}
- :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .compact-card-name {font-size:clamp(8px,2.3vw,11px)!important;letter-spacing:0;padding:3px 0;}
+ :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .compact-card-name {font-size:clamp(8px,2.3vw,11px)!important;}
+ :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="soul_release"] .compact-card-name {font-size:clamp(6px,1.8vw,9px)!important;}
 }
-/* Landscape keeps the compact horizontal arrangement and bottom title. */
-:root .phone-landscape #player-hand-container .hand-grid .compact-hand-card {flex-direction:column;gap:2px;}
-:root .phone-landscape #player-hand-container .hand-grid .compact-card-name {text-align:center;font-size:9px!important;}
+/* The narrow landscape hand rail must retain its five existing rows. */
+:root .phone-landscape #player-hand-container .hand-grid .compact-hand-card {height:100%!important;aspect-ratio:auto;}
+:root .phone-landscape #player-hand-container .hand-grid .compact-hand-card .card-art {inset:6% 12% 25%!important;}
+:root .phone-landscape #player-hand-container .hand-grid .compact-hand-card .compact-card-name {font-size:8px!important;}
+/* The neutral Monolith card retains a blue stone treatment. */
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="monolith"] .card-art > .v5-art {filter:sepia(.55) saturate(3.4) hue-rotate(165deg) brightness(1.1);}
