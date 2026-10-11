@@ -1,0 +1,16 @@
+/* Guidance only: the game keeps its normal desktop, tablet, and phone layout. */
+.main-tutorial-spotlight{position:fixed;inset:0;pointer-events:none;z-index:20020;}.main-tutorial-spotlight>div{position:fixed;background:rgba(2,7,18,.7);pointer-events:none;}
+.main-tutorial-gold-frame{position:fixed;pointer-events:none;z-index:20021;border:3px solid #ffd75e;border-radius:8px;box-shadow:0 0 8px #ffd54d,0 0 24px #ffb700aa,inset 0 0 10px #ffd75e55;animation:main-tutorial-gold 1.3s ease-in-out infinite alternate;}
+.main-tutorial-coach{position:fixed;z-index:20030;background:#f5f8ff;color:#142b48;border:2px solid #e9b949;border-radius:12px;padding:10px;box-shadow:0 12px 40px #0008;font-family:Nunito,system-ui,sans-serif;font-size:12px;line-height:1.4;overflow:auto;overscroll-behavior:contain;}
+.dark .main-tutorial-coach{background:#10243e;color:#edf5ff;}.main-tutorial-coach header{display:flex;align-items:center;gap:4px;}.main-tutorial-coach header strong{flex:1;font-size:12px;color:#a76c06;}.dark .main-tutorial-coach header strong{color:#ffd75e;}.main-tutorial-coach header button{border:0;background:transparent;padding:4px;cursor:pointer;}.main-tutorial-coach h3{font-size:15px;font-weight:900;margin:6px 0;}.main-tutorial-coach p{margin:7px 0;}.main-tutorial-joe{padding:7px;border-radius:8px;background:#dceaff;font-style:italic;}.dark .main-tutorial-joe{background:#183958;}.main-tutorial-coach small{color:#7f8fa5;}.main-tutorial-coach .ui-button{margin-top:7px;}.main-tutorial-error{color:#f43f5e;font-weight:800;}.ui-modal.main-tutorial-complete{z-index:20040!important;}.main-tutorial-complete>section{background:#f5f8ff;color:#142b48;padding:25px;border:2px solid #e9b949;border-radius:14px;max-width:440px;}.dark .main-tutorial-complete>section{background:#10243e;color:#edf5ff;}.main-tutorial-complete h2{font-size:24px;font-weight:900;}.main-tutorial-complete section>div{display:flex;gap:8px;margin-top:14px;}@keyframes main-tutorial-gold{from{box-shadow:0 0 8px #ffd75e,0 0 15px #ffb70066}to{box-shadow:0 0 16px #ffd75e,0 0 32px #ffb700cc}}@media(prefers-reduced-motion:reduce){.main-tutorial-gold-frame{animation:none;}}@media(max-width:600px){.main-tutorial-coach{font-size:11px;padding:8px;}.main-tutorial-coach h3{font-size:14px;}}
+
+.rb-footer button.tutorial-entry-gold,.tutorial-entry-gold {border:2px solid #dba52d!important;box-shadow:0 0 0 1px #ffe4a344,0 0 12px #dba52d33;font-weight:900;}
+.ui-modal.tutorial-welcome-modal {z-index:20040!important;background:#071326aa!important;}
+.tutorial-welcome-dialog {width:min(420px,calc(100vw - 32px));padding:24px;border:1px solid #dba52d;border-radius:18px;background:#f3f8ff;color:#182e49;box-shadow:0 20px 70px #0006;}
+.dark .tutorial-welcome-dialog {background:#102038;color:#f0f6ff;}
+.tutorial-welcome-dialog h2 {font-size:24px;font-weight:900;margin-bottom:10px;}
+.tutorial-welcome-dialog p {line-height:1.5;}
+.tutorial-welcome-dialog>div {display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+.tutorial-welcome-note {font-size:12px;opacity:.75;margin-top:16px;}
+
+.main-tutorial-navigation{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.ui-modal.main-tutorial-exit-confirm{z-index:20050!important;}
