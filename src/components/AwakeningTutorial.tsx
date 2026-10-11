@@ -7,6 +7,11 @@ import {V5Piece} from './V5Art.tsx';
 
 type Guide={key:number;owner:PlayerColor;card:Card};
 const PIECES:Record<string,string>={awakening_pawn:'p',awakening_knight:'n',awakening_bishop:'b',awakening_rook:'r',awakening_queen:'q',awakening_king:'k'};
+// Own panels do not block themselves. The expansion offer waits for Awakening
+// in App, so it must not also make Awakening wait for the expansion offer.
+export function hasOtherAwakeningDialog(candidates:Iterable<Element>) {
+ return Array.from(candidates).some(node=>!node.closest('.awakening-tutorial-modal,.frontier-expand-offer'));
+}
 // This component is mounted for one active match only. Preferences and hand
 // tracking are local: neither player can dismiss or see the other's guides.
 export function AwakeningTutorial({hands,color,paused,sharedDevice=false,onOpenChange}:{sharedDevice?:boolean;hands:Record<PlayerColor,Card[]>;color:PlayerColor;paused:boolean;onOpenChange:(open:boolean)=>void}) {
@@ -17,7 +22,7 @@ export function AwakeningTutorial({hands,color,paused,sharedDevice=false,onOpenC
  const sequence=React.useRef(0);
  const [anotherDialog,setAnotherDialog]=React.useState(false);
  React.useEffect(()=>{
-  const update=()=>setAnotherDialog(Boolean(document.querySelector('.ui-modal:not(.awakening-tutorial-modal),.ground-popup,.ground-dialog,[aria-label="Match Chat Drawer"]')));
+  const update=()=>setAnotherDialog(hasOtherAwakeningDialog(document.querySelectorAll('.ui-modal,.ground-popup,.ground-dialog,[aria-label="Match Chat Drawer"]')));
   const observer=new MutationObserver(update);
   observer.observe(document.body,{childList:true,subtree:true});update();
   return()=>observer.disconnect();
