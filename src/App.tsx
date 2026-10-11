@@ -975,7 +975,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
     gameState.status === 'points_win'
   );
 
-  const tacticalPowers = (<><PowerUpsBar confirmPlacement={compactUI||tutorialMode}
+  const tacticalPowers = (<section className="tactical-powers-panel"><PowerUpsBar confirmPlacement={compactUI||tutorialMode}
             isJokerLocked={isJokerLocked} grounds={gameState.grounds} color={activeColor} selectedGround={groundMode} onGround={type=>{setCompactPanel(null);if(!isMyTurn)return;setGroundMode(groundMode===type?null:type);setGroundSquare(null);setPortalFrom(null);setSelectedCard(null);setIsWildPowerUp(false);setIsMonolithPowerUp(false);}}
             powerUps={currentPowerUps}
             progress={gameState.powerUpProgress ? gameState.powerUpProgress[activeColor] || 0 : 0}
@@ -988,7 +988,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
             isMonolithMode={isMonolithPowerUp}
             hasShiftedParadigm={gameState.expansions?.shiftedParadigm !== false}
             hasChampionsOfTheMonolith={gameState.expansions?.championsOfTheMonolith !== false}
-          />{myColor!=='spectator'&&<FrontierInventory state={gameState} color={activeColor} disabled={!isMyTurn} send={sendMessage} onIntro={()=>setFrontierIntro(true)}/>}</>);
+          />{myColor!=='spectator'&&<FrontierInventory state={gameState} color={activeColor} disabled={!isMyTurn} send={sendMessage} onIntro={()=>setFrontierIntro(true)}/>}</section>);
   const opponentWidget = (<OpponentHand
             hidePowerButton={compactUI} openRequest={opponentInfoRequest}
             grounds={gameState.grounds} color={opponentColor}
@@ -1101,7 +1101,6 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
         {!compactUI && <aside className="desktop-left-column">
           <DiscardAndDeck hiddenDeckCount={gameState.hiddenDeckCount} historyLog={gameState.historyLog} unseenHandCards={activeVision?[]:opponentHand.filter(card=>!card.knownStartingPawnFor)} deckCards={gameState.deck} discardPile={gameState.discard} exhaustedCards={gameState.exhausted || []} isMyTurn={isMyTurn}/>
           <section className="desktop-left-chat glass-panel"><h2>Chat{unreadChat>0?` (${unreadChat})`:''}</h2>{mode==='online'?<ChatPanel messages={chatMessages} onSendMessage={text=>{sendMessage({type:'send_chat',text});setUnreadChat(0);}} playerId={playerId} playerName={playerName} myColor={myColor} disabled={!connected}/>:<p className="desktop-chat-placeholder">Chat is available in online matches.</p>}</section>
-          <div ref={setDesktopDescriptionHost} className="desktop-description-host"/>
         </aside>}
         {phoneLandscape && <aside className="landscape-support-column">
           <div ref={setLandscapeOpponentHost} className="landscape-tag-host"/>
@@ -1223,6 +1222,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
           />
           </div>,landscapePlayerHost)}
           {<div className="compact-dock-actions"><button onClick={()=>setCompactPanel('powers')}><Zap size={16}/>Power-ups & Items</button>{travelTarget && <button disabled={!isMyTurn || Boolean(gameState.pendingPortal)} onClick={()=>{if(isMyTurn)sendMessage({type:'portal_move',from:travelTarget.from});}}>Travel (Free)</button>}<button disabled={!isMyTurn || isJokerLocked} onClick={handleOpenDiscardRedraw}><RefreshCw size={14}/>Redraw / Pass</button></div>}
+          <div className="desktop-hand-layout">
           {myColor==='spectator'&&roomPlayers[playerId]?.role!=='arbiter'?<div className="viewing-hand-placeholder"><span>Spectator · hands and traps are hidden</span><Button onClick={handleReturnToLobby}>Quit viewing</Button></div>:(          <CardHand suppressJokerSurgePopup={tutorialMode} compact={compactUI} floatingDetails={!compactUI} descriptionHost={phoneLandscape?landscapeDescriptionHost:!compactUI?desktopDescriptionHost:undefined}
             disabledSoulIds={currentHand.filter(c=>c.type==='soul_release'&&!soulTargets(gameState,c,activeColor).length).map(c=>c.id)}
             boundCardId={gameState.frontier?.bind?.target===activeColor?gameState.frontier.bind.cardId:undefined} hand={currentHand}
@@ -1249,6 +1249,8 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
             isKingInCheck={isCurrentKingInCheck}
             checkEscapeCardTypes={checkEscapeCardTypes}
           />)}
+          {!compactUI && <div ref={setDesktopDescriptionHost} className="desktop-description-host"/>}
+          </div>
           </div>
         </div>
 

@@ -1366,7 +1366,7 @@ body .move-error-notice>div{margin:0!important;}
 :root #player-hand-container .compact-hand-card[data-selected],:root .vision-card-grid .compact-hand-card[aria-pressed="true"] {
  outline:2px solid var(--tcg-accent);outline-offset:2px;box-shadow:0 0 12px color-mix(in srgb,var(--tcg-accent) 50%,transparent)!important;
 }
-:root #player-hand-container .compact-hand-card .hand-free-action-badge {right:0;bottom:0;font-size:7px;padding:1px 3px;}
+:root #player-hand-container .compact-hand-card .hand-free-action-badge {top:0;right:0;bottom:auto;left:auto;width:max-content;height:auto;align-self:flex-start;font-size:7px;padding:2px 4px;}
 :root #player-hand-container .compact-hand-card > .text-\[7\.5px\] {position:absolute;left:12%;top:5%;z-index:2;}
 @media(max-width:640px) {
  :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .compact-card-name {font-size:clamp(8px,2.3vw,11px)!important;}
@@ -1384,3 +1384,25 @@ body .move-error-notice>div{margin:0!important;}
 @media(max-width:1024px){:root #player-hand-container .hand-grid.hand-seven{display:flex!important;overflow-x:auto;overflow-y:hidden;padding:8px 4px 12px;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;gap:0!important;}.hand-seven>.compact-hand-card{flex:0 0 24%!important;min-width:78px;margin-right:-5%;scroll-snap-align:center;position:relative;}.hand-seven>.compact-hand-card:last-child{margin-right:0}.hand-seven>.compact-hand-card[data-selected]{z-index:5;transform:translateY(-5px)}}
 
 .desktop-match.frontier-expanded .chess-arena>.relative{width:calc(var(--compact-board-size) * 2 / 3)!important;max-width:none!important}.desktop-match.frontier-expanded #chess-board{width:calc(var(--compact-board-size) * 2 / 3)!important;height:var(--compact-board-size)!important;grid-template-rows:repeat(12,minmax(0,1fr))!important}.compact-match.frontier-expanded .board-viewport{overflow-y:auto!important;overscroll-behavior:contain}.compact-match.frontier-expanded .board-stage,.compact-match.frontier-expanded .chess-arena{height:auto!important;flex-shrink:0}.compact-match.frontier-expanded #chess-board{height:calc(var(--compact-board-size) * 1.5)!important;grid-template-rows:repeat(12,minmax(0,1fr))!important}
+
+/* Desktop keeps seven fixed card slots and the description beside the hand. */
+.compact-match .desktop-hand-layout {display:contents;}
+.desktop-match .desktop-left-column {grid-template-rows:auto minmax(0,1fr);}
+.desktop-match .desktop-hand-layout {display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,.45fr);align-items:start;gap:8px;}
+.desktop-match .desktop-hand-layout > #player-hand-container {min-width:0;}
+:root .desktop-match #player-hand-container .hand-grid {display:grid!important;grid-template-columns:repeat(7,minmax(0,86px));justify-content:center;align-items:start;gap:6px;}
+:root .desktop-match #player-hand-container .hand-grid .compact-hand-card {width:100%;max-width:86px;max-height:120px!important;height:auto!important;aspect-ratio:43/60;align-self:start;justify-self:center;}
+.desktop-match .desktop-hand-layout .desktop-description-host {display:block;min-width:0;max-height:132px;overflow:auto;}
+.desktop-match .desktop-hand-layout .desktop-description-host:empty {visibility:hidden;}
+.desktop-match .desktop-hand-layout .desktop-description-host > .card-description-panel {margin:3px 0 0!important;padding:8px!important;}
+.desktop-match .desktop-hand-layout .brief-card-description {font-size:11px;line-height:1.4;}
+.desktop-match .desktop-hand-layout .card-description-panel > .flex > .flex {min-width:0;}
+.desktop-match .desktop-hand-layout .card-description-panel > .flex > .flex > div:last-child {min-width:0;}
+.desktop-match .desktop-hand-layout .card-description-panel > .flex > .flex > div:last-child > .flex {flex-wrap:wrap;}
+
+/* Power-ups and inventory occupy one sidebar row, above the history log. */
+.tactical-powers-panel {min-width:0;min-height:0;}
+.desktop-match .tactical-powers-panel {max-height:52dvh;overflow:auto;overscroll-behavior:contain;}
+.desktop-match .tactical-powers-panel #power-ups-bar {max-height:none;overflow:visible;}
+.desktop-match .tactical-powers-panel .frontier-inventory {margin:8px 0 0;padding:10px;border:1px solid var(--edge);border-radius:14px;background:var(--surface-raised);}
+.tactical-powers-panel .frontier-inventory > .ui-button {display:block;width:100%;height:auto;min-height:44px;white-space:normal;padding:8px 12px;}
