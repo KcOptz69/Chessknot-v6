@@ -1383,7 +1383,20 @@ body .move-error-notice>div{margin:0!important;}
 @media(min-width:1025px){:root #player-hand-container .hand-grid.hand-seven{grid-template-columns:repeat(7,minmax(0,1fr));}}
 @media(max-width:1024px){:root #player-hand-container .hand-grid.hand-seven{display:flex!important;overflow-x:auto;overflow-y:hidden;padding:8px 4px 12px;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;gap:0!important;}.hand-seven>.compact-hand-card{flex:0 0 24%!important;min-width:78px;margin-right:-5%;scroll-snap-align:center;position:relative;}.hand-seven>.compact-hand-card:last-child{margin-right:0}.hand-seven>.compact-hand-card[data-selected]{z-index:5;transform:translateY(-5px)}}
 
-.desktop-match.frontier-expanded .chess-arena>.relative{width:calc(var(--compact-board-size) * 2 / 3)!important;max-width:none!important}.desktop-match.frontier-expanded #chess-board{width:calc(var(--compact-board-size) * 2 / 3)!important;height:var(--compact-board-size)!important;grid-template-rows:repeat(12,minmax(0,1fr))!important}.compact-match.frontier-expanded .board-viewport{overflow-y:auto!important;overscroll-behavior:contain}.compact-match.frontier-expanded .board-stage,.compact-match.frontier-expanded .chess-arena{height:auto!important;flex-shrink:0}.compact-match.frontier-expanded #chess-board{height:calc(var(--compact-board-size) * 1.5)!important;grid-template-rows:repeat(12,minmax(0,1fr))!important}
+/* Keep original square size; the additional central ranks scroll vertically. */
+:is(.desktop-match,.compact-match).frontier-expanded .board-viewport {overflow-y:auto!important;overscroll-behavior:contain;align-items:flex-start;}
+:is(.desktop-match,.compact-match).frontier-expanded .board-stage,
+:is(.desktop-match,.compact-match).frontier-expanded .chess-arena {height:auto!important;flex-shrink:0;}
+:is(.desktop-match,.compact-match).frontier-expanded .chess-arena > .relative {width:var(--compact-board-size)!important;max-width:none!important;}
+:is(.desktop-match,.compact-match).frontier-expanded #chess-board {width:var(--compact-board-size)!important;height:calc(var(--compact-board-size) * 1.5)!important;grid-template-rows:repeat(12,minmax(0,1fr))!important;}
+:is(.desktop-match,.compact-match).frontier-expanded.frontier-zoomed-out .chess-arena > .relative {width:calc(var(--compact-board-size) * 2 / 3)!important;}
+:is(.desktop-match,.compact-match).frontier-expanded.frontier-zoomed-out #chess-board {width:calc(var(--compact-board-size) * 2 / 3)!important;height:var(--compact-board-size)!important;}
+.frontier-board-toolbar {display:flex;align-items:center;gap:8px;}
+.frontier-board-toolbar .compact-board-controls-host {flex:1;min-width:0;}
+.frontier-zoom-button {position:static;flex-shrink:0;z-index:20;border:1px solid var(--edge);background:var(--surface-raised);color:var(--ink);padding:4px 8px;border-radius:8px;font-size:11px;}
+.frontier-deploy-guide {position:absolute;z-index:25;top:0;left:0;right:0;background:var(--surface-raised);}
+.frontier-test-expand {border-color:#a78bfa;color:var(--ink);background:var(--surface-raised);margin-top:6px;}
+
 
 /* Desktop keeps seven fixed card slots and the description beside the hand. */
 .compact-match .desktop-hand-layout {display:contents;}
@@ -1404,5 +1417,5 @@ body .move-error-notice>div{margin:0!important;}
 .tactical-powers-panel {min-width:0;min-height:0;}
 .desktop-match .tactical-powers-panel {max-height:52dvh;overflow:auto;overscroll-behavior:contain;}
 .desktop-match .tactical-powers-panel #power-ups-bar {max-height:none;overflow:visible;}
-.desktop-match .tactical-powers-panel .frontier-inventory {margin:8px 0 0;padding:10px;border:1px solid var(--edge);border-radius:14px;background:var(--surface-raised);}
+.tactical-powers-panel .frontier-inventory {margin:10px 0 0;padding:10px 0 0;border:0;border-top:1px solid var(--edge);border-radius:0;background:transparent;}
 .tactical-powers-panel .frontier-inventory > .ui-button {display:block;width:100%;height:auto;min-height:44px;white-space:normal;padding:8px 12px;}

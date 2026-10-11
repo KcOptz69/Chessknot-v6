@@ -241,6 +241,9 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const [groundSquare,setGroundSquare]=React.useState<string|null>(null);
   const [portalFrom,setPortalFrom]=React.useState<string|null>(null);
   const [frontierIntro,setFrontierIntro]=React.useState(false);
+  const [golemPlacement,setGolemPlacement]=React.useState(false);
+  const [frontierZoomOut,setFrontierZoomOut]=React.useState(false);
+  React.useEffect(()=>{setGolemPlacement(false);},[gameState.turn,gameState.status,roomId]);
   const [frontierFrom,setFrontierFrom]=React.useState<string|null>(null);
   const frontierSeen=React.useRef('');
   const frontierSounds=React.useRef(new Set<string>());
@@ -599,6 +602,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
 
   // Actions
   const handleSelectCard = (card: Card | null) => {
+    setGolemPlacement(false);
     if(tutorialMode){tutorialDispatch(card?{type:'card',value:card.id}:{type:'deselect'});return;}
     if (!isMyTurn) return;
     setGroundMode(null); setGroundSquare(null); setPortalFrom(null);
@@ -726,6 +730,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   };
 
   const handleUseMonolith = () => {
+    setGolemPlacement(false);
     if (!isMyTurn) return;
     setGroundMode(null); setGroundSquare(null); setPortalFrom(null);
     setIsMonolithPowerUp(value=>!value);
@@ -976,7 +981,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   );
 
   const tacticalPowers = (<section className="tactical-powers-panel"><PowerUpsBar confirmPlacement={compactUI||tutorialMode}
-            isJokerLocked={isJokerLocked} grounds={gameState.grounds} color={activeColor} selectedGround={groundMode} onGround={type=>{setCompactPanel(null);if(!isMyTurn)return;setGroundMode(groundMode===type?null:type);setGroundSquare(null);setPortalFrom(null);setSelectedCard(null);setIsWildPowerUp(false);setIsMonolithPowerUp(false);}}
+            isJokerLocked={isJokerLocked} grounds={gameState.grounds} color={activeColor} selectedGround={groundMode} onGround={type=>{setGolemPlacement(false);setCompactPanel(null);if(!isMyTurn)return;setGroundMode(groundMode===type?null:type);setGroundSquare(null);setPortalFrom(null);setSelectedCard(null);setIsWildPowerUp(false);setIsMonolithPowerUp(false);}}
             powerUps={currentPowerUps}
             progress={gameState.powerUpProgress ? gameState.powerUpProgress[activeColor] || 0 : 0}
             isMyTurn={isMyTurn}
@@ -988,7 +993,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
             isMonolithMode={isMonolithPowerUp}
             hasShiftedParadigm={gameState.expansions?.shiftedParadigm !== false}
             hasChampionsOfTheMonolith={gameState.expansions?.championsOfTheMonolith !== false}
-          />{myColor!=='spectator'&&<FrontierInventory state={gameState} color={activeColor} disabled={!isMyTurn} send={sendMessage} onIntro={()=>setFrontierIntro(true)}/>}</section>);
+          >{myColor!=='spectator'&&<FrontierInventory state={gameState} color={activeColor} disabled={!isMyTurn} send={sendMessage} onIntro={()=>setFrontierIntro(true)} onDeployGolem={()=>{setCompactPanel(null);setGolemPlacement(true);setSelectedCard(null);setGroundMode(null);setIsMonolithPowerUp(false);setIsWildPowerUp(false);}}/>}</PowerUpsBar></section>);
   const opponentWidget = (<OpponentHand
             hidePowerButton={compactUI} openRequest={opponentInfoRequest}
             grounds={gameState.grounds} color={opponentColor}
@@ -1003,7 +1008,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const viewerTools=!tutorialMode?<ViewerTools roomId={roomId} players={roomPlayers} myId={playerId} game={gameState} allowArbiter={lobbyConfig.allowArbiter} recovery={arbiterRecovery} send={sendMessage} onChat={()=>setChatOpen(true)}/>:undefined;
   if(tutorialLaunch&&!tutorialMode)return <App tutorialMode onExitTutorial={()=>setTutorialLaunch(false)}/>;
   return (
-    <div className={`game-app min-h-screen bg-gradient-to-b from-stone-50 via-stone-100 to-blue-50/30 text-stone-800 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950 dark:text-stone-100 flex flex-col font-sans antialiased selection:bg-blue-500 selection:text-white transition-colors duration-200 ${gameState.frontier?.expanded?'frontier-expanded':''} ${isAnyPopupActive ? 'has-popup-open' : ''} ${phoneLandscape && gameState.status !== 'lobby' ? 'phone-landscape' : ''} ${gameState.status !== 'lobby' ? (compactUI ? 'compact-match' : 'desktop-match') : ''}`}>
+    <div className={`game-app min-h-screen bg-gradient-to-b from-stone-50 via-stone-100 to-blue-50/30 text-stone-800 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950 dark:text-stone-100 flex flex-col font-sans antialiased selection:bg-blue-500 selection:text-white transition-colors duration-200 ${gameState.frontier?.expanded?'frontier-expanded':''} ${frontierZoomOut?'frontier-zoomed-out':''} ${isAnyPopupActive ? 'has-popup-open' : ''} ${phoneLandscape && gameState.status !== 'lobby' ? 'phone-landscape' : ''} ${gameState.status !== 'lobby' ? (compactUI ? 'compact-match' : 'desktop-match') : ''}`}>
       {!tutorialMode&&welcomeTutorial&&gameState.status==='lobby'&&<Modal className="tutorial-welcome-modal"><section className="tutorial-welcome-dialog"><h2>New to ChessKnot?</h2><p>Learn the board, cards, and power-ups with Friendly Joe in an interactive practice match.</p><div><Button className="tutorial-entry-gold" onClick={()=>dismissWelcome(true)}>Play tutorial</Button><Button aria-label="Close dialog" onClick={()=>dismissWelcome(false)}>Skip for now</Button></div><p className="tutorial-welcome-note">You can always start the tutorial from the rulebook.</p></section></Modal>}
       {frontierIntro&&<FrontierIntro onClose={()=>setFrontierIntro(false)}/>}
       {gameState.pendingSummon && (myColor===gameState.pendingSummon.player) && <div className="ground-popup"><section className="ground-dialog summon-choice-dialog" role="dialog" aria-modal="true" aria-label="Choose a piece to revive"><h2>Summoning circle is ready</h2><p>Choose a captured piece to revive on {gameState.summoningCircles?.find(c=>c.id===gameState.pendingSummon!.circleId)?.square}. This is free. The chess clock is paused.</p><div className="revival-options">{eligibleRevives(gameState,gameState.pendingSummon.player).map(({piece,index})=><button className="revival-choice" key={index} onClick={()=>{  sendMessage({type:'resolve_summon',captureIndex:index}); }}><V5Piece type={piece.type} color={gameState.pendingSummon!.player} className="w-16 h-16"/><span>{piece.type==='sp'?'Super Pawn':piece.type==='sn'?'Super Knight':({p:'Pawn',n:'Knight',b:'Bishop',r:'Rook',q:'Queen'} as any)[piece.type]}</span></button>)}</div><div className="flex justify-end mt-3"><button onClick={()=>sendMessage({type:'resolve_summon',captureIndex:null})}>Decline revival</button></div></section></div>}
@@ -1125,7 +1130,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
 
 
           </div>,landscapeOpponentHost)}
-          <div ref={setBoardControlsHost} className="compact-board-controls-host"/>
+          <div className="frontier-board-toolbar"><div ref={setBoardControlsHost} className="compact-board-controls-host"/>{gameState.frontier?.expanded&&<button className="frontier-zoom-button" onClick={()=>setFrontierZoomOut(v=>!v)}>{frontierZoomOut?"Zoom in":"Zoom out"}</button>}</div>
           </div>
 
           {/* Clock Block Warning Notification Banner */}
@@ -1133,7 +1138,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
 
           {/* Interactive Chess Board */}
           <div ref={boardViewport} className="board-viewport"><div className="board-stage flex justify-center">
-                          {groundMode&&<div className="ground-controls"><strong>{groundMode==='transport'?'Choose your piece on a portal to warp':groundMode==='portal'&&!portalFrom?'Choose a portal to relocate':`Place ${GROUND_NAMES[groundMode as GroundType]}`}</strong><button onClick={()=>{setGroundMode(null);setGroundSquare(null);}}>Cancel</button></div>}
+                          {golemPlacement&&<div className="ground-controls frontier-deploy-guide"><strong>Deploy Golem · choose an empty square on your first rank</strong><button onClick={()=>setGolemPlacement(false)}>Cancel</button></div>}{groundMode&&<div className="ground-controls"><strong>{groundMode==='transport'?'Choose your piece on a portal to warp':groundMode==='portal'&&!portalFrom?'Choose a portal to relocate':`Place ${GROUND_NAMES[groundMode as GroundType]}`}</strong><button onClick={()=>{setGroundMode(null);setGroundSquare(null);}}>Cancel</button></div>}
 <ChessBoard
               frontier={gameState.frontier} frontierGame={gameState}
               tutorialGuide={tutorialMode?{from:tutorialState.step<8?TUTORIAL_ROUTE[tutorialState.step][0]:null,to:tutorialState.step<8?TUTORIAL_ROUTE[tutorialState.step][1]:null,guard:square=>{const allowed=tutorialSquareAllowed(tutorialState,square);if(allowed&&createSafeChess(tutorialState.fen).get(square as any)?.color==='w')tutorialDispatch({type:'square',value:square});return allowed;}}:undefined}
@@ -1143,8 +1148,8 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
               grounds={gameState.grounds}
               groundNotice={groundNotice} onDismissGroundNotice={()=>setGroundNotice(null)}
               hands={gameState.hands} historyLog={gameState.historyLog} summoningCircles={gameState.summoningCircles} soulSummons={gameState.soulSummons} pieceIds={gameState.pieceIds}
-              groundTargets={gameState.frontier?.expanded&&frontierFrom&&!groundMode?(selectedCard?.type==='traverse'?allSquares(gameState.fen).filter(q=>/[WXYZ]$/.test(q)&&emptyFrontierSquare(gameState,q)):frontierMoves(gameState,frontierFrom,occupant(gameState,frontierFrom)?.type==='golem'?({pawn:'k',knight:'n',bishop:'b',rook:'r',queen:'q'} as any)[selectedCard?.type||'']:undefined,occupant(gameState,frontierFrom)?.type==='golem'&&selectedCard?.type!=='pawn')):selectedCard?.type==='soul_release'&&isMyTurn?soulTargets(gameState,selectedCard,activeColor):validGroundTargets}
-              onGroundSquare={q=>{if(gameState.frontier?.expanded&&!groundMode&&isMyTurn&&(selectedCard?.type==='traverse'||selectedCard&&['pawn','knight','bishop','rook','queen'].includes(selectedCard.type)&&(occupant(gameState,q)?.type==='golem'||!!frontierFrom&&occupant(gameState,frontierFrom)?.type==='golem'))){const piece=occupant(gameState,q);if(piece?.color===activeColor){setFrontierFrom(q);return true;}if(frontierFrom){sendMessage({type:occupant(gameState,frontierFrom)?.type==='golem'?'frontier_golem_move':'play_card_move',cardId:selectedCard!.id,from:frontierFrom,to:q} as any);setFrontierFrom(null);setSelectedCard(null);}return true;}if(selectedCard?.type==='soul_release'){if(isMyTurn&&soulTargets(gameState,selectedCard,activeColor).includes(q)){sendMessage({type:'play_soul_release',cardId:selectedCard.id,targetSquare:q});setSelectedCard(null);}return true;}if(!groundMode)return false;if(!isMyTurn || !validGroundTargets.includes(q))return true;if(groundMode==='portal'&&!portalFrom){if(gameState.grounds?.tiles[q]==='portal')setPortalFrom(q);return true;}setGroundSquare(q);return true;}}
+              groundTargets={golemPlacement?allSquares(gameState.fen).filter(q=>q.slice(1)===(activeColor==='w'?'1':'8')&&emptyFrontierSquare(gameState,q)):gameState.frontier?.expanded&&frontierFrom&&!groundMode?(selectedCard?.type==='traverse'?allSquares(gameState.fen).filter(q=>/[WXYZ]$/.test(q)&&emptyFrontierSquare(gameState,q)):frontierMoves(gameState,frontierFrom,occupant(gameState,frontierFrom)?.type==='golem'?({pawn:'k',knight:'n',bishop:'b',rook:'r',queen:'q'} as any)[selectedCard?.type||'']:undefined,occupant(gameState,frontierFrom)?.type==='golem'&&selectedCard?.type!=='pawn')):selectedCard?.type==='soul_release'&&isMyTurn?soulTargets(gameState,selectedCard,activeColor):validGroundTargets}
+              onGroundSquare={q=>{if(golemPlacement){if(isMyTurn&&q.slice(1)===(activeColor==='w'?'1':'8')&&emptyFrontierSquare(gameState,q)){sendMessage({type:'frontier_item',item:'core',to:q});setGolemPlacement(false);}return true;}if(gameState.frontier?.expanded&&!groundMode&&isMyTurn&&(selectedCard?.type==='traverse'||selectedCard&&['pawn','knight','bishop','rook','queen'].includes(selectedCard.type)&&(occupant(gameState,q)?.type==='golem'||!!frontierFrom&&occupant(gameState,frontierFrom)?.type==='golem'))){const piece=occupant(gameState,q);if(piece?.color===activeColor){setFrontierFrom(q);return true;}if(frontierFrom){sendMessage({type:occupant(gameState,frontierFrom)?.type==='golem'?'frontier_golem_move':'play_card_move',cardId:selectedCard!.id,from:frontierFrom,to:q} as any);setFrontierFrom(null);setSelectedCard(null);}return true;}if(selectedCard?.type==='soul_release'){if(isMyTurn&&soulTargets(gameState,selectedCard,activeColor).includes(q)){sendMessage({type:'play_soul_release',cardId:selectedCard.id,targetSquare:q});setSelectedCard(null);}return true;}if(!groundMode)return false;if(!isMyTurn || !validGroundTargets.includes(q))return true;if(groundMode==='portal'&&!portalFrom){if(gameState.grounds?.tiles[q]==='portal')setPortalFrom(q);return true;}setGroundSquare(q);return true;}}
 
               fen={gameState.fen}
               onOpenChat={!compactUI && mode === 'online' ? () => { setChatOpen(true); setUnreadChat(0); } : undefined}

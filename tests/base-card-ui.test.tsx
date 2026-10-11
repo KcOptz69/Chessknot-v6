@@ -62,3 +62,5 @@ test('interactive rulebook retains new base rules and shows details above the ic
  assert.ok(html.indexOf('rb-detail')<html.indexOf('rb-icon-grid'));
  assert.match(html,/Effect preview/);assert.match(html,/Pause example/);assert.match(html,/aria-controls=/);assert.match(html,/data-power-crop="wild"/);
 });
+
+test('Traverse hand and selected description use the approved violet portal sprite',()=>{const card=createCard('traverse',1);const html=renderToStaticMarkup(<ThemeProvider><CardHand hand={[card]} selectedCardId={card.id} onSelectCard={()=>{}} isMyTurn playerColor="w" lastMovedPiece={null}/></ThemeProvider>);assert.match(html,/src="\/art\/frontier\/traverse.png"/);assert.ok(!html.includes('data-power="traverse"'));assert.match(html,/MOVE ACTION/);});

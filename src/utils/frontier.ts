@@ -57,7 +57,7 @@ const uid = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toStrin
 export const handLimit = (s: GameState, c: PlayerColor) => s.frontier?.bags[c] ? 7 : 5;
 export function frontierNotice(s: GameState, kind: string, detail: string) { const f = s.frontier; if (!f)
     return; const id = uid('frontier'); f.events.unshift({ id, kind, detail }); f.events = f.events.slice(0, 24); s.historyLog.unshift({ id, turn: s.turn, turnNumber: s.turnNumber, actionType: 'powerup', cardName: 'Arcane Frontier', detail, timestamp: Date.now(), whitePoints: s.whitePoints, blackPoints: s.blackPoints }); }
-export function canExpand(s: GameState, c: PlayerColor) { return !!s.frontier && !s.frontier.expanded && s.status === 'playing' && s.turn === c && !s.pendingPortal && !s.pendingSummon && !s.pendingSwapDiscard && (c === 'w' ? s.whitePoints : s.blackPoints) <= 25; }
+export function canExpand(s: GameState, c: PlayerColor, test = false) { return !!s.frontier && !s.frontier.expanded && s.status === 'playing' && s.turn === c && !s.pendingPortal && !s.pendingSummon && !s.pendingSwapDiscard && (test || (c === 'w' ? s.whitePoints : s.blackPoints) <= 25); }
 export function expandFrontier(s: GameState, random = Math.random) { const f = s.frontier; if (!f || f.expanded)
     return false; s.fen = extendFen(s.fen); f.expanded = true; f.id = uid('expansion'); f.expandedTurn = s.turnNumber; const pool = 'WXYZ'.split('').flatMap(r => [...'abcdefgh'].map(x => x + r)); for (const kind of ['bag', 'key', 'chest', 'boss'] as const) {
     const q = pool.splice(Math.floor(random() * pool.length), 1)[0];
@@ -373,7 +373,7 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
     if (!f)
         return ownType ? (h.error('Arcane Frontier is disabled.'), true) : false;
     if (m.type === 'expand_frontier') {
-        if (!canExpand(s, c)) {
+        if (!canExpand(s, c, m.test === true)) {
             h.error('Expansion requires your army to have 25 or fewer points.');
             return true;
         }

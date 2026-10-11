@@ -3,6 +3,6 @@
 
 .frontier-original{background:none;object-fit:contain;overflow:hidden;border-radius:10px}
 
-.frontier-silhouette .frontier-art{filter:brightness(.15) saturate(0);opacity:.65}.frontier-health{position:absolute;bottom:1px;right:1px;background:#122b44;color:#9aeafc;border-radius:4px;padding:0 3px;font-size:10px}
+.frontier-silhouette .frontier-art{filter:brightness(.15) saturate(0);opacity:.65}.frontier-health{position:absolute;top:1px;bottom:auto;right:1px;background:#122b44;color:#9aeafc;border-radius:4px;padding:0 3px;font-size:10px}
 
 .frontier-bind-badge{position:absolute;top:10%;left:10%;right:10%;z-index:4;background:#3c2179;color:#eadaff;font-size:9px;font-weight:900;border:1px solid #ad8cfc;border-radius:5px;text-align:center}.frontier-inventory .ui-button:disabled{opacity:.45;cursor:not-allowed}

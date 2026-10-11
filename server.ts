@@ -1,4 +1,4 @@
-import {executeFrontier,finishFrontierTurn,checkExpansion,handLimit,frontierClockRestore,frontierKingSafe,canExpand,frontierUltimate} from './src/utils/frontier.ts';
+import {executeFrontier,finishFrontierTurn,checkExpansion,handLimit,frontierClockRestore,frontierKingSafe,canExpand,frontierUltimate,emptyFrontierSquare} from './src/utils/frontier.ts';
 import {isExtendedFen,adjacent,xy,squareAt,allSquares,ranksFor} from './src/utils/frontierBoard.ts';
 import {viewingGameState,isArbiter} from './src/utils/roomViewing.ts';
 import { randomBytes } from 'node:crypto';
@@ -3115,7 +3115,7 @@ function executeGameAction(
 
     // Validate the complete placement before consuming the card/power-up.
     const target = msg.targetSquare;
-    if (typeof target !== 'string' || !/^[a-h][1-8]$/.test(target)) return;
+    if (typeof target !== 'string' || !allSquares(state.fen).includes(target)) return;
     if (state.monolithSquare && target === state.monolithSquare) {
       if (ws) {
         sendToSocket(ws, {
@@ -3125,7 +3125,7 @@ function executeGameAction(
       }
       return;
     }
-    if (isSquareBlocked(target, state.restrictedSquares, null) || chess.get(target as Square) ||
+    if (state.frontier?.expanded && !emptyFrontierSquare(state,target) || isSquareBlocked(target, state.restrictedSquares, null) || chess.get(target as Square) ||
         state.champions?.w?.square === target || state.champions?.b?.square === target) {
       return; // Cannot place on occupied/restricted/champion square
     }

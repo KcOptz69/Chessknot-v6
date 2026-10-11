@@ -7,6 +7,7 @@ import { PowerUpsState } from '../types.ts';
 import { Layers, Mountain, Sparkles, Eye, Zap, Compass } from 'lucide-react';
 
 interface PowerUpsBarProps {
+  children?: React.ReactNode;
   hasEye?:boolean;
   confirmPlacement?: boolean;
   grounds?: Grounds;
@@ -28,7 +29,7 @@ interface PowerUpsBarProps {
 }
 
 export const PowerUpsBar: React.FC<PowerUpsBarProps> = ({
-  hasEye=false,confirmPlacement = false,
+  children,hasEye=false,confirmPlacement = false,
   grounds,color="w",onGround,selectedGround,
   powerUps,
   progress = 0,
@@ -110,7 +111,7 @@ export const PowerUpsBar: React.FC<PowerUpsBarProps> = ({
   return (
     <GlassPanel id="power-ups-bar">
       <div className="powerup-heading flex items-center justify-between gap-1 w-full flex-nowrap">
-        <h2 className="flex items-center gap-1.5 whitespace-nowrap shrink-0"><Zap size={15} /> Power-ups</h2>
+        <h2 className="flex items-center gap-1.5 whitespace-nowrap shrink-0"><Zap size={15} /> Power-ups & Items</h2>
         <span className="whitespace-nowrap ml-auto shrink-0 text-right text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400">{currentProgress}/5 capture points</span>
       </div>
       <div className="powerup-progress" role="progressbar" aria-label="Capture points toward power-up refresh" aria-valuenow={currentProgress} aria-valuemin={0} aria-valuemax={5}><span style={{width: `${progressPercent}%`}} /></div>
@@ -153,6 +154,7 @@ export const PowerUpsBar: React.FC<PowerUpsBarProps> = ({
       )}
 
       {isJokerLocked && <p className="powerup-hint">Draw locked until all Joker Wild cards are played.</p>}
+      {children}
     </GlassPanel>
   );
 };

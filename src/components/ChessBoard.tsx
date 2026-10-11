@@ -1,4 +1,4 @@
-import {frontierMoves,frontierKingSafe,executeLandingMove,occupant,frontierUltimateTargets} from '../utils/frontier.ts';
+import {frontierMoves,frontierKingSafe,executeLandingMove,occupant,frontierUltimateTargets,emptyFrontierSquare} from '../utils/frontier.ts';
 import {FrontierArt} from './FrontierUI.tsx';
 import {ranksFor,isExtendedFen} from '../utils/frontierBoard.ts';
 import {ChampionInfoDialog} from './ChampionInfoDialog.tsx';
@@ -563,15 +563,16 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
   // Valid card targets (pieces or squares eligible for the currently selected card / power-up)
   const validCardTargets = React.useMemo(() => {
-    if (!selectedCard && !isWildPowerUp) return [];
+    if (!selectedCard && !isWildPowerUp && !isMonolithPowerUp) return [];
     const targets: string[] = [];
 
     // Monolith card / powerup: empty squares
     if (selectedCard?.type === 'monolith' || isMonolithPowerUp) {
-      for (let r = 1; r <= 8; r++) {
+      for (const r of ranksFor(fen)) {
         for (const f of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
           const sq = `${f}${r}`;
           if (
+            (!frontierGame?.frontier?.expanded || emptyFrontierSquare(frontierGame,sq)) &&
             !chess.get(sq as Square) &&
             sq !== monolithSquare &&
             !restrictedSquares.includes(sq) &&
@@ -716,6 +717,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     champions,
     myChampion,
     validChampionDeploySquares,
+    frontierGame,
+    fen,
     championUltimateTargets,
     awakeningMode,
     superPawns,
@@ -769,7 +772,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       const champOnSquare =
         (whiteChampion && whiteChampion.square === square) ||
         (blackChampion && blackChampion.square === square);
-      if (restrictedSquares.includes(square) || pieceOnSquare || champOnSquare) {
+      if (restrictedSquares.includes(square) || pieceOnSquare || champOnSquare || frontierGame?.frontier?.expanded && !emptyFrontierSquare(frontierGame,square)) {
         return; // Cannot place on occupied or restricted square
       }
       onPlaceMonolith(square);

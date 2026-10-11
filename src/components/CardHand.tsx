@@ -312,6 +312,7 @@ export const CardHand: React.FC<CardHandProps> = ({
   React.useEffect(()=>{setWildConfirmation(null);},[selectedCard?.id,isMyTurn]);
 
   const renderCardIcon = (card: Card) => {
+    if(card.type==='traverse')return <FrontierArt type="traverse" className="w-full h-full aspect-square"/>;
     if(card.type==='previous'&&lastMovedPiece)return <V5Piece type={lastMovedPiece} color={playerColor} className="w-full h-full aspect-square"/>;
     if(card.type==='soul_release') {
       const pType = card.soul?.piece?.type || 'q';
