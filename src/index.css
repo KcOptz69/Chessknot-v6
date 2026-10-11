@@ -1377,3 +1377,31 @@ body .move-error-notice>div{margin:0!important;}
 :root .phone-landscape #player-hand-container .hand-grid .compact-hand-card .compact-card-name {font-size:8px!important;}
 /* The neutral Monolith card retains a blue stone treatment. */
 :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="monolith"] .card-art > .v5-art {filter:sepia(.55) saturate(3.4) hue-rotate(165deg) brightness(1.1);}
+
+/* PC hands retain portrait frames without filling the entire game column. */
+@media(min-width:641px) {
+ :root .desktop-match #player-hand-container .hand-grid {
+  grid-template-columns:repeat(5,minmax(0,86px))!important;
+  justify-content:center;gap:8px!important;padding:7px 4px!important;
+  overflow:visible;
+ }
+ :root .desktop-match #player-hand-container .compact-hand-card {
+  max-width:86px!important;width:100%!important;aspect-ratio:5/7;
+  min-height:0!important;height:auto!important;
+ }
+ :root .desktop-match #player-hand-container .compact-hand-card .compact-card-name {font-size:10px!important;}
+ :root .desktop-match #player-hand-container .compact-hand-card[data-card-type="soul_release"] .compact-card-name {font-size:8px!important;}
+}
+/* Explicitly unset the lower anchor: FREE must never stretch down the card. */
+:root #player-hand-container .compact-hand-card .card-art .hand-free-action-badge {
+ position:absolute;inset:auto!important;top:0!important;right:0!important;
+ bottom:auto!important;left:auto!important;width:max-content!important;height:auto!important;
+ min-height:0!important;max-height:none!important;display:inline-flex;align-items:center;
+ justify-content:center;align-self:flex-start;padding:2px 3px!important;
+ border-radius:4px;font-size:8px!important;line-height:1!important;
+ letter-spacing:0;background:#111b2a;color:#fff0af;border:1px solid #eac65b;
+ z-index:3;white-space:nowrap;pointer-events:none;
+}
+@media(max-width:640px) {
+ :root #player-hand-container .compact-hand-card .card-art .hand-free-action-badge {font-size:7px!important;padding:1px 2px!important;}
+}
