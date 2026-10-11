@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./components/FrontierUI.css";
 @import "./components/Rulebook.css";
 @font-face{font-family:'Nunito';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/nunito-400.woff') format('woff');}
 @font-face{font-family:'Nunito';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/nunito-700.woff') format('woff');}
@@ -1378,30 +1379,8 @@ body .move-error-notice>div{margin:0!important;}
 /* The neutral Monolith card retains a blue stone treatment. */
 :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="monolith"] .card-art > .v5-art {filter:sepia(.55) saturate(3.4) hue-rotate(165deg) brightness(1.1);}
 
-/* PC hands retain portrait frames without filling the entire game column. */
-@media(min-width:641px) {
- :root .desktop-match #player-hand-container .hand-grid {
-  grid-template-columns:repeat(5,minmax(0,86px))!important;
-  justify-content:center;gap:8px!important;padding:7px 4px!important;
-  overflow:visible;
- }
- :root .desktop-match #player-hand-container .compact-hand-card {
-  max-width:86px!important;width:100%!important;aspect-ratio:5/7;
-  min-height:0!important;height:auto!important;
- }
- :root .desktop-match #player-hand-container .compact-hand-card .compact-card-name {font-size:10px!important;}
- :root .desktop-match #player-hand-container .compact-hand-card[data-card-type="soul_release"] .compact-card-name {font-size:8px!important;}
-}
-/* Explicitly unset the lower anchor: FREE must never stretch down the card. */
-:root #player-hand-container .compact-hand-card .card-art .hand-free-action-badge {
- position:absolute;inset:auto!important;top:0!important;right:0!important;
- bottom:auto!important;left:auto!important;width:max-content!important;height:auto!important;
- min-height:0!important;max-height:none!important;display:inline-flex;align-items:center;
- justify-content:center;align-self:flex-start;padding:2px 3px!important;
- border-radius:4px;font-size:8px!important;line-height:1!important;
- letter-spacing:0;background:#111b2a;color:#fff0af;border:1px solid #eac65b;
- z-index:3;white-space:nowrap;pointer-events:none;
-}
-@media(max-width:640px) {
- :root #player-hand-container .compact-hand-card .card-art .hand-free-action-badge {font-size:7px!important;padding:1px 2px!important;}
-}
+/* Bag hand preserves card size; mobile and tablet use a stacked swipe row. */
+@media(min-width:1025px){:root #player-hand-container .hand-grid.hand-seven{grid-template-columns:repeat(7,minmax(0,1fr));}}
+@media(max-width:1024px){:root #player-hand-container .hand-grid.hand-seven{display:flex!important;overflow-x:auto;overflow-y:hidden;padding:8px 4px 12px;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;gap:0!important;}.hand-seven>.compact-hand-card{flex:0 0 24%!important;min-width:78px;margin-right:-5%;scroll-snap-align:center;position:relative;}.hand-seven>.compact-hand-card:last-child{margin-right:0}.hand-seven>.compact-hand-card[data-selected]{z-index:5;transform:translateY(-5px)}}
+
+.desktop-match.frontier-expanded .chess-arena>.relative{width:calc(var(--compact-board-size) * 2 / 3)!important;max-width:none!important}.desktop-match.frontier-expanded #chess-board{width:calc(var(--compact-board-size) * 2 / 3)!important;height:var(--compact-board-size)!important;grid-template-rows:repeat(12,minmax(0,1fr))!important}.compact-match.frontier-expanded .board-viewport{overflow-y:auto!important;overscroll-behavior:contain}.compact-match.frontier-expanded .board-stage,.compact-match.frontier-expanded .chess-arena{height:auto!important;flex-shrink:0}.compact-match.frontier-expanded #chess-board{height:calc(var(--compact-board-size) * 1.5)!important;grid-template-rows:repeat(12,minmax(0,1fr))!important}

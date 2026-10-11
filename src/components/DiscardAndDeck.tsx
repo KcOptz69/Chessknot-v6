@@ -31,6 +31,7 @@ interface DiscardAndDeckProps {
 }
 
 const CARD_TYPE_LABELS: Record<CardType, { name: string; color: string; badgeBg: string }> = {
+  traverse:{name:'Traverse',color:'text-violet-300',badgeBg:'bg-violet-950/70 border-violet-500/40'},
   refresh:{name:'Refresh',color:'text-blue-300',badgeBg:'bg-blue-950/70 border-blue-500/40'},
   brick:{name:'Brick',color:'text-stone-300',badgeBg:'bg-stone-950/70 border-stone-500/40'},
   soul_release: {name:"Soul Release",color:"text-stone-200",badgeBg:"bg-stone-950 border-stone-700 text-stone-200"},

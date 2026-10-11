@@ -1,3 +1,4 @@
+import {FrontierIntro} from './FrontierUI.tsx';
 import type {RuleSectionId} from './rulebookData.ts';
 import { useLoopMusic } from '../utils/music.ts';
 import { Modal } from "./UI";
@@ -87,6 +88,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
   const [isRenameModalOpen, setIsRenameModalOpen] = React.useState(false);
   const [renameTarget, setRenameTarget] = React.useState<string | undefined>();
   const [isSetupOpen, setIsSetupOpen] = React.useState(false);
+  const [frontierDetails,setFrontierDetails]=React.useState(false);
   const [futurePack, setFuturePack] = React.useState<{
     title: string;
     description: string;
@@ -171,6 +173,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
     const nextVal = !isShiftedParadigmActive;
     onUpdateConfig({
       expansions: {
+        ...lobbyConfig.expansions,
         treacherousGrounds: isGroundsActive,
         shiftedParadigm: nextVal,
         treacherousGroundsSelected:
@@ -186,6 +189,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
     const nextVal = !isChampionsOfTheMonolithActive;
     onUpdateConfig({
       expansions: {
+        ...lobbyConfig.expansions,
         treacherousGrounds: isGroundsActive,
         shiftedParadigm: isShiftedParadigmActive,
         championsOfTheMonolith: nextVal,
@@ -201,6 +205,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
     const nextVal = !isTheAwakeningActive;
     onUpdateConfig({
       expansions: {
+        ...lobbyConfig.expansions,
         treacherousGrounds: isGroundsActive,
         shiftedParadigm: isShiftedParadigmActive,
         championsOfTheMonolith: isChampionsOfTheMonolithActive,
@@ -216,6 +221,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
     const nextVal = !isGroundsActive;
     onUpdateConfig({
       expansions: {
+        ...lobbyConfig.expansions,
         treacherousGrounds: nextVal,
         shiftedParadigm: isShiftedParadigmActive,
         championsOfTheMonolith: isChampionsOfTheMonolithActive,
@@ -296,6 +302,8 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
       id: "arcane-frontier",
       title: "Arcane Frontier",
       art: "frontier",
+      enabled: lobbyConfig.expansions?.arcaneFrontier===true,
+      toggle: ()=>{if(isHost)onUpdateConfig({expansions:{...lobbyConfig.expansions,arcaneFrontier:lobbyConfig.expansions?.arcaneFrontier!==true}});},
       description: "An expanded board, a Golem Boss, and items to discover.",
     },
     {
@@ -339,6 +347,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
 
   return (
     <div className="ck-menu">
+      {frontierDetails&&<FrontierIntro onClose={()=>setFrontierDetails(false)}/>}
       <header className="ck-menu-header">
         <div className="ck-menu-brand">
           <img src="/logo.png?v=5-blue-knot" alt="ChessKnot logo" />
@@ -417,7 +426,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                   <button
                     className="ck-menu-pack-art"
                     onClick={() =>
-                      available
+                      pack.key==='frontier'?setFrontierDetails(true):available
                         ? onOpenRules(({shifted:'expansion1',champions:'expansion2',awakening:'expansion3',grounds:'expansion4'} as Record<string,RuleSectionId>)[pack.key])
                         : setFuturePack(pack)
                     }
@@ -447,7 +456,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                     <button
                       className="ck-menu-icon-button"
                       onClick={() =>
-                        available
+                        pack.key==='frontier'?setFrontierDetails(true):available
                           ? onOpenRules(({shifted:'expansion1',champions:'expansion2',awakening:'expansion3',grounds:'expansion4'} as Record<string,RuleSectionId>)[pack.key])
                           : setFuturePack(pack)
                       }
@@ -1048,6 +1057,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                       configuredGrounds.length === 2 ? configuredGrounds : [];
                     onUpdateConfig({
                       expansions: {
+        ...lobbyConfig.expansions,
                         shiftedParadigm: isShiftedParadigmActive,
                         championsOfTheMonolith: isChampionsOfTheMonolithActive,
                         theAwakening: isTheAwakeningActive,

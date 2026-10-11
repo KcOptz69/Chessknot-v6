@@ -1,3 +1,6 @@
+import {FrontierIntro,FrontierInventory,FrontierArt} from './components/FrontierUI.tsx';
+import {frontierMoves,occupant,emptyFrontierSquare,frontierKingSafe} from './utils/frontier.ts';
+import {allSquares} from './utils/frontierBoard.ts';
 import {ViewerTools} from './components/ViewerTools.tsx';
 import {MainTutorialOverlay} from './components/MainTutorialOverlay.tsx';
 import {initialTutorial,tutorialReducer} from './components/tutorialBattle.ts';
@@ -80,6 +83,7 @@ import {
   playCaptureSound,
   playGroundEffect,
   isSoundEnabled,
+  getSoundVolume,
 } from './utils/audio.ts';
 
 // Helper to generate a fresh random 6-character room code (e.g. "E7K29X")
@@ -236,6 +240,12 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const [groundMode,setGroundMode]=React.useState<GroundType|'transport'|null>(null);
   const [groundSquare,setGroundSquare]=React.useState<string|null>(null);
   const [portalFrom,setPortalFrom]=React.useState<string|null>(null);
+  const [frontierIntro,setFrontierIntro]=React.useState(false);
+  const [frontierFrom,setFrontierFrom]=React.useState<string|null>(null);
+  const frontierSeen=React.useRef('');
+  const frontierSounds=React.useRef(new Set<string>());
+  React.useEffect(()=>{const f=gameState.frontier;if(!f?.expanded){frontierSeen.current='';return;}if(frontierSeen.current!==f.id){frontierSeen.current=f.id;setFrontierIntro(true);}const audioMap:Record<string,string>={expand:'01-board-expansion',key:'02-chest-key',bag:'03-wayfarers-satchel',chest:'04-chest-opening',mimic:'05-mimic-chest',item:'06-item-use',boss_hit:'07-boss-first-damage',boss_defeat:'08-boss-fallen',summon:'09-golem-summon',traverse:'10-traverse'};for(const e of [...f.events].reverse()){if(frontierSounds.current.has(e.id))continue;frontierSounds.current.add(e.id);if(audioMap[e.kind]&&isSoundEnabled()){const a=new Audio(`/audio/frontier/${audioMap[e.kind]}.mp3`);a.volume=.3 * getSoundVolume();void a.play().catch(()=>{});}}},[gameState.frontier]);
+  React.useEffect(()=>setFrontierFrom(null),[gameState.turnNumber]);
   const [groundsIntro,setGroundsIntro]=React.useState(false);
   const groundsMatchRef=React.useRef<string>('');
   const [groundNotice,setGroundNotice]=React.useState<string|null>(null);
@@ -436,13 +446,13 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   React.useEffect(()=>{setShowArbiterPause(arbiterPaused&&myColor!=='spectator');},[arbiterPaused,myColor,roomId]);
   const isMyTurn = !arbiterPaused && (!tutorialMode||(tutorialState.phase==='play'&&!tutorialState.pendingBot&&!tutorialState.animating&&tutorialState.step<12)) && connected && !gameState.pendingSummon && !(mode==='online'&&recovery?.length) && !handoffPending && (myColor === gameState.turn);
 
-  const validGroundTargets = groundMode && isMyTurn?Array.from({length:64},(_,i)=>'abcdefgh'[i%8]+(Math.floor(i/8)+1)).filter(q=>{const g=gameState.grounds;if(!g)return false;if(groundMode==='transport'||(groundMode==='portal'&&!portalFrom))return g.tiles[q]==='portal' && (groundMode!=='transport' || createSafeChess(gameState.fen).get(q as any)?.color===activeColor || Object.values(gameState.champions).some(c=>c?.square===q && c.color===activeColor));if(createSafeChess(gameState.fen).get(q as any)||gameState.monolithSquare===q||Object.values(gameState.champions).some(c=>c?.square===q)||gameState.restrictedSquares.includes(q)||activeCircle(gameState,q))return false;if(['mine','poison','banish','disarm'].includes(groundMode))return (activeColor==='w'?Number(q[1])<=4:Number(q[1])>=5)&&!['portal','defense'].includes(g.tiles[q])&&!g.traps.some(t=>t.owner===activeColor&&t.square===q&&t.type===groundMode);return !g.tiles[q];}):[];
+  const validGroundTargets = groundMode && isMyTurn?allSquares(gameState.fen).filter(q=>{const g=gameState.grounds;if(!g)return false;if(groundMode==='transport'||(groundMode==='portal'&&!portalFrom))return g.tiles[q]==='portal' && (groundMode!=='transport' || createSafeChess(gameState.fen).get(q as any)?.color===activeColor || Object.values(gameState.champions).some(c=>c?.square===q && c.color===activeColor));if(createSafeChess(gameState.fen).get(q as any)||gameState.monolithSquare===q||Object.values(gameState.champions).some(c=>c?.square===q)||gameState.restrictedSquares.includes(q)||activeCircle(gameState,q))return false;if(['mine','poison','banish','disarm'].includes(groundMode))return (activeColor==='w'?Number(q[1])<=4:Number(q[1])>=5)&&!['portal','defense'].includes(g.tiles[q])&&!g.traps.some(t=>t.owner===activeColor&&t.square===q&&t.type===groundMode);return !g.tiles[q];}):[];
 
   const travelTarget = portalTravelTarget(gameState,activeColor);
   const currentHand = gameState.hands[activeColor] || [];
   const opponentColor: PlayerColor = activeColor === 'w' ? 'b' : 'w';
   const opponentHand = gameState.hands[opponentColor] || [];
-  const activeVision = myColor!=='spectator'&&gameState.visionActive ? gameState.visionActive[activeColor] : false;
+  const activeVision = myColor!=='spectator' && (!!gameState.visionActive?.[activeColor] || !!gameState.frontier?.inventories[activeColor].some(i=>i.type==='eye'));
   const currentPowerUps = gameState.powerUps ? gameState.powerUps[activeColor] : { draw: 1, monolith: 1, wild: 1, vision: 1 };
   const lastPieceMoved = gameState.lastMovedPiece ? gameState.lastMovedPiece[activeColor] : null;
   const lastMovedSquare = gameState.lastMovedSquare ? gameState.lastMovedSquare[activeColor] : null;
@@ -455,12 +465,12 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
 
   const beaconProtectedSquares = React.useMemo(() => {
     if (!gameState.beaconEffect?.active || !gameState.monolithSquare) return [];
-    return getSurroundingSquares(gameState.monolithSquare);
+    return getSurroundingSquares(gameState.monolithSquare,gameState.fen);
   }, [gameState.beaconEffect?.active, gameState.monolithSquare]);
 
   const isCurrentKingInCheck = React.useMemo(() => {
-    return isKingChecked(activeChess, gameState.turn, gameState.monolithSquare, gameState.champions, beaconProtectedSquares, gameState.grounds);
-  }, [activeChess, gameState.turn, gameState.monolithSquare, gameState.champions, beaconProtectedSquares,gameState.grounds]);
+    if(gameState.frontier?.expanded)return !frontierKingSafe(gameState,gameState.turn);return isKingChecked(activeChess, gameState.turn, gameState.monolithSquare, gameState.champions, beaconProtectedSquares, gameState.grounds);
+  }, [activeChess, gameState.turn, gameState.monolithSquare, gameState.champions, beaconProtectedSquares,gameState.grounds,gameState.frontier]);
 
   const checkEscapeCardTypes = React.useMemo(() => {
     if (!isCurrentKingInCheck) return undefined;
@@ -947,7 +957,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
     gameState.pendingSummon ||
     (gameState.status === 'playing' && gameState.pendingPortal && isMyTurn) ||
     (groundMode && groundSquare) ||
-    groundsIntro ||
+    frontierIntro || groundsIntro ||
     awakeningTutorialOpen ||
     groundNotice ||
     isRulesModalOpen ||
@@ -965,7 +975,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
     gameState.status === 'points_win'
   );
 
-  const tacticalPowers = (<PowerUpsBar confirmPlacement={compactUI||tutorialMode}
+  const tacticalPowers = (<><PowerUpsBar confirmPlacement={compactUI||tutorialMode}
             isJokerLocked={isJokerLocked} grounds={gameState.grounds} color={activeColor} selectedGround={groundMode} onGround={type=>{setCompactPanel(null);if(!isMyTurn)return;setGroundMode(groundMode===type?null:type);setGroundSquare(null);setPortalFrom(null);setSelectedCard(null);setIsWildPowerUp(false);setIsMonolithPowerUp(false);}}
             powerUps={currentPowerUps}
             progress={gameState.powerUpProgress ? gameState.powerUpProgress[activeColor] || 0 : 0}
@@ -973,12 +983,12 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
             onUseDraw={()=>{setCompactPanel(null);handleUseDraw();}}
             onUseMonolith={()=>{setCompactPanel(null);handleUseMonolith();}}
             onUseWild={()=>{setCompactPanel(null);handleUseWild();}}
-            onUseVision={()=>{setCompactPanel(null);handleUseVision();}}
+            hasEye={!!gameState.frontier?.inventories[activeColor].some(i=>i.type==='eye')} onUseVision={()=>{if(gameState.frontier?.inventories[activeColor].some(i=>i.type==='eye'))return;setCompactPanel(null);handleUseVision();}}
             isWildActive={isWildPowerUp}
             isMonolithMode={isMonolithPowerUp}
             hasShiftedParadigm={gameState.expansions?.shiftedParadigm !== false}
             hasChampionsOfTheMonolith={gameState.expansions?.championsOfTheMonolith !== false}
-          />);
+          />{myColor!=='spectator'&&<FrontierInventory state={gameState} color={activeColor} disabled={!isMyTurn} send={sendMessage} onIntro={()=>setFrontierIntro(true)}/>}</>);
   const opponentWidget = (<OpponentHand
             hidePowerButton={compactUI} openRequest={opponentInfoRequest}
             grounds={gameState.grounds} color={opponentColor}
@@ -986,15 +996,16 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
             isVisionActive={activeVision || (myColor === 'spectator' && roomPlayers[playerId]?.role === 'arbiter')}
             alwaysReveal={myColor === 'spectator' && roomPlayers[playerId]?.role === 'arbiter'}
             opponentName={opponentColor === 'w' ? 'White' : 'Black'}
-            opponentPowerUps={gameState.powerUps ? gameState.powerUps[opponentColor] : undefined}
+            opponentHasEye={!!gameState.frontier?.inventories[opponentColor].some(i=>i.type==='eye')} permanentVision={!!gameState.frontier?.inventories[activeColor].some(i=>i.type==='eye')} opponentPowerUps={gameState.powerUps ? gameState.powerUps[opponentColor] : undefined}
             hasShiftedParadigm={gameState.expansions?.shiftedParadigm !== false}
             hasChampionsOfTheMonolith={gameState.expansions?.championsOfTheMonolith !== false}
           />);
   const viewerTools=!tutorialMode?<ViewerTools roomId={roomId} players={roomPlayers} myId={playerId} game={gameState} allowArbiter={lobbyConfig.allowArbiter} recovery={arbiterRecovery} send={sendMessage} onChat={()=>setChatOpen(true)}/>:undefined;
   if(tutorialLaunch&&!tutorialMode)return <App tutorialMode onExitTutorial={()=>setTutorialLaunch(false)}/>;
   return (
-    <div className={`game-app min-h-screen bg-gradient-to-b from-stone-50 via-stone-100 to-blue-50/30 text-stone-800 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950 dark:text-stone-100 flex flex-col font-sans antialiased selection:bg-blue-500 selection:text-white transition-colors duration-200 ${isAnyPopupActive ? 'has-popup-open' : ''} ${phoneLandscape && gameState.status !== 'lobby' ? 'phone-landscape' : ''} ${gameState.status !== 'lobby' ? (compactUI ? 'compact-match' : 'desktop-match') : ''}`}>
+    <div className={`game-app min-h-screen bg-gradient-to-b from-stone-50 via-stone-100 to-blue-50/30 text-stone-800 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950 dark:text-stone-100 flex flex-col font-sans antialiased selection:bg-blue-500 selection:text-white transition-colors duration-200 ${gameState.frontier?.expanded?'frontier-expanded':''} ${isAnyPopupActive ? 'has-popup-open' : ''} ${phoneLandscape && gameState.status !== 'lobby' ? 'phone-landscape' : ''} ${gameState.status !== 'lobby' ? (compactUI ? 'compact-match' : 'desktop-match') : ''}`}>
       {!tutorialMode&&welcomeTutorial&&gameState.status==='lobby'&&<Modal className="tutorial-welcome-modal"><section className="tutorial-welcome-dialog"><h2>New to ChessKnot?</h2><p>Learn the board, cards, and power-ups with Friendly Joe in an interactive practice match.</p><div><Button className="tutorial-entry-gold" onClick={()=>dismissWelcome(true)}>Play tutorial</Button><Button aria-label="Close dialog" onClick={()=>dismissWelcome(false)}>Skip for now</Button></div><p className="tutorial-welcome-note">You can always start the tutorial from the rulebook.</p></section></Modal>}
+      {frontierIntro&&<FrontierIntro onClose={()=>setFrontierIntro(false)}/>}
       {gameState.pendingSummon && (myColor===gameState.pendingSummon.player) && <div className="ground-popup"><section className="ground-dialog summon-choice-dialog" role="dialog" aria-modal="true" aria-label="Choose a piece to revive"><h2>Summoning circle is ready</h2><p>Choose a captured piece to revive on {gameState.summoningCircles?.find(c=>c.id===gameState.pendingSummon!.circleId)?.square}. This is free. The chess clock is paused.</p><div className="revival-options">{eligibleRevives(gameState,gameState.pendingSummon.player).map(({piece,index})=><button className="revival-choice" key={index} onClick={()=>{  sendMessage({type:'resolve_summon',captureIndex:index}); }}><V5Piece type={piece.type} color={gameState.pendingSummon!.player} className="w-16 h-16"/><span>{piece.type==='sp'?'Super Pawn':piece.type==='sn'?'Super Knight':({p:'Pawn',n:'Knight',b:'Bishop',r:'Rook',q:'Queen'} as any)[piece.type]}</span></button>)}</div><div className="flex justify-end mt-3"><button onClick={()=>sendMessage({type:'resolve_summon',captureIndex:null})}>Decline revival</button></div></section></div>}
       {mode==='online'&&(recoveryRequired||(myColor!=='spectator'&&gameState.status==='playing'&&recovery.length>0))&&<RecoveryPanel roomId={roomId} recovery={recovery} myColor={myColor} send={sendMessage} requestCode={recoveryRequired||myColor==='spectator'} onDismiss={()=>setRecoveryRequired(false)} onLeave={()=>{sendMessage({type:'return_to_lobby'});handleJoinRoom(generateRandomRoomCode(),'online');}}/>}
       {showArbiterPause&&arbiterPaused&&myColor!=='spectator'&&<Modal><section className="viewer-dialog"><h2 className="pause-info-title">Match paused</h2><p>The Arbiter paused the clock. Cards and piece moves are disabled until the Arbiter resumes the match.</p><Button aria-label="Close dialog" onClick={()=>setShowArbiterPause(false)}>Got it</Button></section></Modal>}
@@ -1094,7 +1105,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
         </aside>}
         {phoneLandscape && <aside className="landscape-support-column">
           <div ref={setLandscapeOpponentHost} className="landscape-tag-host"/>
-          <button onClick={()=>setCompactPanel('powers')}><Zap size={17}/>Power-ups</button>
+          <button onClick={()=>setCompactPanel('powers')}><Zap size={17}/>Power-ups & Items</button>
           <div className="landscape-info-actions"><button onClick={()=>setCompactPanel('info')}><Info size={16}/>Info</button>{opponentWidget}</div>
           <div ref={setLandscapeDescriptionHost} className="landscape-description-host"/>
           <div ref={setLandscapePlayerHost} className="landscape-tag-host landscape-own-tag"/>
@@ -1125,6 +1136,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
           <div ref={boardViewport} className="board-viewport"><div className="board-stage flex justify-center">
                           {groundMode&&<div className="ground-controls"><strong>{groundMode==='transport'?'Choose your piece on a portal to warp':groundMode==='portal'&&!portalFrom?'Choose a portal to relocate':`Place ${GROUND_NAMES[groundMode as GroundType]}`}</strong><button onClick={()=>{setGroundMode(null);setGroundSquare(null);}}>Cancel</button></div>}
 <ChessBoard
+              frontier={gameState.frontier} frontierGame={gameState}
               tutorialGuide={tutorialMode?{from:tutorialState.step<8?TUTORIAL_ROUTE[tutorialState.step][0]:null,to:tutorialState.step<8?TUTORIAL_ROUTE[tutorialState.step][1]:null,guard:square=>{const allowed=tutorialSquareAllowed(tutorialState,square);if(allowed&&createSafeChess(tutorialState.fen).get(square as any)?.color==='w')tutorialDispatch({type:'square',value:square});return allowed;}}:undefined}
               controlsHost={boardControlsHost}
               hasPopup={isAnyPopupActive}
@@ -1132,8 +1144,8 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
               grounds={gameState.grounds}
               groundNotice={groundNotice} onDismissGroundNotice={()=>setGroundNotice(null)}
               hands={gameState.hands} historyLog={gameState.historyLog} summoningCircles={gameState.summoningCircles} soulSummons={gameState.soulSummons} pieceIds={gameState.pieceIds}
-              groundTargets={selectedCard?.type==='soul_release'&&isMyTurn?soulTargets(gameState,selectedCard,activeColor):validGroundTargets}
-              onGroundSquare={q=>{if(selectedCard?.type==='soul_release'){if(isMyTurn&&soulTargets(gameState,selectedCard,activeColor).includes(q)){sendMessage({type:'play_soul_release',cardId:selectedCard.id,targetSquare:q});setSelectedCard(null);}return true;}if(!groundMode)return false;if(!isMyTurn || !validGroundTargets.includes(q))return true;if(groundMode==='portal'&&!portalFrom){if(gameState.grounds?.tiles[q]==='portal')setPortalFrom(q);return true;}setGroundSquare(q);return true;}}
+              groundTargets={gameState.frontier?.expanded&&frontierFrom&&!groundMode?(selectedCard?.type==='traverse'?allSquares(gameState.fen).filter(q=>/[WXYZ]$/.test(q)&&emptyFrontierSquare(gameState,q)):frontierMoves(gameState,frontierFrom,occupant(gameState,frontierFrom)?.type==='golem'?({pawn:'k',knight:'n',bishop:'b',rook:'r',queen:'q'} as any)[selectedCard?.type||'']:undefined,occupant(gameState,frontierFrom)?.type==='golem'&&selectedCard?.type!=='pawn')):selectedCard?.type==='soul_release'&&isMyTurn?soulTargets(gameState,selectedCard,activeColor):validGroundTargets}
+              onGroundSquare={q=>{if(gameState.frontier?.expanded&&!groundMode&&isMyTurn&&(selectedCard?.type==='traverse'||selectedCard&&['pawn','knight','bishop','rook','queen'].includes(selectedCard.type)&&(occupant(gameState,q)?.type==='golem'||!!frontierFrom&&occupant(gameState,frontierFrom)?.type==='golem'))){const piece=occupant(gameState,q);if(piece?.color===activeColor){setFrontierFrom(q);return true;}if(frontierFrom){sendMessage({type:occupant(gameState,frontierFrom)?.type==='golem'?'frontier_golem_move':'play_card_move',cardId:selectedCard!.id,from:frontierFrom,to:q} as any);setFrontierFrom(null);setSelectedCard(null);}return true;}if(selectedCard?.type==='soul_release'){if(isMyTurn&&soulTargets(gameState,selectedCard,activeColor).includes(q)){sendMessage({type:'play_soul_release',cardId:selectedCard.id,targetSquare:q});setSelectedCard(null);}return true;}if(!groundMode)return false;if(!isMyTurn || !validGroundTargets.includes(q))return true;if(groundMode==='portal'&&!portalFrom){if(gameState.grounds?.tiles[q]==='portal')setPortalFrom(q);return true;}setGroundSquare(q);return true;}}
 
               fen={gameState.fen}
               onOpenChat={!compactUI && mode === 'online' ? () => { setChatOpen(true); setUnreadChat(0); } : undefined}
@@ -1210,10 +1222,10 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
             beaconTurns={gameState.beaconEffect?.active ? Math.max(0, (gameState.beaconEffect.expiresOnTurnNumber ?? (gameState.turnNumber + 6)) - gameState.turnNumber) : undefined}
           />
           </div>,landscapePlayerHost)}
-          {<div className="compact-dock-actions"><button onClick={()=>setCompactPanel('powers')}><Zap size={16}/>Power-ups</button>{travelTarget && <button disabled={!isMyTurn || Boolean(gameState.pendingPortal)} onClick={()=>{if(isMyTurn)sendMessage({type:'portal_move',from:travelTarget.from});}}>Travel (Free)</button>}<button disabled={!isMyTurn || isJokerLocked} onClick={handleOpenDiscardRedraw}><RefreshCw size={14}/>Redraw / Pass</button></div>}
+          {<div className="compact-dock-actions"><button onClick={()=>setCompactPanel('powers')}><Zap size={16}/>Power-ups & Items</button>{travelTarget && <button disabled={!isMyTurn || Boolean(gameState.pendingPortal)} onClick={()=>{if(isMyTurn)sendMessage({type:'portal_move',from:travelTarget.from});}}>Travel (Free)</button>}<button disabled={!isMyTurn || isJokerLocked} onClick={handleOpenDiscardRedraw}><RefreshCw size={14}/>Redraw / Pass</button></div>}
           {myColor==='spectator'&&roomPlayers[playerId]?.role!=='arbiter'?<div className="viewing-hand-placeholder"><span>Spectator · hands and traps are hidden</span><Button onClick={handleReturnToLobby}>Quit viewing</Button></div>:(          <CardHand suppressJokerSurgePopup={tutorialMode} compact={compactUI} floatingDetails={!compactUI} descriptionHost={phoneLandscape?landscapeDescriptionHost:!compactUI?desktopDescriptionHost:undefined}
             disabledSoulIds={currentHand.filter(c=>c.type==='soul_release'&&!soulTargets(gameState,c,activeColor).length).map(c=>c.id)}
-            hand={currentHand}
+            boundCardId={gameState.frontier?.bind?.target===activeColor?gameState.frontier.bind.cardId:undefined} hand={currentHand}
             selectedCardId={selectedCard?.id || null}
             onSelectCard={myColor==='spectator'?()=>{}:handleSelectCard}
             onPlayRefresh={cardId=>{if(!isMyTurn||isJokerLocked)return;sendMessage({type:'play_refresh',cardId});setSelectedCard(null);}}
@@ -1261,7 +1273,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
       )}
 
       {gameState.status !== 'lobby' && <PopupLayer><div data-mobile-device={typeof navigator !== "undefined" && (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) ? "true" : "false"} className="portrait-guard" role="alert"><Maximize size={40}/><h2>Rotate to portrait</h2><p>Rotate your device to continue playing.</p><small>The match and chess clock continue running.</small></div></PopupLayer>}
-      {compactUI && compactPanel && <Modal className="compact-modal-backdrop" onClick={()=>setCompactPanel(null)}><section className="compact-dialog" onClick={e=>e.stopPropagation()}><div className="compact-dialog-heading"><h2>{compactPanel==='info'?'Match Info':compactPanel==='powers'?'Power-ups':'Game Log'}</h2><button aria-label="Close dialog" onClick={()=>setCompactPanel(null)}><X size={20}/></button></div>
+      {compactUI && compactPanel && <Modal className="compact-modal-backdrop" onClick={()=>setCompactPanel(null)}><section className="compact-dialog" onClick={e=>e.stopPropagation()}><div className="compact-dialog-heading"><h2>{compactPanel==='info'?'Match Info':compactPanel==='powers'?'Power-ups & Items':'Game Log'}</h2><button aria-label="Close dialog" onClick={()=>setCompactPanel(null)}><X size={20}/></button></div>
         {compactPanel==='info' && <div className="compact-info-list"><button onClick={()=>{setCompactPanel(null);setPileRequest({type:'deck',id:Date.now()});}}><Layers/><span>Draw Pile<small>{(gameState.hiddenDeckCount??gameState.deck.length)} cards remaining</small></span><span>›</span></button><button onClick={()=>{setCompactPanel(null);setPileRequest({type:'discard',id:Date.now()});}}><ScrollText/><span>Discard & Exhausted<small>Last played: {gameState.discard.at(-1)?.name || 'None'}</small></span><span>›</span></button><button onClick={()=>{setCompactPanel(null);setOpponentInfoRequest(v=>v+1);}}><Zap/><span>Opponent’s Power-ups<small>View available power-ups</small></span><span>›</span></button><button onClick={()=>setCompactPanel('log')}><ScrollText/><span>Game Log<small>Moves and match events</small></span><span>›</span></button></div>}
         {compactPanel==='powers' && tacticalPowers}
         {compactPanel==='log' && <GameLog historyLog={gameState.historyLog} trapsEnabled={Boolean(gameState.expansions?.treacherousGrounds)}/>}
@@ -1288,7 +1300,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
       {captureViewer && <Modal className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
         <div className="capture-dialog glass-panel w-full max-w-md p-4">
           <div className="flex justify-between items-center gap-3"><h2 className="font-bold">Pieces captured by {captureViewer === 'w' ? 'White' : 'Black'}</h2><Button variant="ghost" aria-label="Close dialog" onClick={() => setCaptureViewer(null)}>×</Button></div>
-          {(gameState.captures?.[captureViewer] || []).length ? <div className="captured-piece-grid">{gameState.captures![captureViewer].map((piece,index) => <div key={index} title={piece.type} className="captured-piece-tile"><PieceIcon type={piece.type} color={piece.color} className="w-12 h-12" /></div>)}</div> : <p className="text-sm mt-4">No pieces captured yet.</p>}
+          {(gameState.captures?.[captureViewer] || []).length ? <div className="captured-piece-grid">{gameState.captures![captureViewer].map((piece,index) => <div key={index} title={piece.type} className="captured-piece-tile">{piece.type==='golem'?<FrontierArt type={piece.color==='w'?'golem':'black_golem'} className="w-12 h-12"/>:<PieceIcon type={piece.type} color={piece.color} className="w-12 h-12" />}</div>)}</div> : <p className="text-sm mt-4">No pieces captured yet.</p>}
         </div>
       </Modal>}
       {confirmResign && <Modal className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">

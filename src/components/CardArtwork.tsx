@@ -1,3 +1,4 @@
+import {FrontierArt} from './FrontierUI.tsx';
 import React from 'react';
 import type {Card, PlayerColor, ChampionPiece} from '../types.ts';
 import {V5Piece,V5Power} from './V5Art.tsx';
@@ -7,6 +8,7 @@ export function FreeActionArtwork({children}:{children:React.ReactNode}) {
  return <span className="free-action-artwork">{children}<span className="free-action-icon-badge">FREE</span></span>;
 }
 export function CardArtwork({card,color='w',champion,className='w-full h-full'}:{card:Card;color?:PlayerColor;champion?:ChampionPiece|null;className?:string}) {
+ if(card.type==='traverse')return <FrontierArt type="traverse" className={className}/>;
  if(card.type==='soul_release') {
   const pType = card.soul?.piece?.type || 'q';
   const pColor = card.soul?.piece?.color || (color === 'w' ? 'b' : 'w');

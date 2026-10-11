@@ -1,3 +1,4 @@
+import type {FrontierState, FrontierItem} from './utils/frontier.ts';
 import type { Grounds, GroundType } from './utils/grounds.ts';
 export type PlayerColor = 'w' | 'b';
 
@@ -5,6 +6,7 @@ export type StandardPieceType = 'p' | 'n' | 'b' | 'r' | 'q' | 'k';
 export type PieceType = StandardPieceType | 'm' | 'sp' | 'sn'; // 'm' for monolith, 'sp' for super pawn, 'sn' for super knight
 
 export type CardType =
+  | 'traverse'
   | 'pawn'
   | 'knight'
   | 'bishop'
@@ -203,6 +205,7 @@ export interface LastMoveDetails {
 }
 
 export interface GameExpansionsConfig {
+  arcaneFrontier?: boolean;
   shiftedParadigm: boolean;
   championsOfTheMonolith?: boolean;
   theAwakening?: boolean;
@@ -210,12 +213,14 @@ export interface GameExpansionsConfig {
   treacherousGroundsSelected?: string[];
 }
 
-export interface CapturedPiece { type: StandardPieceType | ChampionType | 'sp' | 'sn'; color: PlayerColor; }
+export interface CapturedPiece { type: StandardPieceType | ChampionType | 'sp' | 'sn' | 'golem'; color: PlayerColor; capturedTurn?:number; }
 
 export interface SummoningCircle { bishopId?:string; id:string; owner:PlayerColor; square:string; remaining:number; createdTurn:number; interrupted?:boolean; finished?:boolean; }
 export interface SoulSummon { id:string; owner:PlayerColor; pieceId:string; remaining:number; createdTurn:number; }
 
 export interface BoardSnapshot {
+  frontier?: FrontierState;
+  frontierLocked?: boolean;
   awakeningSkill?: boolean;
   summoningCircles?: SummoningCircle[];
   soulSummons?: SoulSummon[];
@@ -237,6 +242,7 @@ export interface BoardSnapshot {
 }
 
 export interface GameState {
+  frontier?: FrontierState;
   handCounts?: {w:number;b:number};
   hiddenDeckCount?: number;
   summoningCircles?: SummoningCircle[];
@@ -361,8 +367,14 @@ export interface RoomState {
 }
 
 export type ClientMessage =
+  | {type: 'expand_frontier'}
+  | {type: 'frontier_item';item:FrontierItem;from?:string;to?:string;cardId?:string;targetCardId?:string;targetSquare?:string;targetFriendlySquare?:string;targetSquares?:string[]}
+  | {type: 'frontier_golem_move';cardId:string;from:string;to:string}
+  | {type: 'frontier_self_destruct';from:string}
+  | {type: 'frontier_bind';targetCardId:string}
+
   | {type:'claim_arbiter'}
-  | {type:'return_as_player'; color?: 'w' | 'b'}
+  | {type:'return_as_player';color?:PlayerColor}
   | {type:'quit_viewing'}
   | {type:'kick_spectator';playerId:string}
   | {type:'arbiter_pause';paused:boolean}

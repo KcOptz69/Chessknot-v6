@@ -1,3 +1,4 @@
+import {FrontierArt} from './FrontierUI.tsx';
 import {isFreeActionCard, cardDisplayName} from './CardArtwork.tsx';
 import { AWAKENING_DESCRIPTIONS, AWAKENING_WILD_DESCRIPTION } from '../utils/cardDescriptions.ts';
 import {V5Piece,V5Power} from './V5Art.tsx';
@@ -27,6 +28,7 @@ interface CardHandProps {
   canTravel?: boolean;
   onOpenDiscardRedraw?: () => void;
   isJokerLocked?: boolean;
+  boundCardId?:string;
   isMyTurn: boolean;
   playerColor: PlayerColor;
   lastMovedPiece: StandardPieceType | null;
@@ -60,6 +62,7 @@ const CARD_STYLES: Record<
     icon: (isDark?: boolean) => React.ReactNode;
   }
 > = {
+  traverse: {bg:'bg-violet-950/80',border:'border-violet-400/60',badgeBg:'bg-violet-500/20',badgeText:'text-violet-100',accent:'purple',icon:()=> <FrontierArt type="traverse"/>},
   refresh: {
     bg:'from-blue-50 to-white dark:from-blue-950 dark:to-stone-950',
     border:'border-blue-400',badgeBg:'bg-blue-100',badgeText:'text-blue-900',accent:'blue',
@@ -271,7 +274,7 @@ export const CardHand: React.FC<CardHandProps> = ({
   onPlayStatic,
   onPlayClock,
   onOpenDiscardRedraw,onTravel,canTravel=false,
-  isJokerLocked,
+  boundCardId,isJokerLocked,
   isMyTurn,
   playerColor,
   lastMovedPiece,
@@ -368,21 +371,21 @@ export const CardHand: React.FC<CardHandProps> = ({
         </div>
       </div>
 
-      <div className="hand-grid">
+      <div className={`hand-grid ${hand.length>5?'hand-seven':''}`} aria-label={hand.length>5?'Seven-card hand, swipe to browse':undefined}>
         {hand.map((card) => {
           const isSelected = selectedCardId === card.id;
           const isCheckEscape = Boolean(isKingInCheck && isMyTurn && checkEscapeCardTypes?.has(card.type));
           const style = CARD_STYLES[card.type] || CARD_STYLES.wild;
-          const unavailable = card.type === 'brick' || (card.type === 'refresh' && Boolean(isJokerLocked)) || disabledSoulIds.includes(card.id) || !isMyTurn || (card.type === 'previous' && !lastMovedPiece) ||
+          const unavailable = card.id===boundCardId || card.type === 'brick' || (card.type === 'refresh' && Boolean(isJokerLocked)) || disabledSoulIds.includes(card.id) || !isMyTurn || (card.type === 'previous' && !lastMovedPiece) ||
             ((card.type === 'beacon' || card.type === 'static') && !monolithSquare) ||
             (card.type === 'clock' && Boolean(clockBlockReason));
           return (
             <CardSurface key={card.id} id={`card-${card.id}`} data-card-id={card.id}
-              data-card-type={card.type}
+              data-card-type={card.type} data-bound={card.id===boundCardId||undefined}
               data-joker-wild={card.isJokerWild || undefined}
               data-awakening={card.type.startsWith('awakening_') || undefined}
               data-selected={isSelected || undefined} data-unavailable={unavailable || undefined}
-              role="button" tabIndex={isMyTurn ? 0 : -1} aria-disabled={!isMyTurn} aria-pressed={isSelected} aria-label={card.type === 'joker' ? 'JOKER' : cardDisplayName(card)}
+              role="button" tabIndex={isMyTurn ? 0 : -1} aria-disabled={unavailable} aria-pressed={isSelected} aria-label={card.type === 'joker' ? 'JOKER' : cardDisplayName(card)}
               onKeyDown={(event) => { if (isMyTurn && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }}
               onClick={() => {
                 if (!isMyTurn) return;
@@ -402,7 +405,7 @@ export const CardHand: React.FC<CardHandProps> = ({
                   <span>Escape</span>
                 </span>
               )}
-              <span className="compact-card-name">
+              {card.id===boundCardId&&<span className='frontier-bind-badge'>BOUND</span>}<span className="compact-card-name">
                 {cardDisplayName(card)}
               </span>
             </CardSurface>

@@ -1,3 +1,5 @@
+import {initialFrontier,frontierMoves,frontierKingSafe,frontierEscape} from './frontier.ts';
+import {boardFor,isExtendedFen,adjacent,ranksFor,xy,squareAt} from './frontierBoard.ts';
 import { AWAKENING_DESCRIPTIONS } from './cardDescriptions.ts';
 import { soulTargets, placeRevived, kingSafe } from './summoning.ts';
 import { landGround } from './grounds.ts';
@@ -111,6 +113,7 @@ export function createCard(type: CardType, index: number): Card {
     refresh: {name:'Refresh',description:'Free action: discard your entire hand, including Brick, and draw 5 new cards. Cannot be played during Joker Wild Surge.'},
     brick: {name:'Brick',description:'Unplayable. Occupies a hand slot until discarded by Redraw, Exchange, Refresh, or Joker.'},
     soul_release: {name:'Soul Release',description:'Summon a bound captured piece within the 5×5 area around its original Queen. Move action; five subsequent turns; zero army and capture value; exhausts on use.'},
+    traverse: {name:'Traverse',description:'Teleport a friendly piece to an empty, unrestricted Mystic Field square. Move action.'},
     pawn: {
       name: 'Pawn',
       description: 'Move any of your pawns according to standard chess rules.',
@@ -345,7 +348,7 @@ export function calculatePiecePoints(
   chess: Chess,
   color: PlayerColor,
   champions?: { w: ChampionPiece | null; b: ChampionPiece | null } | null,
-  identityState?: Pick<GameState,'pieceIds'|'soulSummons'>
+  identityState?: Pick<GameState,'pieceIds'|'soulSummons'|'frontier'>
 ): number {
   let total = 0;
   const board = chess.board();
@@ -360,6 +363,7 @@ export function calculatePiecePoints(
   if (champions && champions[color] && champions[color]?.square) {
     total += 5;
   }
+  total += (identityState?.frontier?.golems.filter(g=>g.owner===color).length||0)*10;
   return total;
 }
 
@@ -372,6 +376,7 @@ export function calculatePiecePoints(
  * (e.g., permits pawns on back ranks without crashing the engine).
  */
 export function createSafeChess(fen?: string): Chess {
+  if (fen && isExtendedFen(fen)) return boardFor(fen);
   if (!fen) return new Chess();
   fen = sanitizeEnPassantFen(fen);
   try {
@@ -393,6 +398,7 @@ export function createSafeChess(fen?: string): Chess {
 // A stale en-passant target with the wrong active color can make chess.js
 // serialize a phantom pawn while testing and undoing a hypothetical capture.
 function sanitizeEnPassantFen(fen: string): string {
+ if(isExtendedFen(fen))return fen;
  const parts=fen.split(' '), ep=parts[3];
  if(!ep || ep==='-')return fen;
  const white=parts[1]==='w';
@@ -428,7 +434,7 @@ export function syncFenTurn(fen: string, nextTurn: PlayerColor, preserveEpSquare
 export function ensureEdgePawnsPromoted(chess: Chess): boolean {
   let changed = false;
   const board = chess.board();
-  for (let r = 0; r < 8; r++) {
+  for (let r = 0; r < board.length; r++) {
     for (let f = 0; f < 8; f++) {
       const piece = board[r][f];
       if (piece && piece.type === 'p') {
@@ -436,10 +442,10 @@ export function ensureEdgePawnsPromoted(chess: Chess): boolean {
         // White pawn promotes only on opponent's back rank (Rank 8, r === 0)
         // Black pawn promotes only on opponent's back rank (Rank 1, r === 7)
         const reachesOpponentBackline =
-          (piece.color === 'w' && r === 0) || (piece.color === 'b' && r === 7);
+          (piece.color === 'w' && r === 0) || (piece.color === 'b' && r === board.length-1);
         if (reachesOpponentBackline) {
           const fileChar = String.fromCharCode('a'.charCodeAt(0) + f);
-          const rankChar = (8 - r).toString();
+          const rankChar = piece.square.slice(1);
           const square = `${fileChar}${rankChar}` as Square;
           chess.remove(square);
           chess.put({ type: 'q', color: piece.color }, square);
@@ -516,14 +522,15 @@ export function isKingChecked(
   beaconProtectedSquares?: string[],
   grounds?: Grounds
 ): boolean {
+  if(isExtendedFen(chess.fen()))return !frontierKingSafe(movementState(chess,[],monolithSquare,champions,[],beaconProtectedSquares||[],[],[],[],grounds),color);
   const board = chess.board();
   let kingSquare: Square | null = null;
-  for (let r = 0; r < 8; r++) {
+  for (let r = 0; r < board.length; r++) {
     for (let f = 0; f < 8; f++) {
       const p = board[r][f];
       if (p && p.type === 'k' && p.color === color) {
         const fileChar = String.fromCharCode('a'.charCodeAt(0) + f);
-        const rankChar = (8 - r).toString();
+        const rankChar = p.square.slice(1);
         kingSquare = `${fileChar}${rankChar}` as Square;
         break;
       }
@@ -612,6 +619,7 @@ export function createInitialGameState(
   const grounds=initialGrounds(expansions.treacherousGrounds !== false, Math.random, expansions.treacherousGroundsSelected);
   return {
     grounds,
+    frontier: expansions.arcaneFrontier ? initialFrontier() : undefined,
     pieceIds,superPawnIds:[],superKnightIds:[],
     fen: chess.fen(),
     turn: 'w',
@@ -629,6 +637,7 @@ export function createInitialGameState(
       b: 0,
     },
     expansions: {
+      arcaneFrontier: expansions.arcaneFrontier===true,
       shiftedParadigm: hasShiftedParadigm,
       championsOfTheMonolith: hasChampionsOfTheMonolith,
       theAwakening: hasTheAwakening,
@@ -786,9 +795,10 @@ export function getSlideSquares(
   isPush: boolean = false,
   champions?: { w: ChampionPiece | null; b: ChampionPiece | null } | null
 ): string[] {
+  const rankOrder=ranksFor(chess.fen());
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const fromFile = files.indexOf(from[0]);
-  const fromRank = parseInt(from[1], 10);
+  const fromRank = rankOrder.indexOf(from[1])+1;
   const currentPiece =
     chess.get(from as Square) ||
     (champions?.w?.square === from
@@ -802,8 +812,8 @@ export function getSlideSquares(
     let f = fromFile + df;
     let r = fromRank + dr;
 
-    while (f >= 0 && f < 8 && r >= 1 && r <= 8) {
-      const sq = `${files[f]}${r}`;
+    while (f >= 0 && f < 8 && r >= 1 && r <= rankOrder.length) {
+      const sq = `${files[f]}${rankOrder[r-1]}`;
 
       // Restricted squares cannot be landed on, but pieces can still pass through
       if (restrictedSquares.includes(sq)) {
@@ -939,6 +949,7 @@ export function getLegalMovesForPiece(
   awakenedPieces: string[] = [],
   grounds?: Grounds
 ): string[] {
+  if(isExtendedFen(chess.fen()))return frontierMoves(movementState(chess,restrictedSquares,monolithSquare,champions||{w:friendlyChampionSquare?{square:friendlyChampionSquare,color:'w',type:'berserker'}:null,b:enemyChampion},staticStunnedSquares,beaconProtectedSquares,awakenedRooks,superPawns,superKnights,grounds),square);
   const piece = chess.get(square);
   if (!piece) return [];
   if (square === monolithSquare) return [];
@@ -1389,11 +1400,12 @@ export function getQueenMovesForKing(
   beaconProtectedSquares: string[] = [],
   awakenedRooks: AwakenedRookState[] = []
 ): string[] {
+  const rankOrder=ranksFor(chess.fen());
   const piece = chess.get(square);
   if (!piece || piece.type !== 'k') return [];
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const f = files.indexOf(square[0]);
-  const r = parseInt(square[1], 10);
+  const r = rankOrder.indexOf(square[1])+1;
 
   const directions = [
     [1, 0], [-1, 0], [0, 1], [0, -1], // Orthogonal (Rook)
@@ -1408,8 +1420,8 @@ export function getQueenMovesForKing(
     let currF = f + df;
     let currR = r + dr;
 
-    while (currF >= 0 && currF < 8 && currR >= 1 && currR <= 8) {
-      const targetSq = `${files[currF]}${currR}`;
+    while (currF >= 0 && currF < 8 && currR >= 1 && currR <= rankOrder.length) {
+      const targetSq = `${files[currF]}${rankOrder[currR-1]}`;
 
       if (targetSq === monolithSquare) break;
       if (friendlyChamp && friendlyChamp.square === targetSq) break;
@@ -1529,11 +1541,12 @@ function canPieceAttackSquare(
   chess: Chess,
   restrictedSquares: string[]
 ): boolean {
+  const rankOrder=ranksFor(chess.fen());
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const f1 = files.indexOf(from[0]);
-  const r1 = parseInt(from[1], 10);
+  const r1 = rankOrder.indexOf(from[1])+1;
   const f2 = files.indexOf(to[0]);
-  const r2 = parseInt(to[1], 10);
+  const r2 = rankOrder.indexOf(to[1])+1;
   const df = f2 - f1;
   const dr = r2 - r1;
 
@@ -1579,11 +1592,12 @@ function hasClearPath(
   chess: Chess,
   restrictedSquares: string[]
 ): boolean {
+  const rankOrder=ranksFor(chess.fen());
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const f1 = files.indexOf(from[0]);
-  const r1 = parseInt(from[1], 10);
+  const r1 = rankOrder.indexOf(from[1])+1;
   const f2 = files.indexOf(to[0]);
-  const r2 = parseInt(to[1], 10);
+  const r2 = rankOrder.indexOf(to[1])+1;
 
   const df = Math.sign(f2 - f1);
   const dr = Math.sign(r2 - r1);
@@ -1592,7 +1606,7 @@ function hasClearPath(
   let currR = r1 + dr;
 
   while (currF !== f2 || currR !== r2) {
-    const sq = `${files[currF]}${currR}`;
+    const sq = `${files[currF]}${rankOrder[currR-1]}`;
     if (restrictedSquares.includes(sq) || chess.get(sq as Square)) {
       return false;
     }
@@ -1661,8 +1675,9 @@ export function canPlayerEscapeCheck(
   defendingColor: PlayerColor,
   allowRefresh = true
 ): boolean {
-  const protectedSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare) : [];
+  const protectedSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [];
 
+  if(isExtendedFen(state.fen))return frontierKingSafe(state,defendingColor)||frontierEscape(state,defendingColor);
   // If King is not in check, no need to escape
   if (!isKingChecked(chess, defendingColor, state.monolithSquare, state.champions, protectedSquares, state.grounds)) {
     return true;
@@ -2080,7 +2095,8 @@ export function getCheckEscapeCardTypes(
   defendingColor: PlayerColor
 ): Set<CardType> {
   const escapeTypes = new Set<CardType>();
-  const protectedSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare) : [];
+  if(isExtendedFen(state.fen)){for(const card of state.hands[defendingColor]){if(!['push','switch','monolith','clock','traverse'].includes(card.type)||card.id===state.frontier?.bind?.cardId)continue;const draft=structuredClone(state);draft.hands[defendingColor]=[card];if(frontierEscape(draft,defendingColor))escapeTypes.add(card.type);}return escapeTypes;}
+  const protectedSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [];
 
   if (!isKingChecked(chess, defendingColor, state.monolithSquare, state.champions, protectedSquares, state.grounds)) {
     return escapeTypes;
@@ -2295,10 +2311,10 @@ export function evaluateGameEnd(
   // Check the player whose turn it now is (the defending player)
   const currentTurn = chess.turn();
   const beaconSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare) : [];
-  const inCheck = isKingChecked(chess, currentTurn, state.monolithSquare, state.champions, beaconSquares, state.grounds);
+  const inCheck = isExtendedFen(state.fen)?!frontierKingSafe(state,currentTurn):isKingChecked(chess, currentTurn, state.monolithSquare, state.champions, beaconSquares, state.grounds);
 
   if (inCheck) {
-    const canEscape = canPlayerEscapeCheck(chess, state, currentTurn);
+    const canEscape = isExtendedFen(state.fen)?frontierEscape(state,currentTurn):canPlayerEscapeCheck(chess, state, currentTurn);
     if (!canEscape) {
       const winner = currentTurn === 'w' ? 'b' : 'w';
       const winnerName = winner === 'w' ? 'White' : 'Black';
@@ -2336,7 +2352,8 @@ export function evaluateGameEnd(
 /**
  * Returns all squares in the 3x3 surrounding region of a center square (e.g. around the Monolith).
  */
-export function getSurroundingSquares(centerSquare: string | null): string[] {
+export function getSurroundingSquares(centerSquare: string | null,fen?:string): string[] {
+  if(fen&&isExtendedFen(fen))return centerSquare?adjacent(centerSquare,fen,true):[];
   if (!centerSquare || centerSquare.length !== 2) return [];
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const f = files.indexOf(centerSquare[0]);
@@ -2402,15 +2419,17 @@ export function getChampionNormalMoves(
   awakenedPieces: string[] = [],
   grounds?: Grounds
 ): string[] {
+  const rankOrder=ranksFor(chess.fen());
   if (staticStunnedSquares.includes(champion.square)) {
     return [];
   }
 
+  if(isExtendedFen(chess.fen()))return frontierMoves(movementState(chess,restrictedSquares,monolithSquare,{[champion.color]:champion,[champion.color==='w'?'b':'w']:enemyChampion},staticStunnedSquares,beaconProtectedSquares,awakenedRooks,[],[],grounds),champion.square);
   const powered=grounds?groundMoves({fen:chess.fen(),grounds,champions:{[champion.color]:champion,[champion.color==='w'?'b':'w']:enemyChampion},restrictedSquares,monolithSquare} as any,champion.square):undefined;
   if(powered)return powered;
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const f = files.indexOf(champion.square[0]);
-  const r = parseInt(champion.square[1], 10);
+  const r = rankOrder.indexOf(champion.square[1])+1;
   if (f === -1 || isNaN(r)) return [];
 
   const moves: string[] = [];
@@ -2422,8 +2441,8 @@ export function getChampionNormalMoves(
         if (df === 0 && dr === 0) continue;
         const nf = f + df;
         const nr = r + dr;
-        if (nf < 0 || nf >= 8 || nr < 1 || nr > 8) continue;
-        const sq = `${files[nf]}${nr}`;
+        if (nf < 0 || nf >= 8 || nr < 1 || nr > rankOrder.length) continue;
+        const sq = `${files[nf]}${rankOrder[nr-1]}`;
 
         if (restrictedSquares.includes(sq)) continue;
         if (monolithSquare === sq) continue;
@@ -2461,8 +2480,8 @@ export function getChampionNormalMoves(
     for (const [df, dr] of directions) {
       let nf = f + df;
       let nr = r + dr;
-      while (nf >= 0 && nf < 8 && nr >= 1 && nr <= 8) {
-        const sq = `${files[nf]}${nr}`;
+      while (nf >= 0 && nf < 8 && nr >= 1 && nr <= rankOrder.length) {
+        const sq = `${files[nf]}${rankOrder[nr-1]}`;
         if (restrictedSquares.includes(sq)) {
           nf += df;
           nr += dr;
@@ -2498,9 +2517,10 @@ export function getBerserkerUltimateMoves(
   awakenedPieces: string[] = [],
   grounds?: Grounds
 ): string[] {
+  const rankOrder=ranksFor(chess.fen());
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const f = files.indexOf(champion.square[0]);
-  const r = parseInt(champion.square[1], 10);
+  const r = rankOrder.indexOf(champion.square[1])+1;
   if (f === -1 || isNaN(r)) return [];
 
   const directions: [number, number][] = [
@@ -2512,8 +2532,8 @@ export function getBerserkerUltimateMoves(
   for (const [df, dr] of directions) {
     let nf = f + df;
     let nr = r + dr;
-    while (nf >= 0 && nf < 8 && nr >= 1 && nr <= 8) {
-      const sq = `${files[nf]}${nr}`;
+    while (nf >= 0 && nf < 8 && nr >= 1 && nr <= rankOrder.length) {
+      const sq = `${files[nf]}${rankOrder[nr-1]}`;
       if (restrictedSquares.includes(sq)) {
         nf += df;
         nr += dr;
@@ -2562,9 +2582,10 @@ export function getMusketeerSnipeTargets(
   awakenedPieces: string[] = [],
   grounds?: Grounds
 ): string[] {
+  const rankOrder=ranksFor(chess.fen());
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const f = files.indexOf(champion.square[0]);
-  const r = parseInt(champion.square[1], 10);
+  const r = rankOrder.indexOf(champion.square[1])+1;
   if (f === -1 || isNaN(r)) return [];
 
   const directions: [number, number][] = [
@@ -2577,8 +2598,8 @@ export function getMusketeerSnipeTargets(
     for (let step = 1; step <= 3; step++) {
       const nf = f + df * step;
       const nr = r + dr * step;
-      if (nf < 0 || nf >= 8 || nr < 1 || nr > 8) break;
-      const sq = `${files[nf]}${nr}`;
+      if (nf < 0 || nf >= 8 || nr < 1 || nr > rankOrder.length) break;
+      const sq = `${files[nf]}${rankOrder[nr-1]}`;
 
       if (monolithSquare === sq) break; // Cannot shoot through monolith
 
@@ -2621,9 +2642,10 @@ export function getSummonerPlacementSquares(
   awakenedPieces: string[] = [],
   grounds?: Grounds
 ): string[] {
+  const rankOrder=ranksFor(chess.fen());
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const f = files.indexOf(summonerSquare[0]);
-  const r = parseInt(summonerSquare[1], 10);
+  const r = rankOrder.indexOf(summonerSquare[1])+1;
   if (f === -1 || isNaN(r)) return [];
 
   const placementSquares: string[] = [];
@@ -2632,8 +2654,8 @@ export function getSummonerPlacementSquares(
       if (df === 0 && dr === 0) continue;
       const nf = f + df;
       const nr = r + dr;
-      if (nf < 0 || nf >= 8 || nr < 1 || nr > 8) continue;
-      const sq = `${files[nf]}${nr}`;
+      if (nf < 0 || nf >= 8 || nr < 1 || nr > rankOrder.length) continue;
+      const sq = `${files[nf]}${rankOrder[nr-1]}`;
 
       if (monolithSquare === sq) continue;
       if (restrictedSquares.includes(sq)) continue;
@@ -2675,9 +2697,10 @@ export function getNinjaAdjacentEnemyPieces(
   awakenedPieces: string[] = [],
   grounds?: Grounds
 ): string[] {
+  const rankOrder=ranksFor(chess.fen());
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const f = files.indexOf(ninjaSquare[0]);
-  const r = parseInt(ninjaSquare[1], 10);
+  const r = rankOrder.indexOf(ninjaSquare[1])+1;
   if (f === -1 || isNaN(r)) return [];
 
   const targets: string[] = [];
@@ -2686,8 +2709,8 @@ export function getNinjaAdjacentEnemyPieces(
       if (df === 0 && dr === 0) continue;
       const nf = f + df;
       const nr = r + dr;
-      if (nf < 0 || nf >= 8 || nr < 1 || nr > 8) continue;
-      const sq = `${files[nf]}${nr}`;
+      if (nf < 0 || nf >= 8 || nr < 1 || nr > rankOrder.length) continue;
+      const sq = `${files[nf]}${rankOrder[nr-1]}`;
 
       if (beaconProtectedSquares.includes(sq)) continue;
 
@@ -2762,6 +2785,7 @@ export function swapBeaconPieceSquares(
  */
 export function getClockBlockReason(
   state: {
+    frontier?: import('./frontier.ts').FrontierState;
     turnNumber: number;
     lastMoveDetails?: LastMoveDetails | null;
     historyLog?: GameLogEntry[];
@@ -2771,6 +2795,8 @@ export function getClockBlockReason(
   },
   currentTurn?: PlayerColor
 ): string | null {
+  if(state.frontier?.expanded&&state.boardHistory?.slice(-2).some(x=>x.frontierLocked))return 'Clock cannot undo Golem summon/control or a Champion ultimate.';
+
   if (state.boardHistory?.slice(-2).some(snap => snap.grounds?.placementTurns?.includes(snap.grounds.completedTurns))) return 'Tile power-up placements cannot be rewound.';
   if(state.boardHistory?.at(-1)?.awakeningSkill ?? state.historyLog?.some(e=>e.actionType==='awakening'&&e.turnNumber===state.turnNumber-1))return 'An Awakening skill was played on the previous turn and cannot be rewound.';
   // 1. Must have at least 2 completed turns to revert (your previous move and opponent's previous move)
@@ -2836,4 +2862,8 @@ export function getClockBlockReason(
   }
 
   return null;
+}
+
+export function movementState(chess:Chess, restrictedSquares:string[],monolithSquare:string|null, champions:any={w:null,b:null}, staticStunnedSquares:string[]=[],beaconProtectedSquares:string[]=[],awakenedRooks:AwakenedRookState[]=[],superPawns:string[]=[],superKnights:string[]=[],grounds?:Grounds):GameState {
+ return {fen:chess.fen(),turnNumber:1,historyLog:[],captures:{w:[],b:[]},pieceIds:{},powerUps:{w:{draw:0,wild:0,vision:0,monolith:0},b:{draw:0,wild:0,vision:0,monolith:0}},turn:chess.turn(),status:'playing',champions:champions||{w:null,b:null},restrictedSquares,monolithSquare,staticEffect:{active:staticStunnedSquares.length>0,stunnedSquares:staticStunnedSquares},beaconEffect:{active:beaconProtectedSquares.length>0,protectedSquares:beaconProtectedSquares},awakenedRooks,superPawns,superKnights,grounds,frontier:{...initialFrontier(),expanded:true,ready:true}} as unknown as GameState;
 }

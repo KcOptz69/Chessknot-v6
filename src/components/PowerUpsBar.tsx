@@ -7,6 +7,7 @@ import { PowerUpsState } from '../types.ts';
 import { Layers, Mountain, Sparkles, Eye, Zap, Compass } from 'lucide-react';
 
 interface PowerUpsBarProps {
+  hasEye?:boolean;
   confirmPlacement?: boolean;
   grounds?: Grounds;
   selectedGround?: GroundType | 'transport' | null;
@@ -27,7 +28,7 @@ interface PowerUpsBarProps {
 }
 
 export const PowerUpsBar: React.FC<PowerUpsBarProps> = ({
-  confirmPlacement = false,
+  hasEye=false,confirmPlacement = false,
   grounds,color="w",onGround,selectedGround,
   powerUps,
   progress = 0,
@@ -117,7 +118,7 @@ export const PowerUpsBar: React.FC<PowerUpsBarProps> = ({
         <PowerUpButton id="btn-powerup-draw" icon={<V5Power type="draw"/>} name="Exchange" quantity={drawCount} free description={isJokerLocked ? "Play all Joker Wild cards before drawing." : "Draw 2 fresh cards, then choose 2 cards from your hand to discard. Free action."} data-unavailable={!isMyTurn || drawCount <= 0 || isJokerLocked || undefined} active={pendingUse==='draw'} onClick={()=>setPendingUse(pendingUse==='draw'?null:'draw')} />
         {showMonolithPowerUp && <PowerUpButton id="btn-powerup-monolith" icon={<V5Piece type="m" className="w-8 h-8"/>} name="Monolith" quantity={monolithCount} active={isMonolithMode} description="Spawn or reposition the obstacle Monolith" data-unavailable={!isMyTurn || monolithCount <= 0 || undefined} onClick={()=>{setPendingUse(pendingUse==='monolith'?null:'monolith');if(!confirmPlacement&&isMyTurn&&monolithCount>0)onUseMonolith();}} />}
         <PowerUpButton id="btn-powerup-wild" icon={<V5Power type="wild"/>} name="Wild move" quantity={wildCount} active={isWildActive} description="Move any piece without spending a card" data-unavailable={!isMyTurn || wildCount <= 0 || undefined} onClick={()=>{setPendingUse(pendingUse==='wild'?null:'wild');if(!confirmPlacement&&isMyTurn&&wildCount>0)onUseWild();}} />
-        <PowerUpButton id="btn-powerup-vision" icon={<V5Power type="vision"/>} name="Vision" quantity={visionCount} free description="Reveal your opponent's cards this turn" data-unavailable={!isMyTurn || visionCount <= 0 || undefined} active={pendingUse==='vision'} onClick={()=>setPendingUse(pendingUse==='vision'?null:'vision')} />
+        <PowerUpButton id="btn-powerup-vision" icon={<V5Power type="vision"/>} name={hasEye?"Bind":"Vision"} quantity={visionCount} free description={hasEye?"Choose a card in Arcane Frontier items below":"Reveal your opponent's cards this turn"} data-unavailable={!isMyTurn || visionCount <= 0 || undefined} active={pendingUse==='vision'} onClick={()=>{if(hasEye){document.querySelector('.frontier-bind')?.scrollIntoView({block:'nearest'});return;}setPendingUse(pendingUse==='vision'?null:'vision');}} />
       </div>
 
       {isNormalPowerUp && renderUsePanel()}

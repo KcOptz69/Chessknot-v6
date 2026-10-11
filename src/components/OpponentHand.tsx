@@ -15,6 +15,8 @@ interface OpponentHandProps {
   hand: Card[];
   champion?: ChampionPiece|null;
   isVisionActive: boolean;
+  opponentHasEye?:boolean;
+  permanentVision?:boolean;
   alwaysReveal?: boolean;
   opponentName: string;
   opponentPowerUps?: PowerUpsState | {
@@ -32,7 +34,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   grounds,
   color = "b",
   hand,champion,
-  isVisionActive,
+  opponentHasEye=false,permanentVision=false,isVisionActive,
   alwaysReveal = false,
   opponentName,
   opponentPowerUps = { draw: 1, monolith: 1, wild: 1, vision: 1 },
@@ -181,7 +183,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
                   </span>
                 </div>
                 <div>
-                  <strong className="text-xs font-bold block text-stone-900 dark:text-stone-100">Vision</strong>
+                  <strong className="text-xs font-bold block text-stone-900 dark:text-stone-100">{opponentHasEye?'Bind':'Vision'}</strong>
                   <span className="text-[10px] text-stone-500 dark:text-stone-400">Free action</span>
                 </div>
               </div>
@@ -233,7 +235,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
         <header><h3>{opponentName}’s revealed cards</h3><button type="button" className="ui-button" autoFocus onClick={()=>setVisionOpen(false)}>Close</button></header>
         <div className="vision-card-grid">{hand.map(card=><button type="button" key={card.id} className="compact-hand-card" data-card-type={card.type} data-joker-wild={card.isJokerWild||undefined} aria-pressed={inspectedCardId===card.id} onClick={()=>setInspectedCardId(inspectedCardId===card.id?null:card.id)}><div className="card-art"><CardArtwork card={card} color={color} champion={champion}/></div><span className="compact-card-name">{card.name}</span></button>)}</div>
         {inspectedCard&&<div className="vision-card-description"><div className="selected-card-thumb"><CardArtwork card={inspectedCard} color={color} champion={champion}/></div><div><strong>{inspectedCard.name}</strong><p>{inspectedCard.description}</p></div></div>}
-        <p className="vision-note">Tap a card to read its description. Vision lasts for this turn.</p>
+        <p className="vision-note">{permanentVision?'Tap a card to read its description. Eye of Revelation reveals this hand permanently.':'Tap a card to read its description. Vision lasts for this turn.'}</p>
       </section></div></PopupLayer>}
     </>
   );

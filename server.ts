@@ -1,3 +1,5 @@
+import {executeFrontier,finishFrontierTurn,checkExpansion,handLimit,frontierClockRestore,frontierKingSafe,canExpand,frontierUltimate} from './src/utils/frontier.ts';
+import {isExtendedFen,adjacent,xy,squareAt,allSquares,ranksFor} from './src/utils/frontierBoard.ts';
 import {viewingGameState,isArbiter} from './src/utils/roomViewing.ts';
 import { randomBytes } from 'node:crypto';
 import { activeCircle, isTemporary, eligibleRevives, emptySummonSquare, soulTargets, placeRevived, kingSafe, interruptCircles, tickSummons, summonNotice, removeSoul } from './src/utils/summoning.ts';
@@ -741,6 +743,7 @@ function consumeCardAndRefill(
   isExhausted: boolean = false
 ) {
   if (cardPlayed) {
+    delete cardPlayed.knownStartingPawnFor;
     if (isExhausted) {
       if (!state.exhausted) state.exhausted = [];
       state.exhausted.push(cardPlayed);
@@ -757,7 +760,7 @@ function consumeCardAndRefill(
     if (state.hands[currentTurn].length === 0) {
       state.jokerLocked[currentTurn] = false;
       // Draw 5 new cards from the deck
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < handLimit(state,currentTurn); i++) {
         const drawRes = drawCard(state);
         if (drawRes.drawnCard) state.hands[currentTurn].push(drawRes.drawnCard);
         state.deck = drawRes.newDeck;
@@ -778,7 +781,7 @@ function consumeCardAndRefill(
     }
   } else {
     // Draw cards until player has 5 cards in hand
-    while (state.hands[currentTurn].length < 5) {
+    while (state.hands[currentTurn].length < handLimit(state,currentTurn)) {
       const drawRes = drawCard(state);
       if (drawRes.drawnCard) state.hands[currentTurn].push(drawRes.drawnCard);
       state.deck = drawRes.newDeck;
@@ -1000,6 +1003,8 @@ function completeTurnState(state:GameState,currentTurn:PlayerColor,nextTurn:Play
   // Snapshot board history for Clock rewind
   if (!state.boardHistory) state.boardHistory = [];
   state.boardHistory.push({
+    frontier: structuredClone(state.frontier),
+    frontierLocked: !!state.frontier?.clockLocked,
     awakeningSkill: state.lastMoveDetails?.actionType==='awakening',
     summoningCircles: structuredClone(state.summoningCircles||[]),
     soulSummons: structuredClone(state.soulSummons||[]),
@@ -1022,6 +1027,8 @@ function completeTurnState(state:GameState,currentTurn:PlayerColor,nextTurn:Play
     state.boardHistory.shift();
   }
 
+  if(state.frontier)state.frontier.clockLocked=false;
+
   // Red aura expiration: Remove after your opponent moves after you played an awakened card
   if (state.awakenedByPlayer && currentTurn !== state.awakenedByPlayer) {
     state.awakenedPieceSquare = null;
@@ -1040,6 +1047,9 @@ function completeTurnState(state:GameState,currentTurn:PlayerColor,nextTurn:Play
     state.awakeningAlert = null;
   }
 
+  const priorBags={...state.frontier?.bags};
+  finishFrontierTurn(state,currentTurn);
+  for(const color of ['w','b'] as const)if(state.frontier?.bags[color]&&!priorBags[color])consumeCardAndRefill(state,color,null);
   state.turn = nextTurn;
   state.turnNumber += 1;
   state.visionActive[currentTurn] = false;
@@ -1082,7 +1092,7 @@ function completeTurnState(state:GameState,currentTurn:PlayerColor,nextTurn:Play
   if (state.staticEffect && state.staticEffect.pending && state.turnNumber >= (state.staticEffect.procOnTurnNumber || 0)) {
     state.staticEffect.pending = false;
     state.staticEffect.active = true;
-    state.staticEffect.stunnedSquares = state.monolithSquare ? getSurroundingSquares(state.monolithSquare) : [];
+    state.staticEffect.stunnedSquares = state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [];
     state.historyLog.unshift({
       id: `log_${Date.now()}_${Math.random()}`,
       turn: state.turn,
@@ -1109,6 +1119,7 @@ function completeTurnState(state:GameState,currentTurn:PlayerColor,nextTurn:Play
     }
     state.whitePoints = evalRes.whitePoints;
     state.blackPoints = evalRes.blackPoints;
+    checkExpansion(state);
   }
 
   if (state.clock && state.clock.enabled && state.status === 'playing') {
@@ -1181,7 +1192,7 @@ function moveWithGrounds(board:Chess,state:GameState,move:any):any {
  const options=groundMoves({...state,fen:board.fen()},move.from);
  if(options){if(!options.includes(move.to))throw Error('Tile movement prohibits that destination.');const p=board.get(move.from);if(!p)throw Error('Missing piece.');board.remove(move.from);board.put(p,move.to);if(isKingChecked(board,p.color,state.monolithSquare,state.champions,undefined,state.grounds))throw Error('King unsafe.');return {san:`${move.from}-${move.to}`,from:move.from,to:move.to};}
  try{return board.move(move);}catch(error){
- if(!state.grounds)throw error;
+ if(!state.grounds||isExtendedFen(board.fen()))throw error;
  const square=(n:number)=>String.fromCharCode(97+(n&15))+(8-(n>>4));
  const raw=(board as any)._moves({square:move.from,legal:false}).find((m:any)=>square(m.to)===move.to&&(!m.promotion||m.promotion===(move.promotion||'q')));
  if(!raw)throw error;(board as any)._makeMove(raw);
@@ -1257,10 +1268,10 @@ function executeGroundAction(room:RoomState,msg:ClientMessage,color:PlayerColor,
  if(msg.type==='place_ground'){
   const type=m.groundType,q=m.square;
   if(!g.selected.includes(type)||(g.charges[color][type as keyof typeof g.charges.w]||0)<1)return fail('No charge available.');
-  if(!/^[a-h][1-8]$/.test(q)||groundPiece(s,q)||s.monolithSquare===q||s.restrictedSquares.includes(q))return fail('Choose an empty unrestricted square.');
+  if(!allSquares(s.fen).includes(q)||groundPiece(s,q)||!!s.frontier?.pois[q]||activeCircle(s,q)||s.monolithSquare===q||s.restrictedSquares.includes(q))return fail('Choose an empty unrestricted square.');
   if(isKingChecked(createSafeChess(s.fen),color,s.monolithSquare,s.champions, undefined, s.grounds))return fail('A tile placement cannot leave your King in check.');
   const trap=['mine','poison','disarm','banish'].includes(type);
-  if(trap){if((color==='w'?Number(q[1])>4:Number(q[1])<5))return fail('Place traps on your half of the board.');if(['portal','defense'].includes(g.tiles[q]))return fail('Traps cannot be placed on Portal or Defense.');if(g.traps.some(t=>t.square===q&&t.owner===color&&t.type===type))return fail('Your same trap already exists here.');}
+  if(trap){if((color==='w'?xy(q,s.fen)[1]>=ranksFor(s.fen).length/2:xy(q,s.fen)[1]<ranksFor(s.fen).length/2))return fail('Place traps on your half of the board.');if(['portal','defense'].includes(g.tiles[q]))return fail('Traps cannot be placed on Portal or Defense.');if(g.traps.some(t=>t.square===q&&t.owner===color&&t.type===type))return fail('Your same trap already exists here.');}
   else {if(g.tiles[q])return fail('Power tiles cannot overlap.');if(type==='portal'&&g.tiles[m.portalFrom]!=='portal')return fail('Choose which portal to relocate.');}
   g.charges[color][type as keyof typeof g.charges.w]!--;
   if(trap)g.traps.push({id:`trap_${Date.now()}_${Math.random()}`,type,owner:color,square:q});else{if(type==='portal')delete g.tiles[m.portalFrom];g.tiles[q]=type;if(type==='portal'||type==='defense')g.traps=g.traps.filter(t=>t.square!==q);}
@@ -1291,9 +1302,28 @@ function awardCaptureRefresh(state: GameState, player: PlayerColor, points: numb
   return applyCaptureRefresh(state, player, points);
 }
 
-function handleGameAction(room: RoomState, msg: ClientMessage, actorColor: PlayerColor | 'spectator', ws?: WebSocket) {
+function handleGameAction(room: RoomState, msg: ClientMessage, actorColor: PlayerColor | 'spectator', ws?: WebSocket, frontierTransaction=false) {
   if (actorColor === 'spectator') return;
   const before = room.gameState;
+  if(isExtendedFen(before.fen)&&!frontierTransaction){
+    const draftRoom={...room,gameState:structuredClone(before)};
+    const replies:ServerMessage[]=[];
+    const captureSocket={readyState:WebSocket.OPEN,send:(payload:string)=>replies.push(JSON.parse(payload))} as unknown as WebSocket;
+    try{handleGameAction(draftRoom,msg,actorColor,captureSocket,true);}catch(error){replies.push({type:'error',message:(error as Error).message});}
+    const draft=draftRoom.gameState;
+    const failed=replies.some(reply=>reply.type==='error');
+    const changed=JSON.stringify(draft)!==JSON.stringify(before);
+    const destinations=Object.keys(draft.frontier?.pois||{}).filter(q=>['boss','chest','mimic'].includes(draft.frontier!.pois[q]));
+    const collision=destinations.some(q=>!!createSafeChess(draft.fen).get(q as Square)||Object.values(draft.champions).some(ch=>ch?.square===q)||draft.frontier?.golems.some(g=>g.square===q))||draft.frontier?.golems.some(g=>!!createSafeChess(draft.fen).get(g.square as Square)||Object.values(draft.champions).some(ch=>ch?.square===g.square));
+    const safe=!changed||msg.type==='resign'||msg.type==='play_clock'||msg.type.startsWith('dismiss_')||frontierKingSafe(draft,actorColor);
+    if(!failed&&changed&&safe&&!collision){for(const c of ['w','b'] as const){const existing=before.captures?.[c].length||0;for(const loss of draft.captures?.[c].slice(existing)||[])loss.capturedTurn??=before.turnNumber;}room.gameState=draft;}
+    else if(!failed&&changed&&(!safe||collision))replies.push({type:'error',message:collision?'A discovery or Golem occupies that square.':'The complete action leaves your King unsafe.'});
+    if(ws)for(const reply of replies)sendToSocket(ws,reply);
+    return;
+  }
+
+  if(before.frontier?.bind?.target===actorColor && before.frontier.bind.cardId===(msg as any).cardId&&msg.type!=='frontier_item'){if(ws)sendToSocket(ws,{type:'error',message:'This exact card is bound for this turn.'});return;}
+  if(executeFrontier(before,msg,actorColor,{consume:consumeCardAndRefill,finish:advanceTurnState,error:message=>{if(ws)sendToSocket(ws,{type:'error',message});},ultimate:frontierUltimate,evaluate:d=>{const result=evaluateGameEnd(createSafeChess(d.fen),d);Object.assign(d,result);checkExpansion(d);}}))return;
   const requestCard=before.hands[actorColor]?.find(c=>c.id===(msg as any).cardId);
   if(requestCard?.type==='brick'||(requestCard?.type==='refresh'&&msg.type!=='play_refresh')){
     if(ws)sendToSocket(ws,{type:'error',message:requestCard.type==='brick'?'Brick cannot be played. Discard it instead.':'Refresh is a free hand redraw, not a piece move.'});
@@ -1548,7 +1578,7 @@ function executeGameAction(
     const oldHand = state.hands[currentTurn];
     state.discard.push(...oldHand.filter(c => !c.isJokerWild));
     state.hands[currentTurn] = [];
-    for (let i=0;i<5;i++) {
+    for (let i=0;i<handLimit(state,currentTurn);i++) {
       const result=drawCard(state);
       state.deck=result.newDeck;state.discard=result.newDiscard;
       if(result.reshuffled)state.powerUps=result.powerUps;
@@ -1622,7 +1652,7 @@ function executeGameAction(
     const cardPlayed = state.hands[currentTurn].splice(cardIdx, 1)[0];
     state.discard.push(cardPlayed);
 
-    const protectedSquares = getSurroundingSquares(state.monolithSquare);
+    const protectedSquares = getSurroundingSquares(state.monolithSquare,state.fen);
 
     // Beacon buff lasts 6 turns (your turn activation, opp's turn, your next turn, opp's next turn, your next next turn, and opp's next next turn)
     // Only units surrounding the Monolith receive the invulnerability buff.
@@ -1730,6 +1760,7 @@ function executeGameAction(
       const oldSouls=state.soulSummons||[];
       state.soulSummons=oldSouls.filter(t=>targetSnapshot.soulSummons?.some(old=>old.id===t.id));
       state.fen = syncFenTurn(targetSnapshot.fen, currentTurn);
+      frontierClockRestore(state,targetSnapshot);
       state.monolithSquare = targetSnapshot.monolithSquare;
       state.restrictedSquares = [...targetSnapshot.restrictedSquares];
       state.captures = structuredClone(targetSnapshot.captures || { w: [], b: [] });
@@ -1870,7 +1901,7 @@ function executeGameAction(
       state.restrictedSquares,
       state.monolithSquare,
       state.staticEffect?.stunnedSquares || [],
-      state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare) : [],
+      state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [],
       state.champions ? state.champions[currentTurn]?.square || null : null,
       state.champions ? state.champions[otherPlayer] : null,
       state.champions,
@@ -2057,7 +2088,7 @@ function executeGameAction(
       state.restrictedSquares,
       state.monolithSquare,
       state.staticEffect?.stunnedSquares || [],
-      state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare) : [],
+      state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [],
       state.champions ? state.champions[currentTurn]?.square || null : null,
       state.champions ? state.champions[otherPlayer] : null,
       state.champions,
@@ -2203,7 +2234,7 @@ function executeGameAction(
     if (cardIdx === -1) return;
 
     // Verification: King MUST be in check!
-    const beaconSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare) : [];
+    const beaconSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [];
     const inCheck = isKingChecked(chess, currentTurn, state.monolithSquare, state.champions, beaconSquares, state.grounds);
     if (!inCheck) {
       if (ws) sendToSocket(ws, { type: 'error', message: 'Awakening: King can only be activated when your King is in Check!' });
@@ -2312,7 +2343,7 @@ function executeGameAction(
       state.restrictedSquares,
       state.monolithSquare,
       state.staticEffect?.stunnedSquares || [],
-      state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare) : [],
+      state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [],
       state.champions ? state.champions[currentTurn]?.square || null : null,
       state.champions ? state.champions[otherPlayer] : null,
       state.champions,
@@ -2930,6 +2961,7 @@ function executeGameAction(
   }
 
   if (msg.type === 'use_powerup_vision') {
+    if(state.frontier?.inventories[currentTurn].some(i=>i.type==='eye')){if(ws)sendToSocket(ws,{type:'error',message:'Vision is now Bind. Select an opponent card to block.'});return;}
     const curVision = typeof state.powerUps[currentTurn].vision === 'number' ? state.powerUps[currentTurn].vision : state.powerUps[currentTurn].vision ? 1 : 0;
     if (curVision <= 0) return;
     state.powerUps[currentTurn].vision = curVision - 1;
@@ -3387,7 +3419,7 @@ function executeGameAction(
         const cardIdx = state.hands[currentTurn].findIndex((c) => c.id === msg.cardId);
         if (cardIdx !== -1) {
           const candidateCard = state.hands[currentTurn][cardIdx];
-          const beaconSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare) : [];
+          const beaconSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [];
           const inCheck = isKingChecked(chess, currentTurn, state.monolithSquare, state.champions, beaconSquares, state.grounds);
           const isAwakenedKingWild = candidateCard.type === 'awakening_king' && !inCheck;
           const asWild = Boolean((msg as any).asWild || isAwakenedKingWild);
@@ -3440,7 +3472,7 @@ function executeGameAction(
     const isTargetBeaconProtected = Boolean(
       state.beaconEffect?.active &&
       state.monolithSquare &&
-      getSurroundingSquares(state.monolithSquare).includes(capturedTargetSquare)
+      getSurroundingSquares(state.monolithSquare,state.fen).includes(capturedTargetSquare)
     );
 
     if (isTargetBeaconProtected && (isEnPassantAttempt || !!chess.get(msg.to as Square))) {
@@ -3657,7 +3689,7 @@ function executeGameAction(
         nextTurn,
         state.monolithSquare,
         state.champions,
-        state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare) : [], state.grounds
+        state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [], state.grounds
       ),
     });
 

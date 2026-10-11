@@ -6,10 +6,12 @@ export function isArbiter(player:RoomPlayer|undefined){return player?.color==='s
 /** Return a private snapshot for one connection; never change the authoritative room. */
 export function viewingGameState(state:GameState,player:RoomPlayer|undefined,dismissed:Record<string,string>={}) :GameState {
  const arbiter=isArbiter(player),spectator=!player||player.color==='spectator';
+ const publicFrontier=(frontier:GameState['frontier'])=>{if(!frontier)return;const copy=structuredClone(frontier);delete copy.chestRoll;if(copy.boss)delete copy.boss.drop;return copy;};
  const result:GameState={...state,
+  frontier:publicFrontier(state.frontier),
   handCounts:{w:state.hands.w.length,b:state.hands.b.length},
   grounds:arbiter?structuredClone(state.grounds):visibleGrounds(state.grounds,player?.color||'spectator'),
-  boardHistory:state.boardHistory?.map(snapshot=>({...snapshot,grounds:arbiter?structuredClone(snapshot.grounds):visibleGrounds(snapshot.grounds,player?.color||'spectator')})),
+  boardHistory:state.boardHistory?.map(snapshot=>({...snapshot,frontier:publicFrontier(snapshot.frontier),grounds:arbiter?structuredClone(snapshot.grounds):visibleGrounds(snapshot.grounds,player?.color||'spectator')})),
  };
  if(spectator){
   result.hands=arbiter?state.hands:{w:[],b:[]};

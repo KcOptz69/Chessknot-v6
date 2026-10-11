@@ -1,3 +1,6 @@
+import {frontierMoves,frontierKingSafe,executeLandingMove,occupant,frontierUltimateTargets} from '../utils/frontier.ts';
+import {FrontierArt} from './FrontierUI.tsx';
+import {ranksFor,isExtendedFen} from '../utils/frontierBoard.ts';
 import {ChampionInfoDialog} from './ChampionInfoDialog.tsx';
 import {BoardEffects} from './BoardEffects.tsx';
 import {CardEffectNotifications} from './CardEffectNotifications.tsx';
@@ -68,6 +71,8 @@ import {
 import { useTheme } from '../context/ThemeContext.tsx';
 
 interface ChessBoardProps {
+  frontierGame?:import('../types.ts').GameState;
+  frontier?:import('../utils/frontier.ts').FrontierState;
   tutorialGuide?: {from:string|null;to:string|null;guard:(square:string)=>boolean};
   controlsHost?: HTMLElement|null;
   summoningCircles?: import('../types.ts').SummoningCircle[];
@@ -150,7 +155,7 @@ const PIECE_NAMES: Record<StandardPieceType, string> = {
 };
 
 export const ChessBoard: React.FC<ChessBoardProps> = ({
-  tutorialGuide,
+  frontierGame,frontier,tutorialGuide,
   summoningCircles=[],soulSummons=[],pieceIds={},hands,historyLog=[],
   onOpenChat, unreadChat = 0,
   fen,
@@ -253,7 +258,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   }, [fen]);
 
   const monolithSurroundingSquares = React.useMemo(() => {
-    return monolithSquare ? getSurroundingSquares(monolithSquare) : [];
+    return monolithSquare ? getSurroundingSquares(monolithSquare,fen) : [];
   }, [monolithSquare]);
 
   // Beacon Buff: Only units surrounding the Monolith receive the invulnerability buff.
@@ -264,8 +269,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   }, [beaconEffect?.active, monolithSquare, monolithSurroundingSquares]);
 
   const isKingInCheck = React.useMemo(() => {
-    return isKingChecked(chess, turn, monolithSquare, champions, beaconProtectedSquares, grounds);
-  }, [chess, turn, monolithSquare, champions, beaconProtectedSquares, grounds]);
+    if(frontierGame?.frontier?.expanded)return !frontierKingSafe(frontierGame,turn);return isKingChecked(chess, turn, monolithSquare, champions, beaconProtectedSquares, grounds);
+  }, [chess, turn, monolithSquare, champions, beaconProtectedSquares, grounds,frontierGame]);
 
   const myChampion = champions ? champions[turn] : null;
   const enemyColor = turn === 'w' ? 'b' : 'w';
@@ -326,7 +331,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   }, [selectedCard, turn, isWildPowerUp, isMonolithPowerUp]);
 
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+  const ranks = [...ranksFor(fen)].reverse();
 
   const displayFiles = flipBoard ? [...files].reverse() : files;
   const displayRanks = flipBoard ? [...ranks].reverse() : ranks;
@@ -347,6 +352,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   // Champion Ultimate Targets (when champion is already on board)
   const championUltimateTargets = React.useMemo(() => {
     if (selectedCard?.type !== 'champion' || !myChampion) return [];
+    if(frontierGame?.frontier?.expanded){if(myChampion.type==='summoner'&&!summonerPieceToTeleport)return Object.keys(frontierGame.pieceIds||{}).filter(q=>occupant(frontierGame,q)?.color===turn);return frontierUltimateTargets(frontierGame,turn,summonerPieceToTeleport||undefined);}
 
     if (myChampion.type === 'berserker') {
       return getBerserkerUltimateMoves(
@@ -436,6 +442,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     if (!selectedSquare) return [];
     if(tutorialGuide?.from&&tutorialGuide.to)return selectedSquare===tutorialGuide.from?[tutorialGuide.to]:[];
     if (selectedSquare === monolithSquare) return [];
+    if(frontierGame?.frontier?.expanded && (!selectedCard||['pawn','knight','bishop','rook','queen','wild','previous','traverse'].includes(selectedCard.type)||isWildPowerUp)){const d=structuredClone(frontierGame);let from=selectedSquare;if(awaitingKnightSecondMove&&knightMovePrompt){try{executeLandingMove(d,knightMovePrompt.from,knightMovePrompt.to);}catch{return [];}from=knightMovePrompt.to;}return frontierMoves(d,from).filter(q=>!awaitingKnightSecondMove||!knightMovePrompt?.firstCaptured||(!occupant(d,q)&&!['boss','chest','mimic'].includes(d.frontier?.pois[q]||'')));}
     if(grounds && selectedCard?.type!=='push' && !(selectedCard?.type==='champion')){
       const from=awaitingKnightSecondMove&&knightMovePrompt?knightMovePrompt.to:selectedSquare;
       const preview=createSafeChess(fen);
@@ -1484,6 +1491,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         {/* 8x8 Chessboard */}
         <div
           id="chess-board"
+          style={isExtendedFen(fen)?{aspectRatio:'8 / 12',gridTemplateRows:'repeat(12,minmax(0,1fr))'}:undefined}
           data-orientation={flipBoard ? 'black' : 'white'}
           className="relative w-full max-w-[560px] aspect-square grid grid-cols-8 grid-rows-8 border-[3px] sm:border-[6px] border-[#263449] dark:border-[#263449] rounded-xl shadow-xl overflow-hidden bg-[#263449] dark:bg-[#263449] ring-1 ring-stone-900/10 dark:ring-stone-700/50 touch-manipulation"
         >
@@ -1492,6 +1500,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             const square = `${file}${rank}`;
             const isLight = (fIdx + rIdx) % 2 === 0;
             const piece = chess.get(square as Square);
+            const frontierGolem=frontier?.golems.find(g=>g.square===square);
+            const frontierPOI=frontier?.pois[square];
             const isRestricted = restrictedSquares.includes(square);
             const isMonolith = monolithSquare === square;
 
@@ -1508,7 +1518,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             const inCheckGlow = isKingSquare && isKingInCheck;
 
             // Beacon / Static effects
-            const isPiecePresent = Boolean(piece) || Boolean(championPiece);
+            const isPiecePresent = Boolean(piece) || Boolean(championPiece) || Boolean(frontierGolem);
             const isBeaconProtected = beaconProtectedSquares.includes(square) && isPiecePresent;
             const isStaticStunned = staticStunnedSquares.includes(square);
 
@@ -1636,13 +1646,13 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             return (
               <div
                 key={square}
-                id={`square-${square}`}
+                data-tone={isLight?'light':'dark'} id={`square-${square}`}
                 data-last-move={isMoveTo?'to':isMoveFrom?'from':isIntermediateMove?'via':undefined}
                 role="button" tabIndex={0} aria-label={`${square}${piece ? ` ${piece.color === 'w' ? 'White' : 'Black'} ${PIECE_NAMES[piece.type as StandardPieceType] || piece.type}` : ''}`}
                 aria-pressed={isSelected}
                 onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleSquareClick(square); } }}
                 onClick={() => handleSquareClick(square)}
-                className={`relative flex items-center justify-center transition-colors ${squareBg} ${groundTargets.includes(square)?"ring-2 ring-blue-400 z-10":""} ${
+                className={`relative flex items-center justify-center transition-colors ${/[WXYZ]/.test(rank)?'frontier-field-square':''} ${squareBg} ${groundTargets.includes(square)?"ring-2 ring-blue-400 z-10":""} ${
                   isSelected ? 'ring-4 ring-blue-400 z-10' : ''
                 } ${
                   isInspectedChampion && !isSelected
@@ -1679,7 +1689,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 }`}
               >
                 {(groundTargets.includes(square)||isChampionDeployTarget||isMonolithTarget||isRestrictTarget||isBishopReviveTarget||isQueenDeployTarget||(selectedCard?.type==='soul_release'&&isCardTarget)) && <div className="ground-placement-target" data-ground-target={square} aria-label={`Available tile target ${square}`}><span /></div>}
-                {grounds?.tiles[square] && <div className={`ground-tile ${piece || championPiece || isMonolith ? 'occupied' : ''} ${grounds.tiles[square] === 'portal' && portalOccupied ? 'portal-linked-active' : ''}`} data-ground-type={grounds.tiles[square]} data-square-tone={isLight ? 'light' : 'dark'} aria-label={`${grounds.tiles[square]} tile at ${square}`} style={{'--tile-color':({boost:'#22c55e',gravity:'#a56b3d',defense:'#f5c542',portal:'#ff8b24'} as Record<string,string>)[grounds.tiles[square]]} as React.CSSProperties}><V5Power type={grounds.tiles[square]} className="w-full h-full"/><span className="powered-tile-aura"/>{[0,1,2].map(i=><span key={i} className="powered-tile-mote" style={{left:`${20+i*30}%`,animationDelay:`${i*.4}s`}}/>)}</div>}
+                {grounds?.tiles[square] && <div className={`ground-tile ${piece || championPiece || frontierGolem || isMonolith ? 'occupied' : ''} ${grounds.tiles[square] === 'portal' && portalOccupied ? 'portal-linked-active' : ''}`} data-ground-type={grounds.tiles[square]} data-square-tone={isLight ? 'light' : 'dark'} aria-label={`${grounds.tiles[square]} tile at ${square}`} style={{'--tile-color':({boost:'#22c55e',gravity:'#a56b3d',defense:'#f5c542',portal:'#ff8b24'} as Record<string,string>)[grounds.tiles[square]]} as React.CSSProperties}><V5Power type={grounds.tiles[square]} className="w-full h-full"/><span className="powered-tile-aura"/>{[0,1,2].map(i=><span key={i} className="powered-tile-mote" style={{left:`${20+i*30}%`,animationDelay:`${i*.4}s`}}/>)}</div>}
                 {!!grounds?.traps.filter(t=>t.square===square).length && <div className="ground-traps" aria-label={`Your traps at ${square}`}>{grounds.traps.filter(t=>t.square===square).map(t=><V5Power key={t.id} type={t.type} className="w-4 h-4"/>)}</div>}
                 {summoningCircles.filter(c=>c.square===square&&!c.finished&&!c.interrupted).map(c=><div key={c.id} className={`summoning-circle ${c.owner==='w'?'circle-white':'circle-black'}`} title={`Summoning circle: ${c.remaining} owner turns remaining`}><span>✦</span><b>{c.remaining}</b></div>)}
                 {soulSummons.filter(t=>t.pieceId===pieceIds[square]).map(t=><div key={t.id} className="soul-countdown" role="status" aria-label={`Soul: ${t.remaining} owner turns remaining`} title={`Temporary Soul: ${t.remaining} owner turns remaining — zero army and capture value`}><span aria-hidden="true">✦</span>{t.remaining}t</div>)}
@@ -1747,6 +1757,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                   <div className="absolute inset-0 bg-red-600/40 animate-pulse rounded-sm pointer-events-none" />
                 )}
 
+                {(frontierGolem||frontierPOI)&&<div className={`absolute inset-0 z-10 pointer-events-none ${!frontier?.ready&&!frontierGolem?'frontier-silhouette':''}`} title={frontierGolem?'Controlled Golem · 10 points':frontierPOI==='boss'?`Arcane Golem · ${frontier?.boss?.health}/2 health`:frontierPOI}><FrontierArt type={frontierGolem?(frontierGolem.owner==='w'?'golem':'black_golem'):frontierPOI==='boss'&&frontier?.boss?.health===1?'weakened':frontierPOI!}/>{frontierPOI==='boss'&&frontier?.ready&&<span className='frontier-health'>{frontier.boss?.health}/2</span>}</div>}
                 {/* Monolith Piece */}
                 {isMonolith && (
                   <div data-motion-piece="monolith" className="w-[98%] h-[98%] z-10 flex items-center justify-center transition-transform hover:scale-105 pointer-events-none">
