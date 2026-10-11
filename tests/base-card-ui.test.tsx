@@ -64,3 +64,5 @@ test('interactive rulebook retains new base rules and shows details above the ic
 });
 
 test('Traverse hand and selected description use the approved violet portal sprite',()=>{const card=createCard('traverse',1);const html=renderToStaticMarkup(<ThemeProvider><CardHand hand={[card]} selectedCardId={card.id} onSelectCard={()=>{}} isMyTurn playerColor="w" lastMovedPiece={null}/></ThemeProvider>);assert.match(html,/src="\/art\/frontier\/traverse.png"/);assert.ok(!html.includes('data-power="traverse"'));assert.match(html,/MOVE ACTION/);});
+
+test('Lens discard selection permits an unplayable or bound card and suppresses its play controls',()=>{const brick=createCard('brick',1),previous=createCard('previous',2);const html=renderToStaticMarkup(<ThemeProvider><CardHand discardMode hand={[brick,previous]} boundCardId={previous.id} selectedCardId={previous.id} onSelectCard={()=>{}} isMyTurn playerColor="w" lastMovedPiece={null}/></ThemeProvider>);assert.equal((html.match(/aria-disabled="false"/g)||[]).length,2);assert.ok(!html.includes('card-description-panel'));});

@@ -6,3 +6,32 @@
 .frontier-silhouette .frontier-art{filter:brightness(.15) saturate(0);opacity:.65}.frontier-health{position:absolute;top:1px;bottom:auto;right:1px;background:#122b44;color:#9aeafc;border-radius:4px;padding:0 3px;font-size:10px}
 
 .frontier-bind-badge{position:absolute;top:10%;left:10%;right:10%;z-index:4;background:#3c2179;color:#eadaff;font-size:9px;font-weight:900;border:1px solid #ad8cfc;border-radius:5px;text-align:center}.frontier-inventory .ui-button:disabled{opacity:.45;cursor:not-allowed}
+
+/* The blast covers exactly the Golem tile and its eight neighbours. */
+.arcane-golem-blast{position:absolute;isolation:isolate;overflow:hidden;}
+.arcane-blast-grid{position:absolute;inset:0;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);}
+.arcane-blast-grid>span{border:1px solid #77efff70;background:radial-gradient(circle,#44dfff99,#6944ff88 60%,transparent);animation:arcane-tile-flash 1.35s both;}
+.arcane-blast-core{position:absolute;inset:22%;border-radius:50%;background:radial-gradient(circle,#fff 0%,#b8ffff 14%,#20d9ff 35%,#7943ff88 63%,transparent 72%);filter:drop-shadow(0 0 12px #18d9ff);animation:arcane-core-burst 1.35s both;}
+.arcane-blast-ring{position:absolute;inset:8%;border:3px solid #8fffff;border-radius:50%;box-shadow:0 0 12px #23d9ff,inset 0 0 12px #934dff;animation:arcane-ring-burst 1.35s both;}
+.arcane-blast-ring.outer{inset:2%;border:2px dashed #b88aff;animation-delay:90ms;}
+.arcane-blast-spark{position:absolute;left:49%;top:49%;width:2%;height:13%;border-radius:50%;background:#d9ffff;box-shadow:0 0 6px #6ceeff;transform-origin:50% 0;animation:arcane-spark-burst 1.25s both;}
+@keyframes arcane-tile-flash{0%{opacity:0}12%{opacity:1}55%{opacity:.5}100%{opacity:0}}
+@keyframes arcane-core-burst{0%{opacity:0;transform:scale(.15)}12%{opacity:1;transform:scale(.65)}38%{opacity:1;transform:scale(1.5)}100%{opacity:0;transform:scale(1.7)}}
+@keyframes arcane-ring-burst{0%{opacity:0;transform:scale(.15) rotate(0deg)}15%{opacity:1}65%{opacity:.6;transform:scale(.95) rotate(65deg)}100%{opacity:0;transform:scale(1.1) rotate(90deg)}}
+@keyframes arcane-spark-burst{0%{opacity:0;transform:rotate(var(--blast-angle)) translateY(0)}18%{opacity:1}100%{opacity:0;transform:rotate(var(--blast-angle)) translateY(-330%)}}
+@media(prefers-reduced-motion:reduce){.arcane-blast-core,.arcane-blast-ring,.arcane-blast-spark{animation:none;display:none}.arcane-blast-grid>span{animation:arcane-tile-flash .6s both;}}
+.player-zoom-row{display:flex;justify-content:flex-start;padding:2px 5px;}
+.player-zoom-switch{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);cursor:pointer;}
+.zoom-switch-track{display:block;width:25px;height:14px;background:#64748b;border-radius:9px;padding:2px;}
+.zoom-switch-track>span{display:block;width:10px;height:10px;border-radius:50%;background:white;transition:transform .15s;}
+.player-zoom-switch[aria-checked=true] .zoom-switch-track{background:#3b82f6;}
+.player-zoom-switch[aria-checked=true] .zoom-switch-track>span{transform:translateX(11px);}
+.lens-hand-guide{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 8px;color:var(--ink);font-size:11px;}
+.lens-hand-guide button{border:1px solid var(--edge);border-radius:6px;padding:3px 7px;}
+.lens-discard-backdrop{position:fixed;inset:0;z-index:550;display:grid;place-items:center;background:#061024b8;padding:16px;}
+.lens-discard-dialog{width:min(380px,100%);border:1px solid #79aaff;border-radius:18px;padding:20px;background:var(--surface);color:var(--ink);text-align:center;box-shadow:0 12px 45px #0008;}
+.lens-discard-dialog .lens-confirm-art{width:72px;height:72px;}
+.lens-discard-dialog h2{font-size:18px;font-weight:800;margin:8px 0;}
+.lens-discard-dialog p{margin:8px 0;}
+.lens-discard-dialog small{color:var(--muted);}
+.lens-discard-dialog>div{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:16px;}

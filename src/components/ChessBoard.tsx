@@ -1947,7 +1947,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             );
           })
         )}
-        <BoardEffects jokerEventId={historyLog.find(e=>e.actionType==='joker')?.id} fen={fen} pieceIds={pieceIds} champions={champions} grounds={grounds} clockAlert={clockAlert} flipped={flipBoard}/>
+        <BoardEffects frontier={frontier} jokerEventId={historyLog.find(e=>e.actionType==='joker')?.id} fen={fen} pieceIds={pieceIds} champions={champions} grounds={grounds} clockAlert={clockAlert} flipped={flipBoard}/>
         </div>
         {/* End of 8x8 Chessboard */}
       </div>

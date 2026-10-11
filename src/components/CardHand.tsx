@@ -11,6 +11,7 @@ import { Sparkles, History, MoveRight, ArrowLeftRight, Ban, Mountain, Zap, Refre
 import { useTheme } from '../context/ThemeContext.tsx';
 
 interface CardHandProps {
+  discardMode?: boolean;
   compact?: boolean;
   suppressJokerSurgePopup?: boolean;
   floatingDetails?: boolean;
@@ -265,7 +266,7 @@ const isPieceCard = (type: CardType) =>
   ['pawn', 'knight', 'bishop', 'rook', 'queen', 'wild'].includes(type);
 
 export const CardHand: React.FC<CardHandProps> = ({
-  hand, disabledSoulIds=[], suppressJokerSurgePopup=false, compact=false, floatingDetails=false, descriptionHost,
+  hand, discardMode=false, disabledSoulIds=[], suppressJokerSurgePopup=false, compact=false, floatingDetails=false, descriptionHost,
   selectedCardId,
   onSelectCard,
   onPlayRefresh,
@@ -297,16 +298,17 @@ export const CardHand: React.FC<CardHandProps> = ({
     if (!isJokerLocked || suppressJokerSurgePopup) setSurgePopup(false);
     surgeWasActive.current = Boolean(isJokerLocked);
   }, [isJokerLocked,suppressJokerSurgePopup]);
-  const selectedCard = isMyTurn ? hand.find((c) => c.id === (selectedCardId || expandedCardId)) || null : null;
+  const selectedCard = !discardMode && isMyTurn ? hand.find((c) => c.id === (selectedCardId || expandedCardId)) || null : null;
   React.useEffect(() => { if (!isMyTurn) setExpandedCardId(null); }, [isMyTurn]);
   const isClockBlocked = Boolean(clockBlockReason);
 
   // Sync expanded card with selected card when a card is selected
   React.useEffect(() => {
+    if(discardMode){setExpandedCardId(null);return;}
     if (selectedCardId) {
       setExpandedCardId(selectedCardId);
     }
-  }, [selectedCardId]);
+  }, [selectedCardId,discardMode]);
 
   const [wildConfirmation,setWildConfirmation]=React.useState<string|null>(null);
   React.useEffect(()=>{setWildConfirmation(null);},[selectedCard?.id,isMyTurn]);
@@ -377,9 +379,9 @@ export const CardHand: React.FC<CardHandProps> = ({
           const isSelected = selectedCardId === card.id;
           const isCheckEscape = Boolean(isKingInCheck && isMyTurn && checkEscapeCardTypes?.has(card.type));
           const style = CARD_STYLES[card.type] || CARD_STYLES.wild;
-          const unavailable = card.id===boundCardId || card.type === 'brick' || (card.type === 'refresh' && Boolean(isJokerLocked)) || disabledSoulIds.includes(card.id) || !isMyTurn || (card.type === 'previous' && !lastMovedPiece) ||
+          const unavailable = !isMyTurn || !discardMode && (card.id===boundCardId || card.type === 'brick' || (card.type === 'refresh' && Boolean(isJokerLocked)) || disabledSoulIds.includes(card.id) || !isMyTurn || (card.type === 'previous' && !lastMovedPiece) ||
             ((card.type === 'beacon' || card.type === 'static') && !monolithSquare) ||
-            (card.type === 'clock' && Boolean(clockBlockReason));
+            (card.type === 'clock' && Boolean(clockBlockReason)));
           return (
             <CardSurface key={card.id} id={`card-${card.id}`} data-card-id={card.id}
               data-card-type={card.type} data-bound={card.id===boundCardId||undefined}
@@ -390,6 +392,7 @@ export const CardHand: React.FC<CardHandProps> = ({
               onKeyDown={(event) => { if (isMyTurn && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.currentTarget.click(); } }}
               onClick={() => {
                 if (!isMyTurn) return;
+                if(discardMode){onSelectCard(card);return;}
                 if (expandedCardId === card.id) { onSelectCard(null); setExpandedCardId(null); return; }
                 setExpandedCardId(card.id);
                 onSelectCard(unavailable && card.type !== 'brick' ? null : card);

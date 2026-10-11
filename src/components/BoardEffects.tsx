@@ -1,3 +1,4 @@
+import type {FrontierState} from '../utils/frontier.ts';
 import {ranksFor} from '../utils/frontierBoard.ts';
 import {FrontierArt} from './FrontierUI.tsx';
 import React from 'react';
@@ -6,9 +7,16 @@ import type {ChampionPiece, ClockAlertState, PlayerColor} from '../types.ts';
 import {PieceIcon} from './PieceIcons.tsx';
 import {V5Power} from './V5Art.tsx';
 
-type Props={fen:string;pieceIds?:Record<string,string>;champions?:{w:ChampionPiece|null;b:ChampionPiece|null}|null;grounds?:Grounds;clockAlert?:ClockAlertState|null;flipped:boolean;jokerEventId?:string};
+type Props={frontier?:FrontierState;fen:string;pieceIds?:Record<string,string>;champions?:{w:ChampionPiece|null;b:ChampionPiece|null}|null;grounds?:Grounds;clockAlert?:ClockAlertState|null;flipped:boolean;jokerEventId?:string};
 const xy=(square:string,flipped:boolean,fen:string)=>{const ranks=ranksFor(fen),x=square.charCodeAt(0)-97,y=ranks.length-1-ranks.indexOf(square.slice(1));return [flipped?7-x:x,flipped?ranks.length-1-y:y];};
-export function BoardEffects({fen,pieceIds,champions,grounds,clockAlert,flipped,jokerEventId}:Props){
+export function BoardEffects({frontier,fen,pieceIds,champions,grounds,clockAlert,flipped,jokerEventId}:Props){
+ const explosionSeen=React.useRef(new Set(frontier?.events.map(e=>e.id)));
+ const [explosions,setExplosions]=React.useState<FrontierState['events']>([]);
+ React.useEffect(()=>{
+  const fresh=(frontier?.events||[]).filter(e=>!explosionSeen.current.has(e.id)&&e.kind==='golem_explosion'&&e.square);
+  frontier?.events.forEach(e=>explosionSeen.current.add(e.id));
+  if(fresh.length){setExplosions(fresh);const timer=setTimeout(()=>setExplosions([]),1500);pending.current.add(timer);}
+ },[frontier?.events]);
  const lastJoker=React.useRef(jokerEventId);
  const [joking,setJoking]=React.useState(false);
  React.useEffect(()=>{
@@ -48,6 +56,7 @@ export function BoardEffects({fen,pieceIds,champions,grounds,clockAlert,flipped,
  const pending=React.useRef(new Set<ReturnType<typeof setTimeout>>());
  React.useEffect(()=>()=>{pending.current.forEach(clearTimeout);},[]);
  return <div className="board-effects" aria-hidden="true">
+  {explosions.map(e=>{const [x,y]=xy(e.square!,flipped,fen);return <div key={e.id} className="arcane-golem-blast" style={{left:`${(x-1)*12.5}%`,top:`${(y-1)*100/ranksFor(fen).length}%`,width:'37.5%',height:`${300/ranksFor(fen).length}%`}}><div className="arcane-blast-grid">{Array.from({length:9},(_,i)=><span key={i} style={{animationDelay:`${i===4?0:60}ms`}}/>)}</div><span className="arcane-blast-core"/><span className="arcane-blast-ring"/><span className="arcane-blast-ring outer"/>{Array.from({length:12},(_,i)=><span key={i} className="arcane-blast-spark" style={{'--blast-angle':`${i*30}deg`} as React.CSSProperties}/>)}</div>})}
   {joking&&<div className="joker-activation-art"><span className="joker-surge-ring"/><V5Power type="joker" className="w-full h-full"/>{Array.from({length:5},(_,i)=><span key={i} className="joker-surge-star" style={{'--star-angle':`${i*72}deg`} as React.CSSProperties}><V5Power type="wild" className="w-full h-full"/></span>)}</div>}
   {rewinding&&<div className="clock-rewind-art"><V5Power type="clock" className="w-full h-full"/></div>}
   {effects.map(e=>{const [x,y]=xy(e.square!,flipped,fen);return <div key={e.id} className={`trap-fx trap-${e.type}`} style={{left:`${x*12.5}%`,top:`${y*100/ranksFor(fen).length}%`,height:`${100/ranksFor(fen).length}%`}}>

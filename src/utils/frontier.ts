@@ -49,14 +49,15 @@ export interface FrontierState {
         id: string;
         kind: string;
         detail: string;
+        square?: string;
     }>;
     clockLocked?: boolean;
 }
 export const initialFrontier = (): FrontierState => ({ expanded: false, id: '', preparation: { w: false, b: false }, ready: false, pois: {}, inventories: { w: [], b: [] }, bags: { w: false, b: false }, keys: { w: 0, b: 0 }, ownerTurns: { w: 0, b: 0 }, golems: [], events: [] });
 const uid = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 export const handLimit = (s: GameState, c: PlayerColor) => s.frontier?.bags[c] ? 7 : 5;
-export function frontierNotice(s: GameState, kind: string, detail: string) { const f = s.frontier; if (!f)
-    return; const id = uid('frontier'); f.events.unshift({ id, kind, detail }); f.events = f.events.slice(0, 24); s.historyLog.unshift({ id, turn: s.turn, turnNumber: s.turnNumber, actionType: 'powerup', cardName: 'Arcane Frontier', detail, timestamp: Date.now(), whitePoints: s.whitePoints, blackPoints: s.blackPoints }); }
+export function frontierNotice(s: GameState, kind: string, detail: string, square?: string) { const f = s.frontier; if (!f)
+    return; const id = uid('frontier'); f.events.unshift({ id, kind, detail, ...(square ? {square} : {}) }); f.events = f.events.slice(0, 24); s.historyLog.unshift({ id, turn: s.turn, turnNumber: s.turnNumber, actionType: 'powerup', cardName: 'Arcane Frontier', detail, timestamp: Date.now(), whitePoints: s.whitePoints, blackPoints: s.blackPoints }); }
 export function canExpand(s: GameState, c: PlayerColor, test = false) { return !!s.frontier && !s.frontier.expanded && s.status === 'playing' && s.turn === c && !s.pendingPortal && !s.pendingSummon && !s.pendingSwapDiscard && (test || (c === 'w' ? s.whitePoints : s.blackPoints) <= 25); }
 export function expandFrontier(s: GameState, random = Math.random) { const f = s.frontier; if (!f || f.expanded)
     return false; s.fen = extendFen(s.fen); f.expanded = true; f.id = uid('expansion'); f.expandedTurn = s.turnNumber; const pool = 'WXYZ'.split('').flatMap(r => [...'abcdefgh'].map(x => x + r)); for (const kind of ['bag', 'key', 'chest', 'boss'] as const) {
@@ -667,7 +668,7 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
             exhaust = card.type.startsWith('awakening_') && m.type !== 'play_awakening_as_wild' && !m.asWild;
             h.consume(d, c, card, exhaust);
         }
-        frontierNotice(d, card?.type === 'traverse' ? 'traverse' : m.type === 'frontier_item' && m.item === 'core' ? 'summon' : m.type === 'frontier_item' || m.type === 'frontier_bind' ? 'item' : 'move', detail);
+        frontierNotice(d, m.type === 'frontier_self_destruct' ? 'golem_explosion' : card?.type === 'traverse' ? 'traverse' : m.type === 'frontier_item' && m.item === 'core' ? 'summon' : m.type === 'frontier_item' || m.type === 'frontier_bind' ? 'item' : 'move', detail, m.type === 'frontier_self_destruct' ? m.from : undefined);
         if (!free) {
             if (!d.lastMoveDetails || d.lastMoveDetails.player !== c)
                 d.lastMoveDetails = { player: c, actionType: 'move' };
