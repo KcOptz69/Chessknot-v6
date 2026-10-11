@@ -3,6 +3,59 @@
 
 .frontier-original{background:none;object-fit:contain;overflow:hidden;border-radius:10px}
 
+/* Board collectibles are small pickups, with no chess-piece bases. */
+.frontier-board-item{inset:22%!important;z-index:5!important;display:grid;place-items:center}
+.frontier-board-item.with-piece{inset:55% 52% 3% 3%!important;opacity:.9}
+.frontier-boss-hp{top:2px;bottom:auto;left:14%;right:14%;height:5px;z-index:30;overflow:hidden;background:#14283c}
+.frontier-boss-hp.weakened>span{background:#ff553c}
+.golem-idle-art{position:relative;width:100%;height:100%;--golem-glow:#28ddff}
+.golem-idle-art .frontier-art{position:absolute;inset:0}
+.golem-idle-base{clip-path:inset(75% 0 0 0)}
+.golem-idle-body{clip-path:inset(0 0 25% 0);transform-origin:50% 80%;animation:golem-breathe 3s ease-in-out infinite;filter:drop-shadow(0 0 2px var(--golem-glow))}
+.golem-weakened{--golem-glow:#ff482e}
+.golem-weakened .golem-idle-body,.golem-weakened .golem-core-pulse{animation-duration:1.8s}
+.golem-core-pulse{position:absolute;left:46%;top:40%;width:10%;height:10%;border-radius:50%;background:var(--golem-glow);filter:blur(3px);mix-blend-mode:screen;animation:golem-core 3s ease-in-out infinite}
+.golem-idle-spark{position:absolute;left:18%;top:75%;width:2px;height:2px;background:var(--golem-glow);box-shadow:0 0 5px var(--golem-glow);border-radius:50%;animation:golem-spark 3s ease-out infinite}
+.golem-idle-spark.second{left:80%;animation-delay:1.5s}
+.frontier-silhouette .golem-idle-body,.frontier-silhouette .golem-core-pulse,.frontier-silhouette .golem-idle-spark{animation:none}
+.frontier-silhouette .golem-core-pulse,.frontier-silhouette .golem-idle-spark{display:none}
+@keyframes golem-breathe{0%,100%{transform:none}50%{transform:translateY(-1px) scale(1.025,1.035)}}
+@keyframes golem-core{0%,100%{opacity:.12;transform:scale(.7)}50%{opacity:.45;transform:scale(1.4)}}
+@keyframes golem-spark{0%{opacity:0;transform:none}25%{opacity:.8}100%{opacity:0;transform:translate(4px,-18px)}}
+.frontier-bind-icon{position:relative;display:inline-block;width:100%;height:100%;aspect-ratio:1}
+.frontier-bind-icon>.frontier-art{width:100%;height:100%}
+.frontier-bind-icon>svg{position:absolute;bottom:0;right:0;width:45%;height:45%;color:#d4c2ff;background:#392568;border:1px solid #ba9fff;border-radius:50%;padding:2px}
+.frontier-bind-badge{display:flex;align-items:center;justify-content:center;gap:3px}
+.frontier-bind-badge>svg{width:12px;height:12px;flex-shrink:0}
+.vision-card-grid button:disabled{opacity:.4}
+.frontier-cooldown{font-variant-numeric:tabular-nums;color:#bfe9ff}
+.dock-player-tag{position:relative}
+.chest-key-notice{position:absolute;bottom:calc(100% + 8px);left:0;z-index:65;width:max-content;max-width:min(280px,85vw);padding:7px 10px;border:1px solid #efb65d;border-radius:9px;background:#132943;color:#ffe2ac;font-size:12px;box-shadow:0 4px 14px #0005}
+.awakening-intro{width:min(740px,94vw);max-height:88dvh;overflow-y:auto}
+.awakening-guide-toggle{display:flex;align-items:center;gap:10px;color:#c0d8ee;font-size:13px;margin-top:16px}
+.awakening-guide-toggle input{width:18px;height:18px;accent-color:#239cff}
+.awakening-intro .grounds-intro-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+.awakening-intro .grounds-intro-option p{font-size:12px}
+.frontier-action-fx{position:absolute;pointer-events:none;isolation:isolate}
+.flight-unit{position:absolute;inset:0;isolation:isolate;animation:wings-flight 1.9s ease-in-out forwards;filter:drop-shadow(0 4px 3px #07152588)}
+.flight-wing{position:absolute;top:-12%;width:88%;height:112%;left:-68%;transform-origin:100% 64%;z-index:-1;filter:drop-shadow(0 0 3px #75d7ff88);animation:wing-flap .34s ease-in-out 5 alternate}
+.flight-wing.right{left:auto;right:-68%;transform-origin:0% 64%;animation-name:wing-flap-right}
+.pawn-summon-circle{position:absolute;left:3%;top:75%;width:94%;height:25%;border:2px solid #ffdb73;box-sizing:border-box;border-radius:50%;box-shadow:0 0 8px #f8d263;animation:pawn-ring 2.1s ease-out forwards}
+.pawn-summon-beam{position:absolute;left:10%;top:-100%;width:80%;height:184%;background:linear-gradient(to top,#73deff99,#c3f2ff33,transparent);clip-path:polygon(10% 0,90% 0,100% 100%,0 100%);animation:pawn-beam 2.1s ease-out forwards}
+.pawn-summon-unit{position:absolute;inset:0;transform-origin:50% 95%;animation:pawn-rise 1.9s ease-out forwards}
+.pawn-summon-spark{position:absolute;top:70%;width:3px;height:3px;border-radius:50%;background:#fff1aa;box-shadow:0 0 5px #ffd566;animation:pawn-spark 1.5s ease-out forwards}
+.mimic-activation-art{filter:drop-shadow(0 0 20px #17dfff);animation:mimic-reveal 2s ease-in-out forwards}
+@keyframes wings-flight{0%{transform:none}20%{transform:translateY(-25%) scale(1.1)}50%{transform:translate(calc(var(--flight-x) * .5),calc(var(--flight-y) * .5 - 40%)) scale(1.12) rotate(4deg)}78%{transform:translate(var(--flight-x),calc(var(--flight-y) - 25%)) scale(1.06)}100%{transform:translate(var(--flight-x),var(--flight-y))}}
+@keyframes wing-flap{0%{transform:rotate(24deg) scaleY(.65)}100%{transform:rotate(-22deg) scaleY(1)}}
+@keyframes wing-flap-right{0%{transform:rotate(-24deg) scaleY(.65)}100%{transform:rotate(22deg) scaleY(1)}}
+@keyframes pawn-ring{0%{opacity:0;transform:scale(.2)}20%,65%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.3)}}
+@keyframes pawn-beam{0%,10%{opacity:0;transform:scaleX(.2)}30%,55%{opacity:1;transform:scaleX(1)}85%,100%{opacity:0}}
+@keyframes pawn-rise{0%,20%{opacity:0;transform:translateY(15%) scale(.45);filter:brightness(2)}55%{opacity:1;transform:translateY(-5%) scale(1.04);filter:brightness(1.5)}100%{opacity:1;transform:none;filter:none}}
+@keyframes pawn-spark{0%{opacity:0;transform:none}25%{opacity:1}100%{opacity:0;transform:translateY(-50px)}}
+@keyframes mimic-reveal{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-15deg)}25%,65%{opacity:1;transform:translate(-50%,-50%) scale(1.05) rotate(3deg)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}}
+@media(max-width:480px){.awakening-intro .grounds-intro-options{grid-template-columns:1fr}.awakening-intro{max-height:85dvh}}
+@media(prefers-reduced-motion:reduce){.golem-idle-body,.golem-core-pulse,.golem-idle-spark{animation:none}.golem-idle-spark{display:none}.frontier-action-fx{display:none}.mimic-activation-art{animation:none;opacity:1;filter:none}}
+
 .frontier-silhouette .frontier-art{filter:brightness(.15) saturate(0);opacity:.65}.frontier-health{position:absolute;top:1px;bottom:auto;right:1px;background:#122b44;color:#9aeafc;border-radius:4px;padding:0 3px;font-size:10px}
 
 .frontier-bind-badge{position:absolute;top:10%;left:10%;right:10%;z-index:4;background:#3c2179;color:#eadaff;font-size:9px;font-weight:900;border:1px solid #ad8cfc;border-radius:5px;text-align:center}.frontier-inventory .ui-button:disabled{opacity:.45;cursor:not-allowed}

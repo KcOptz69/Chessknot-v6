@@ -1,6 +1,6 @@
 import type {FrontierState} from '../utils/frontier.ts';
 import {ranksFor} from '../utils/frontierBoard.ts';
-import {FrontierArt} from './FrontierUI.tsx';
+import {FrontierArt,FlightWing} from './FrontierUI.tsx';
 import React from 'react';
 import type {Grounds} from '../utils/grounds.ts';
 import type {ChampionPiece, ClockAlertState, PlayerColor} from '../types.ts';
@@ -10,6 +10,16 @@ import {V5Power} from './V5Art.tsx';
 type Props={frontier?:FrontierState;fen:string;pieceIds?:Record<string,string>;champions?:{w:ChampionPiece|null;b:ChampionPiece|null}|null;grounds?:Grounds;clockAlert?:ClockAlertState|null;flipped:boolean;jokerEventId?:string};
 const xy=(square:string,flipped:boolean,fen:string)=>{const ranks=ranksFor(fen),x=square.charCodeAt(0)-97,y=ranks.length-1-ranks.indexOf(square.slice(1));return [flipped?7-x:x,flipped?ranks.length-1-y:y];};
 export function BoardEffects({frontier,fen,pieceIds,champions,grounds,clockAlert,flipped,jokerEventId}:Props){
+ const animationSeen=React.useRef(new Set(frontier?.events.map(e=>e.id)));
+ const [frontierAnimations,setFrontierAnimations]=React.useState<FrontierState['events']>([]);
+ React.useLayoutEffect(()=>{
+  const fresh=(frontier?.events||[]).filter(e=>!animationSeen.current.has(e.id)&&['wings_flight','pawn_summon','mimic'].includes(e.kind));
+  frontier?.events.forEach(e=>animationSeen.current.add(e.id));
+  if(!fresh.length)return;
+  setFrontierAnimations(old=>[...old,...fresh]);
+  for(const e of fresh){if(!e.square||!['wings_flight','pawn_summon'].includes(e.kind))continue;const node=document.getElementById(`square-${e.square}`)?.querySelector<HTMLElement>('[data-motion-piece]');if(node&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)node.animate([{opacity:0},{opacity:0}],{duration:1900});}
+  const timer=setTimeout(()=>setFrontierAnimations(old=>old.filter(e=>!fresh.some(f=>f.id===e.id))),2200);pending.current.add(timer);
+ },[frontier?.events,flipped,fen]);
  const explosionSeen=React.useRef(new Set(frontier?.events.map(e=>e.id)));
  const [explosions,setExplosions]=React.useState<FrontierState['events']>([]);
  React.useEffect(()=>{
@@ -56,11 +66,12 @@ export function BoardEffects({frontier,fen,pieceIds,champions,grounds,clockAlert
  const pending=React.useRef(new Set<ReturnType<typeof setTimeout>>());
  React.useEffect(()=>()=>{pending.current.forEach(clearTimeout);},[]);
  return <div className="board-effects" aria-hidden="true">
+  {frontierAnimations.map(e=>{if(e.kind==='mimic')return <div className="joker-activation-art mimic-activation-art" key={e.id}><span className="joker-surge-ring"/><FrontierArt type="mimic"/></div>;if(!e.square||!e.piece)return null;const [x,y]=xy(e.from||e.square,flipped,fen),[tx,ty]=xy(e.square,flipped,fen);return <div key={e.id} className={`frontier-action-fx ${e.kind}`} style={{left:`${x*12.5}%`,top:`${y*100/ranksFor(fen).length}%`,width:'12.5%',height:`${100/ranksFor(fen).length}%`,'--flight-x':`${(tx-x)*100}%`,'--flight-y':`${(ty-y)*100}%`} as React.CSSProperties}>{e.kind==='wings_flight'?<div className="flight-unit"><FlightWing side="left"/><FlightWing side="right"/>{e.piece.type==='golem'?<FrontierArt type={e.piece.color==='w'?'golem':'black_golem'}/>:<PieceIcon type={e.piece.type as any} color={e.piece.color} awakened={e.piece.awakened} className="w-full h-full"/>}</div>:<><span className="pawn-summon-circle"/><span className="pawn-summon-beam"/><div className="pawn-summon-unit"><PieceIcon type="p" color={e.piece.color} className="w-full h-full"/></div>{[0,1,2].map(i=><i key={i} className="pawn-summon-spark" style={{left:`${20+i*30}%`,animationDelay:`${i*.15}s`}}/>)}</>}</div>;})}
   {explosions.map(e=>{const [x,y]=xy(e.square!,flipped,fen);return <div key={e.id} className="arcane-golem-blast" style={{left:`${(x-1)*12.5}%`,top:`${(y-1)*100/ranksFor(fen).length}%`,width:'37.5%',height:`${300/ranksFor(fen).length}%`}}><div className="arcane-blast-grid">{Array.from({length:9},(_,i)=><span key={i} style={{animationDelay:`${i===4?0:60}ms`}}/>)}</div><span className="arcane-blast-core"/><span className="arcane-blast-ring"/><span className="arcane-blast-ring outer"/>{Array.from({length:12},(_,i)=><span key={i} className="arcane-blast-spark" style={{'--blast-angle':`${i*30}deg`} as React.CSSProperties}/>)}</div>})}
   {joking&&<div className="joker-activation-art"><span className="joker-surge-ring"/><V5Power type="joker" className="w-full h-full"/>{Array.from({length:5},(_,i)=><span key={i} className="joker-surge-star" style={{'--star-angle':`${i*72}deg`} as React.CSSProperties}><V5Power type="wild" className="w-full h-full"/></span>)}</div>}
   {rewinding&&<div className="clock-rewind-art"><V5Power type="clock" className="w-full h-full"/></div>}
   {effects.map(e=>{const [x,y]=xy(e.square!,flipped,fen);return <div key={e.id} className={`trap-fx trap-${e.type}`} style={{left:`${x*12.5}%`,top:`${y*100/ranksFor(fen).length}%`,height:`${100/ranksFor(fen).length}%`}}>
-   {e.piece&&!e.immune&&['mine','banish'].includes(e.type)&&<div className="trap-victim">{e.piece.type==='golem'?<FrontierArt type={e.piece.color==='w'?'golem':'black_golem'}/>:<PieceIcon type={e.piece.type as any} color={e.piece.color} className="w-full h-full"/>}</div>}
+   {e.piece&&!e.immune&&['mine','banish'].includes(e.type)&&<div className="trap-victim">{e.piece.type==='golem'?<FrontierArt type={e.piece.color==='w'?'golem':'black_golem'}/>:<PieceIcon type={e.piece.type as any} color={e.piece.color} awakened={e.piece.awakened} className="w-full h-full"/>}</div>}
    {e.type==='mine'&&<><span className="trap-explosion"/>{Array.from({length:10},(_,i)=><span key={i} className="trap-debris" style={{'--dx':`${Math.cos(i*2.4)*100}%`,'--dy':`${Math.sin(i*2.4)*100}%`} as React.CSSProperties}/>)}</>}
    {e.type==='poison'&&Array.from({length:5},(_,i)=><span key={i} className="trap-fume" style={{'--drift':`${i%2?35:-35}%`,animationDelay:`${i*.12}s`} as React.CSSProperties}/>)}
    {e.type==='banish'&&<><span className="trap-hole"/><span className="trap-vortex"/></>}

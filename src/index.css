@@ -1198,7 +1198,7 @@ body .move-error-notice>div{margin:0!important;}
 :root #player-hand-container .compact-hand-card[data-card-type="soul_release"],
 :root:not(.dark) #player-hand-container .compact-hand-card[data-card-type="soul_release"],
 :root .vision-card-grid .compact-hand-card[data-card-type="soul_release"] {
- background:linear-gradient(150deg,#252525,#050505)!important;
+
  border-color:#737373!important;color:#fafafa!important;
  box-shadow:inset 0 0 8px #ffffff12,0 3px 10px #0005!important;
 }
@@ -1350,6 +1350,7 @@ body .move-error-notice>div{margin:0!important;}
 :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card:is([data-card-type="champion"],[data-card-type="static"]) {--tcg-frame:url('/art/cards/frame-purple.svg');--tcg-accent:#bd7aef;}
 :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card:is([data-card-type="joker"],[data-card-type="clock"],[data-joker-wild]) {--tcg-frame:url('/art/cards/frame-gold.svg');--tcg-accent:#efbf41;}
 :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="soul_release"] {--tcg-frame:url('/art/cards/frame-black.svg');--tcg-accent:#a7b1bb;}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="soul_release"] {background:var(--tcg-frame) center / 100% 100% no-repeat!important;}
 :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .card-art {
  position:absolute!important;inset:9% 12% 20%!important;width:auto!important;height:auto!important;
  max-width:none!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;

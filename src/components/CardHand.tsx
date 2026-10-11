@@ -1,3 +1,4 @@
+import {Link2} from 'lucide-react';
 import {FrontierArt} from './FrontierUI.tsx';
 import {isFreeActionCard, cardDisplayName} from './CardArtwork.tsx';
 import { AWAKENING_DESCRIPTIONS, AWAKENING_WILD_DESCRIPTION } from '../utils/cardDescriptions.ts';
@@ -409,7 +410,7 @@ export const CardHand: React.FC<CardHandProps> = ({
                   <span>Escape</span>
                 </span>
               )}
-              {card.id===boundCardId&&<span className='frontier-bind-badge'>BOUND</span>}<span className="compact-card-name">
+              {card.id===boundCardId&&<span className='frontier-bind-badge' title='Bound — cannot be played'><Link2 aria-hidden='true'/>BOUND</span>}<span className="compact-card-name">
                 {cardDisplayName(card)}
               </span>
             </CardSurface>

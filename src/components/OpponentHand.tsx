@@ -1,3 +1,5 @@
+import {BindIcon} from './FrontierUI.tsx';
+import {Link2} from 'lucide-react';
 import {CardArtwork} from './CardArtwork.tsx';
 import type { Grounds, GroundType } from '../utils/grounds.ts';
 import { GROUND_NAMES } from '../utils/grounds.ts';
@@ -8,6 +10,10 @@ import { Card, ChampionPiece, PowerUpsState } from '../types.ts';
 import { Zap, X } from 'lucide-react';
 
 interface OpponentHandProps {
+  bindRequest?:number;
+  canBind?:boolean;
+  boundCardId?:string;
+  onBind?:(id:string)=>void;
   hidePowerButton?: boolean;
   openRequest?: number;
   grounds?: Grounds;
@@ -30,7 +36,7 @@ interface OpponentHandProps {
 }
 
 export const OpponentHand: React.FC<OpponentHandProps> = ({
-  hidePowerButton = false, openRequest = 0,
+  bindRequest=0,canBind=false,boundCardId,onBind,hidePowerButton = false, openRequest = 0,
   grounds,
   color = "b",
   hand,champion,
@@ -44,6 +50,10 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   const [visionOpen,setVisionOpen]=React.useState(isVisionActive && !alwaysReveal);
   const [inspectedCardId,setInspectedCardId]=React.useState<string|null>(null);
   React.useEffect(()=>{setVisionOpen(isVisionActive && !alwaysReveal);setInspectedCardId(null);},[isVisionActive,alwaysReveal]);
+  const [binding,setBinding]=React.useState(false);
+  React.useEffect(()=>{if(bindRequest){setVisionOpen(true);setBinding(true);setInspectedCardId(null);}},[bindRequest]);
+  React.useEffect(()=>{if(!canBind)setBinding(false);},[canBind]);
+  const bindEligible=(card:Card)=>!['pawn','knight','bishop','rook','queen','wild'].includes(card.type);
   const inspectedCard=hand.find(card=>card.id===inspectedCardId);
   const [open, setOpen] = React.useState(false);
   React.useEffect(()=>{if(openRequest)setOpen(true);},[openRequest]);
@@ -172,7 +182,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
               <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/80 flex flex-col justify-between gap-3 relative">
                 <div className="flex items-start justify-between">
                   <div className="w-14 h-14 rounded-lg bg-cyan-500/10 dark:bg-cyan-400/10 flex items-center justify-center">
-                    <V5Power type="vision" className="w-12 h-12" />
+                    {opponentHasEye?<BindIcon className="w-12 h-12"/>:<V5Power type="vision" className="w-12 h-12" />}
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                     visionCount > 0
@@ -233,8 +243,9 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
 
       {isVisionActive && visionOpen && <PopupLayer><div className="ground-popup" onClick={()=>setVisionOpen(false)}><section className="ground-dialog vision-dialog" role="dialog" aria-modal="true" aria-label="Revealed cards" onClick={event=>event.stopPropagation()} onKeyDown={event=>{if(event.key==='Escape')setVisionOpen(false);}}>
         <header><h3>{opponentName}’s revealed cards</h3><button type="button" className="ui-button" autoFocus onClick={()=>setVisionOpen(false)}>Close</button></header>
-        <div className="vision-card-grid">{hand.map(card=><button type="button" key={card.id} className="compact-hand-card" data-card-type={card.type} data-joker-wild={card.isJokerWild||undefined} aria-pressed={inspectedCardId===card.id} onClick={()=>setInspectedCardId(inspectedCardId===card.id?null:card.id)}><div className="card-art"><CardArtwork card={card} color={color} champion={champion}/></div><span className="compact-card-name">{card.name}</span></button>)}</div>
+        <div className="vision-card-grid">{hand.map(card=><button type="button" key={card.id} className="compact-hand-card" data-card-type={card.type} data-joker-wild={card.isJokerWild||undefined} data-bound={card.id===boundCardId||undefined} disabled={binding&&!bindEligible(card)} aria-pressed={inspectedCardId===card.id} onClick={()=>setInspectedCardId(inspectedCardId===card.id?null:card.id)}><div className="card-art"><CardArtwork card={card} color={color} champion={champion}/></div><span className="compact-card-name">{card.name}</span>{card.id===boundCardId&&<span className="frontier-bind-badge"><Link2/>BOUND</span>}</button>)}</div>
         {inspectedCard&&<div className="vision-card-description"><div className="selected-card-thumb"><CardArtwork card={inspectedCard} color={color} champion={champion}/></div><div><strong>{inspectedCard.name}</strong><p>{inspectedCard.description}</p></div></div>}
+        {binding&&<div className="vision-bind-actions"><p>Choose a non-standard card to bind for the opponent’s next turn.</p><button className="ui-button ui-button--primary" disabled={!canBind||!inspectedCard||!bindEligible(inspectedCard)} onClick={()=>{if(inspectedCard&&canBind){onBind?.(inspectedCard.id);setBinding(false);setVisionOpen(false);}}}>Bind selected card</button><button className="ui-button" onClick={()=>setBinding(false)}>Cancel Bind</button></div>}
         <p className="vision-note">{permanentVision?'Tap a card to read its description. Eye of Revelation reveals this hand permanently.':'Tap a card to read its description. Vision lasts for this turn.'}</p>
       </section></div></PopupLayer>}
     </>

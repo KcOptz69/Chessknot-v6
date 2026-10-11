@@ -1,6 +1,6 @@
 import {bishopCircleTargets} from '../utils/summoning.ts';
 import {frontierMoves,frontierKingSafe,executeLandingMove,occupant,frontierUltimateTargets,emptyFrontierSquare} from '../utils/frontier.ts';
-import {FrontierArt} from './FrontierUI.tsx';
+import {FrontierArt,GolemIdleArt} from './FrontierUI.tsx';
 import {ranksFor,isExtendedFen} from '../utils/frontierBoard.ts';
 import {ChampionInfoDialog} from './ChampionInfoDialog.tsx';
 import {BoardEffects} from './BoardEffects.tsx';
@@ -447,7 +447,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     if (!selectedSquare) return [];
     if(tutorialGuide?.from&&tutorialGuide.to)return selectedSquare===tutorialGuide.from?[tutorialGuide.to]:[];
     if (selectedSquare === monolithSquare) return [];
-    if(frontierGame?.frontier?.expanded && (!selectedCard||['pawn','knight','bishop','rook','queen','wild','previous','traverse'].includes(selectedCard.type)||isWildPowerUp)){const d=structuredClone(frontierGame);let from=selectedSquare;if(awaitingKnightSecondMove&&knightMovePrompt){try{executeLandingMove(d,knightMovePrompt.from,knightMovePrompt.to);}catch{return [];}from=knightMovePrompt.to;}return frontierMoves(d,from).filter(q=>!awaitingKnightSecondMove||!knightMovePrompt?.firstCaptured||(!occupant(d,q)&&!['boss','chest','mimic'].includes(d.frontier?.pois[q]||'')));}
+    if(frontierGame?.frontier?.expanded && (!selectedCard||['pawn','knight','bishop','rook','queen','wild','previous','traverse'].includes(selectedCard.type)||isWildPowerUp)){const d=structuredClone(frontierGame);let from=selectedSquare;if(awaitingKnightSecondMove&&knightMovePrompt){try{executeLandingMove(d,knightMovePrompt.from,knightMovePrompt.to);}catch{return [];}from=knightMovePrompt.to;}return frontierMoves(d,from).filter(q=>!awaitingKnightSecondMove||!knightMovePrompt?.firstCaptured||(!occupant(d,q)&&!['boss','mimic'].includes(d.frontier?.pois[q]||'')));}
     if(grounds && selectedCard?.type!=='push' && !(selectedCard?.type==='champion')){
       const from=awaitingKnightSecondMove&&knightMovePrompt?knightMovePrompt.to:selectedSquare;
       const preview=createSafeChess(fen);
@@ -1771,7 +1771,10 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                   <div className="absolute inset-0 bg-red-600/40 animate-pulse rounded-sm pointer-events-none" />
                 )}
 
-                {(frontierGolem||frontierPOI)&&<div className={`absolute inset-0 z-10 pointer-events-none ${!frontier?.ready&&!frontierGolem?'frontier-silhouette':''}`} title={frontierGolem?'Controlled Golem · 10 points':frontierPOI==='boss'?`Arcane Golem · ${frontier?.boss?.health}/2 health`:frontierPOI}><FrontierArt type={frontierGolem?(frontierGolem.owner==='w'?'golem':'black_golem'):frontierPOI==='boss'&&frontier?.boss?.health===1?'weakened':frontierPOI!}/>{frontierPOI==='boss'&&frontier?.ready&&<span className='frontier-health'>{frontier.boss?.health}/2</span>}</div>}
+                {(frontierGolem||frontierPOI)&&<div data-motion-piece={frontierGolem?'golem':undefined} className={`absolute inset-0 z-10 pointer-events-none ${!frontier?.ready&&!frontierGolem?'frontier-silhouette':''} ${['bag','key','chest'].includes(frontierPOI||'')?`frontier-board-item ${piece?'with-piece':''}`:''}`} title={frontierGolem?'Controlled Golem · 10 points':frontierPOI==='boss'?'Arcane Golem':frontierPOI}>
+                  {frontierGolem||frontierPOI==='boss'?<GolemIdleArt type={frontierGolem?(frontierGolem.owner==='w'?'golem':'black_golem'):frontier?.boss?.health===1?'weakened':'boss'} weakened={frontierPOI==='boss'&&frontier?.boss?.health===1}/>:<FrontierArt type={frontierPOI!}/>}
+                  {frontierPOI==='boss'&&frontier?.ready&&<div className={`frontier-boss-hp ${frontier.boss?.health===1?'weakened':''}`} role="progressbar" aria-label="Arcane Golem health" aria-valuenow={frontier.boss?.health===1?50:100} aria-valuemin={0} aria-valuemax={100}><span style={{width:frontier.boss?.health===1?'50%':'100%'}}/></div>}
+                </div>}
                 {/* Monolith Piece */}
                 {isMonolith && (
                   <div data-motion-piece="monolith" className="w-[98%] h-[98%] z-10 flex items-center justify-center transition-transform hover:scale-105 pointer-events-none">

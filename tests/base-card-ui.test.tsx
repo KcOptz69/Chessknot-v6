@@ -10,7 +10,9 @@ import {PlayerPanel} from '../src/components/UI.tsx';
 import {GameLog} from '../src/components/GameLog.tsx';
 import {ThemeProvider} from '../src/context/ThemeContext.tsx';
 import {activityInfoNotices} from '../src/components/MatchActivityNotices.tsx';
-import {createCard} from '../src/utils/chessLogic.ts';
+import {FrontierExpandOffer} from '../src/components/FrontierUI.tsx';
+import {PowerUpsBar} from '../src/components/PowerUpsBar.tsx';
+import {createCard,createInitialGameState} from '../src/utils/chessLogic.ts';
 import type {GameLogEntry} from '../src/types.ts';
 function hand(type:'brick'|'refresh',locked=false){const card=createCard(type,1);return renderToStaticMarkup(<ThemeProvider><CardHand hand={[card]} selectedCardId={card.id} onSelectCard={()=>{}} onPlayRefresh={()=>{}} isJokerLocked={locked} isMyTurn playerColor="w" lastMovedPiece={null}/></ThemeProvider>);}
 test('Refresh card shows FREE on face and FREE ACTION beside name; Brick has neither action tag nor use button',()=>{
@@ -66,3 +68,12 @@ test('interactive rulebook retains new base rules and shows details above the ic
 test('Traverse hand and selected description use the approved violet portal sprite',()=>{const card=createCard('traverse',1);const html=renderToStaticMarkup(<ThemeProvider><CardHand hand={[card]} selectedCardId={card.id} onSelectCard={()=>{}} isMyTurn playerColor="w" lastMovedPiece={null}/></ThemeProvider>);assert.match(html,/src="\/art\/frontier\/traverse.png"/);assert.ok(!html.includes('data-power="traverse"'));assert.match(html,/MOVE ACTION/);});
 
 test('Lens discard selection permits an unplayable or bound card and suppresses its play controls',()=>{const brick=createCard('brick',1),previous=createCard('previous',2);const html=renderToStaticMarkup(<ThemeProvider><CardHand discardMode hand={[brick,previous]} boundCardId={previous.id} selectedCardId={previous.id} onSelectCard={()=>{}} isMyTurn playerColor="w" lastMovedPiece={null}/></ThemeProvider>);assert.equal((html.match(/aria-disabled="false"/g)||[]).length,2);assert.ok(!html.includes('card-description-panel'));});
+
+test('expansion offer appears only for an eligible player on their turn and waits for pending choices',()=>{
+ const s=createInitialGameState();s.status='playing';s.whitePoints=25;s.blackPoints=30;
+ const render=(color:'w'|'b',paused=false)=>renderToStaticMarkup(<FrontierExpandOffer state={s} color={color} enabled paused={paused} onOpenChange={()=>{}} send={()=>{}}/>);
+ assert.match(render('w'),/Open the Arcane Frontier/);assert.match(render('w'),/Not yet/);assert.match(render('w'),/Expand now/);assert.equal(render('b'),'');assert.equal(render('w',true),'');
+ s.pendingSwapDiscard={player:'w',newCardIds:[]};assert.equal(render('w'),'');s.pendingSwapDiscard=null;s.whitePoints=26;assert.equal(render('w'),'');s.whitePoints=25;s.frontier!.expanded=true;assert.equal(render('w'),'');
+});
+test('bound cards display a chain marker and are disabled for play',()=>{const card=createCard('clock',31);const html=renderToStaticMarkup(<ThemeProvider><CardHand hand={[card]} selectedCardId={null} boundCardId={card.id} onSelectCard={()=>{}} isMyTurn playerColor="w" lastMovedPiece={null}/></ThemeProvider>);assert.match(html,/data-bound="true"/);assert.match(html,/aria-disabled="true"/);assert.match(html,/frontier-bind-badge/);assert.match(html,/lucide-link/);assert.match(html,/BOUND/);});
+test('Eye replaces the Vision control with a distinct Bind icon and revealed-card instructions',()=>{const html=renderToStaticMarkup(<ThemeProvider><PowerUpsBar hasEye powerUps={{draw:1,monolith:1,wild:1,vision:2}} isMyTurn isWildActive={false} isMonolithMode={false} onUseDraw={()=>{}} onUseMonolith={()=>{}} onUseWild={()=>{}} onUseVision={()=>{}}/></ThemeProvider>);assert.match(html,/frontier-bind-icon/);assert.match(html,/revealed-cards popup/);assert.match(html,/>Bind</);});

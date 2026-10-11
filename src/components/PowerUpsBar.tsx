@@ -1,3 +1,4 @@
+import {BindIcon} from './FrontierUI.tsx';
 import {GROUND_DESCRIPTION} from './GroundsUI.tsx';
 import {GROUND_NAMES, type Grounds, type GroundType} from '../utils/grounds.ts';
 import {V5Power,V5Piece} from './V5Art.tsx';
@@ -63,13 +64,13 @@ export const PowerUpsBar: React.FC<PowerUpsBarProps> = ({
     if (!pendingUse) return null;
     return (
       <div className="powerup-use-panel mt-1.5" role="region" aria-label="Power-up description">
-        <V5Power type={pendingUse} />
+        {pendingUse==='vision'&&hasEye?<BindIcon/>:<V5Power type={pendingUse} />}
         <div className="powerup-panel-copy">
           <strong>
-            {({draw:'Exchange',vision:'Vision',wild:'Wild move',monolith:'Monolith'} as Record<string,string>)[pendingUse] || GROUND_NAMES[pendingUse as GroundType]}
+            {({draw:'Exchange',vision:hasEye?'Bind':'Vision',wild:'Wild move',monolith:'Monolith'} as Record<string,string>)[pendingUse] || GROUND_NAMES[pendingUse as GroundType]}
           </strong>
           <p>
-            {({draw:'Draw 2 fresh cards, then choose 2 cards to discard. Free action.',vision:'Reveal your opponent’s hand for this turn. Free action.',wild:'Move any piece without spending a card. Choose a piece and a destination. Move action.',monolith:'Spawn or reposition the obstacle Monolith. Choose a highlighted empty square. Move action.'} as Record<string,string>)[pendingUse] || GROUND_DESCRIPTION[pendingUse as GroundType]}
+            {({draw:'Draw 2 fresh cards, then choose 2 cards to discard. Free action.',vision:hasEye?'Choose a non-standard card in the revealed-cards popup to block for the opponent’s next turn. Free action.':'Reveal your opponent’s hand for this turn. Free action.',wild:'Move any piece without spending a card. Choose a piece and a destination. Move action.',monolith:'Spawn or reposition the obstacle Monolith. Choose a highlighted empty square. Move action.'} as Record<string,string>)[pendingUse] || GROUND_DESCRIPTION[pendingUse as GroundType]}
           </p>
         </div>
         <div className="powerup-panel-actions">
@@ -119,7 +120,7 @@ export const PowerUpsBar: React.FC<PowerUpsBarProps> = ({
         <PowerUpButton id="btn-powerup-draw" icon={<V5Power type="draw"/>} name="Exchange" quantity={drawCount} free description={isJokerLocked ? "Play all Joker Wild cards before drawing." : "Draw 2 fresh cards, then choose 2 cards from your hand to discard. Free action."} data-unavailable={!isMyTurn || drawCount <= 0 || isJokerLocked || undefined} active={pendingUse==='draw'} onClick={()=>setPendingUse(pendingUse==='draw'?null:'draw')} />
         {showMonolithPowerUp && <PowerUpButton id="btn-powerup-monolith" icon={<V5Piece type="m" className="w-8 h-8"/>} name="Monolith" quantity={monolithCount} active={isMonolithMode} description="Spawn or reposition the obstacle Monolith" data-unavailable={!isMyTurn || monolithCount <= 0 || undefined} onClick={()=>{setPendingUse(pendingUse==='monolith'?null:'monolith');if(!confirmPlacement&&isMyTurn&&monolithCount>0)onUseMonolith();}} />}
         <PowerUpButton id="btn-powerup-wild" icon={<V5Power type="wild"/>} name="Wild move" quantity={wildCount} active={isWildActive} description="Move any piece without spending a card" data-unavailable={!isMyTurn || wildCount <= 0 || undefined} onClick={()=>{setPendingUse(pendingUse==='wild'?null:'wild');if(!confirmPlacement&&isMyTurn&&wildCount>0)onUseWild();}} />
-        <PowerUpButton id="btn-powerup-vision" icon={<V5Power type="vision"/>} name={hasEye?"Bind":"Vision"} quantity={visionCount} free description={hasEye?"Choose a card in Arcane Frontier items below":"Reveal your opponent's cards this turn"} data-unavailable={!isMyTurn || visionCount <= 0 || undefined} active={pendingUse==='vision'} onClick={()=>{if(hasEye){document.querySelector('.frontier-bind')?.scrollIntoView({block:'nearest'});return;}setPendingUse(pendingUse==='vision'?null:'vision');}} />
+        <PowerUpButton id="btn-powerup-vision" icon={hasEye?<BindIcon/>:<V5Power type="vision"/>} name={hasEye?"Bind":"Vision"} quantity={visionCount} free description={hasEye?"Choose a card in the revealed-cards popup":"Reveal your opponent's cards this turn"} data-unavailable={!isMyTurn || visionCount <= 0 || undefined} active={pendingUse==='vision'} onClick={()=>{setPendingUse(pendingUse==='vision'?null:'vision');}} />
       </div>
 
       {isNormalPowerUp && renderUsePanel()}

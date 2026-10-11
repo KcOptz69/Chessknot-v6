@@ -302,8 +302,8 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
       id: "arcane-frontier",
       title: "Arcane Frontier",
       art: "frontier",
-      enabled: lobbyConfig.expansions?.arcaneFrontier===true,
-      toggle: ()=>{if(isHost)onUpdateConfig({expansions:{...lobbyConfig.expansions,arcaneFrontier:lobbyConfig.expansions?.arcaneFrontier!==true}});},
+      enabled: lobbyConfig.expansions?.arcaneFrontier!==false,
+      toggle: ()=>{if(isHost)onUpdateConfig({expansions:{...lobbyConfig.expansions,arcaneFrontier:lobbyConfig.expansions?.arcaneFrontier===false}});},
       description: "An expanded board, a Golem Boss, and items to discover.",
     },
     {

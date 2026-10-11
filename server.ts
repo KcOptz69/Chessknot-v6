@@ -1,4 +1,4 @@
-import {executeFrontier,finishFrontierTurn,checkExpansion,handLimit,frontierClockRestore,frontierKingSafe,canExpand,frontierUltimate,emptyFrontierSquare} from './src/utils/frontier.ts';
+import {executeFrontier,finishFrontierTurn,checkExpansion,handLimit,frontierClockRestore,frontierKingSafe,canExpand,frontierUltimate,emptyFrontierSquare,frontierLanding,trimBagHands} from './src/utils/frontier.ts';
 import {isExtendedFen,adjacent,xy,squareAt,allSquares,ranksFor} from './src/utils/frontierBoard.ts';
 import {viewingGameState,isArbiter} from './src/utils/roomViewing.ts';
 import { randomBytes } from 'node:crypto';
@@ -143,6 +143,7 @@ function getOrCreateRoom(roomId: string, mode?: 'online' | 'pass_and_play', host
           shiftedParadigm: true,
           championsOfTheMonolith: true,
           theAwakening: true,
+          arcaneFrontier: true,
         },
       },
     };
@@ -161,6 +162,7 @@ function getOrCreateRoom(roomId: string, mode?: 'online' | 'pass_and_play', host
           shiftedParadigm: true,
           championsOfTheMonolith: true,
           theAwakening: true,
+          arcaneFrontier: true,
         },
       };
     } else if (!room.lobbyConfig.expansions) {
@@ -168,6 +170,7 @@ function getOrCreateRoom(roomId: string, mode?: 'online' | 'pass_and_play', host
         shiftedParadigm: true,
         championsOfTheMonolith: true,
         theAwakening: true,
+          arcaneFrontier: true,
       };
     }
     if (!room.chatMessages) {
@@ -558,6 +561,7 @@ wss.on('connection', (ws: WebSocket) => {
           shiftedParadigm: true,
           championsOfTheMonolith: true,
           theAwakening: true,
+          arcaneFrontier: true,
         };
 
         // Create fresh starting game state with configured expansions
@@ -638,6 +642,7 @@ wss.on('connection', (ws: WebSocket) => {
           shiftedParadigm: true,
           championsOfTheMonolith: true,
           theAwakening: true,
+          arcaneFrontier: true,
         };
         room.gameState = createInitialGameState(expansions);
         room.gameState.status = 'lobby';
@@ -1047,6 +1052,7 @@ function completeTurnState(state:GameState,currentTurn:PlayerColor,nextTurn:Play
     state.awakeningAlert = null;
   }
 
+  trimBagHands(state);
   const priorBags={...state.frontier?.bags};
   finishFrontierTurn(state,currentTurn);
   for(const color of ['w','b'] as const)if(state.frontier?.bags[color]&&!priorBags[color])consumeCardAndRefill(state,color,null);
@@ -1313,7 +1319,7 @@ function handleGameAction(room: RoomState, msg: ClientMessage, actorColor: Playe
     const draft=draftRoom.gameState;
     const failed=replies.some(reply=>reply.type==='error');
     const changed=JSON.stringify(draft)!==JSON.stringify(before);
-    const destinations=Object.keys(draft.frontier?.pois||{}).filter(q=>['boss','chest','mimic'].includes(draft.frontier!.pois[q]));
+    const destinations=Object.keys(draft.frontier?.pois||{}).filter(q=>['boss','mimic'].includes(draft.frontier!.pois[q]));
     const collision=destinations.some(q=>!!createSafeChess(draft.fen).get(q as Square)||Object.values(draft.champions).some(ch=>ch?.square===q)||draft.frontier?.golems.some(g=>g.square===q))||draft.frontier?.golems.some(g=>!!createSafeChess(draft.fen).get(g.square as Square)||Object.values(draft.champions).some(ch=>ch?.square===g.square));
     const safe=!changed||msg.type==='resign'||msg.type==='play_clock'||msg.type.startsWith('dismiss_')||frontierKingSafe(draft,actorColor);
     if(!failed&&changed&&safe&&!collision){for(const c of ['w','b'] as const){const existing=before.captures?.[c].length||0;for(const loss of draft.captures?.[c].slice(existing)||[])loss.capturedTurn??=before.turnNumber;}room.gameState=draft;}
@@ -1448,7 +1454,7 @@ function executeSummoningAction(room:RoomState,msg:ClientMessage,color:PlayerCol
   const draft=structuredClone(s);const id=`soul_piece_${Date.now()}_${Math.random()}`;
   placeRevived(draft,m.targetSquare,card.soul.piece,color,id);draft.soulSummons||=[];
   draft.soulSummons.push({id:`soul_${Date.now()}_${Math.random()}`,owner:color,pieceId:id,remaining:5,createdTurn:s.turnNumber});
-  landGround(draft,m.targetSquare);promoteStatePawns(draft);
+  if(draft.frontier?.expanded)frontierLanding(draft,m.targetSquare);else landGround(draft,m.targetSquare);promoteStatePawns(draft);
   if(!kingSafe(draft,color))return fail('The summon leaves your King unsafe.');
   draft.hands[color]=draft.hands[color].filter(c=>c.id!==card.id);draft.exhausted||=[];draft.exhausted.push(card);
   draft.lastMoveDetails={player:color,actionType:'soul_release'};summonNotice(draft,`Soul Release summoned ${card.soul.piece.type} at ${m.targetSquare} for five of your subsequent turns. It has no army or capture value.`,'soul_release','Soul Release');
@@ -3125,7 +3131,7 @@ function executeGameAction(
       }
       return;
     }
-    if (state.frontier?.expanded && !emptyFrontierSquare(state,target) || isSquareBlocked(target, state.restrictedSquares, null) || chess.get(target as Square) ||
+    if (state.frontier?.expanded && (!emptyFrontierSquare(state,target)||!!state.frontier.pois[target]) || isSquareBlocked(target, state.restrictedSquares, null) || chess.get(target as Square) ||
         state.champions?.w?.square === target || state.champions?.b?.square === target) {
       return; // Cannot place on occupied/restricted/champion square
     }

@@ -7,7 +7,7 @@ import type { Square, PieceSymbol } from 'chess.js';
 export const FRONTIER_ITEMS = ['lens', 'wings', 'star', 'banner', 'sigil', 'eye', 'feather', 'core'] as const;
 export type FrontierItem = typeof FRONTIER_ITEMS[number];
 export const ITEM_NAMES: Record<FrontierItem, string> = { lens: 'Fateweaver’s Lens', wings: 'Wings of Flight', star: 'Wishing Star', banner: 'Footsoldier’s Banner', sigil: 'Champion’s Sigil', eye: 'Eye of Revelation', feather: 'Feather of the Fallen', core: 'Golem Core' };
-export const ITEM_TEXT: Record<FrontierItem, string> = { lens: 'Free action: discard one card and draw its replacement, once per turn.', wings: 'Move action: move a friendly piece 1–2 squares in any direction without capturing. Three owner-turn cooldown.', star: 'Move action: move an eligible piece as a Wild. Five owner-turn cooldown.', banner: 'Single-use move action: summon a Pawn onto your second rank.', sigil: 'Single-use move action: activate your Champion’s ultimate.', eye: 'Permanently reveals the opponent’s hand. Vision becomes Bind and keeps its charges.', feather: 'Single-use move action: revive your latest eligible loss since obtaining this item onto your first rank.', core: 'Single-use move action: summon a controllable Golem onto your first rank.' };
+export const ITEM_TEXT: Record<FrontierItem, string> = { lens: 'Free action: discard one card and draw its replacement, once per turn.', wings: 'Move action: move a friendly piece 1–2 squares in any direction without capturing. Seven owner-turn cooldown.', star: 'Move action: move an eligible piece as a Wild. Five owner-turn cooldown.', banner: 'Single-use move action: summon a Pawn onto your second rank.', sigil: 'Single-use move action: activate your Champion’s ultimate.', eye: 'Permanently reveals the opponent’s hand. Vision becomes Bind and keeps its charges.', feather: 'Single-use move action: revive your latest eligible loss since obtaining this item onto your first rank.', core: 'Single-use move action: summon a controllable Golem onto your first rank.' };
 export interface OwnedItem {
     id: string;
     type: FrontierItem;
@@ -32,6 +32,7 @@ export interface FrontierState {
     chestRoll?: FrontierItem | 'mimic';
     inventories: Record<PlayerColor, OwnedItem[]>;
     bags: Record<PlayerColor, boolean>;
+    bagDiscardPending?: Partial<Record<PlayerColor,boolean>>;
     keys: Record<PlayerColor, number>;
     ownerTurns: Record<PlayerColor, number>;
     golems: Array<{
@@ -52,6 +53,8 @@ export interface FrontierState {
         square?: string;
         item?: FrontierItem;
         recipient?: PlayerColor;
+        from?: string;
+        piece?: {type:string;color:PlayerColor;awakened?:boolean};
     }>;
     clockLocked?: boolean;
 }
@@ -60,6 +63,13 @@ const uid = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toStrin
 export const handLimit = (s: GameState, c: PlayerColor) => s.frontier?.bags[c] ? 7 : 5;
 export function frontierNotice(s: GameState, kind: string, detail: string, square?: string, loot?: {item:FrontierItem;recipient?:PlayerColor}) { const f = s.frontier; if (!f)
     return; const id = uid('frontier'); f.events.unshift({ id, kind, detail, ...(square ? {square} : {}),...loot }); f.events = f.events.slice(0, 24); s.historyLog.unshift({ id, turn: s.turn, turnNumber: s.turnNumber, actionType: 'powerup', cardName: 'Arcane Frontier', detail, timestamp: Date.now(), whitePoints: s.whitePoints, blackPoints: s.blackPoints }); }
+export function trimBagHands(s:GameState,random=Math.random) {
+    for(const c of ['w','b'] as const) {
+        if(!s.frontier?.bagDiscardPending?.[c]||s.frontier.bags[c]||s.jokerLocked[c])continue;
+        while(s.hands[c].length>5) s.discard.push(s.hands[c].splice(Math.floor(random()*s.hands[c].length),1)[0]);
+        delete s.frontier.bagDiscardPending[c];
+    }
+}
 export function canExpand(s: GameState, c: PlayerColor, test = false) { return !!s.frontier && !s.frontier.expanded && s.status === 'playing' && s.turn === c && !s.pendingPortal && !s.pendingSummon && !s.pendingSwapDiscard && (test || (c === 'w' ? s.whitePoints : s.blackPoints) <= 25); }
 export function expandFrontier(s: GameState, random = Math.random) { const f = s.frontier; if (!f || f.expanded)
     return false; s.fen = extendFen(s.fen); f.expanded = true; f.id = uid('expansion'); f.expandedTurn = s.turnNumber; const pool = 'WXYZ'.split('').flatMap(r => [...'abcdefgh'].map(x => x + r)); for (const kind of ['bag', 'key', 'chest', 'boss'] as const) {
@@ -74,13 +84,13 @@ export function expandFrontier(s: GameState, random = Math.random) { const f = s
 export function checkExpansion(s: GameState) { if (!s.frontier?.expanded && s.status === 'playing' && ((s.whitePoints <= 25 && s.blackPoints <= 25) || s.turnNumber > 50))
     expandFrontier(s); }
 export function finishFrontierTurn(s: GameState, c: PlayerColor) { const f = s.frontier; if (!f)
-    return; f.ownerTurns[c]++; if (f.expanded && !f.ready && s.turnNumber >= (f.expandedTurn || 0)) {
+    return; trimBagHands(s); f.ownerTurns[c]++; if (f.expanded && !f.ready && s.turnNumber >= (f.expandedTurn || 0)) {
     f.preparation[c] = true;
     if (f.preparation.w && f.preparation.b) {
         f.ready = true;
         frontierNotice(s, 'ready', 'The Mystic Field is active. Discoveries can now be collected.');
         for (const q of Object.keys(f.pois))
-            if (['bag', 'key'].includes(f.pois[q]) && occupant(s, q))
+            if (['bag', 'key', 'chest'].includes(f.pois[q]) && occupant(s, q))
                 collectFrontier(s, q);
     }
 } if (f.bind?.target === c)
@@ -90,7 +100,7 @@ export function occupant(s: GameState, q: string): {
     color: PlayerColor;
 } | undefined { const golem = s.frontier?.golems.find(g => g.square === q); if (golem)
     return { type: 'golem', color: golem.owner }; const champ = Object.values(s.champions).find(c => c?.square === q); return champ ? { type: champ.type, color: champ.color } : boardFor(s.fen).get(q as Square); }
-export function poiBlocks(s: GameState, q: string) { return !!s.frontier && ['boss', 'chest', 'mimic'].includes(s.frontier.pois[q]); }
+export function poiBlocks(s: GameState, q: string) { return !!s.frontier && ['boss', 'mimic'].includes(s.frontier.pois[q]); }
 export function emptyFrontierSquare(s: GameState, q: string) { return allSquares(s.fen).includes(q) && !occupant(s, q) && !poiBlocks(s, q) && q !== s.monolithSquare && !s.restrictedSquares.includes(q) && !activeCircle(s, q); }
 export function addItem(s: GameState, c: PlayerColor, type: FrontierItem) { const f = s.frontier!; const permanent = ['lens', 'wings', 'star', 'eye'].includes(type); if (permanent && f.inventories[c].some(i => i.type === type)) {
     frontierNotice(s, 'loot', `${c==='w'?'White':'Black'} found ${ITEM_NAMES[type]}, but already owns it.`,undefined,{item:type,recipient:c});
@@ -112,6 +122,21 @@ else if (kind === 'key') {
     delete f.pois[q];
     frontierNotice(s, 'key', `${p.color === 'w' ? 'White' : 'Black'} collected the Chest Key.`);
 }
+else if (kind === 'chest') {
+    if (!f.keys[p.color]) {
+        const id=uid('chest_locked');
+        f.events.unshift({id,kind:'chest_locked',detail:'A Key is required to open this Chest.',square:q,recipient:p.color});
+        f.events=f.events.slice(0,24);
+        return;
+    }
+    f.keys[p.color]--;
+    delete f.pois[q];
+    frontierNotice(s,'chest','The Key opened the Chest.',q);
+    if(f.chestRoll==='mimic') {
+        if(p.type==='k') { awardCaptureRefresh(s,p.color,3); frontierNotice(s,'mimic','The King defeated the Mimic.',q); }
+        else { removeEntity(s,q,p.color,false); f.pois[q]='mimic'; frontierNotice(s,'mimic','The Mimic devoured the opener. Capture it without a Key for three points.',q); }
+    } else if(f.chestRoll) addItem(s,p.color,f.chestRoll);
+}
 else if (FRONTIER_ITEMS.includes(kind as FrontierItem)) {
     delete f.pois[q];
     addItem(s, p.color, kind as FrontierItem);
@@ -121,7 +146,7 @@ export function frontierBoardFor(s: GameState, c: PlayerColor) { const b = board
     if (ch && !b.get(ch.square as Square))
         b.put({ type: 'p', color: ch.color }, ch.square as Square); for (const g of s.frontier?.golems || [])
     b.put({ type: 'p', color: g.owner }, g.square as Square); for (const [q, k] of Object.entries(s.frontier?.pois || {}))
-    if (['boss', 'chest', 'mimic'].includes(k))
+    if (['boss', 'mimic'].includes(k))
         b.put({ type: 'p', color: c === 'w' ? 'b' : 'w' }, q as Square); return b; }
 export function frontierKingSafe(s: GameState, c: PlayerColor) {
     const b = boardFor(s.fen);
@@ -139,7 +164,7 @@ export function frontierKingSafe(s: GameState, c: PlayerColor) {
     for (const g of s.frontier?.golems || [])
         threats.put({ type: 'p', color: c }, g.square as Square);
     for (const [q, k] of Object.entries(s.frontier?.pois || {}))
-        if (['boss', 'chest', 'mimic'].includes(k))
+        if (['boss', 'mimic'].includes(k))
             threats.put({ type: 'p', color: c }, q as Square);
     const enemy = c === 'w' ? 'b' : 'w';
     {
@@ -209,12 +234,11 @@ export function frontierMoves(s: GameState, from: string, as?: PieceSymbol, nonc
         if (victim && (captureProtected(s, victim) || s.grounds?.disarm.some(d => d.square === from)))
             return false;
     } if (target?.color === p.color)
-        return false; const poi = s.frontier?.ready ? s.frontier.pois[q] : undefined; if (!s.frontier?.ready && ['chest', 'boss'].includes(s.frontier?.pois[q] || ''))
+        return false; const poi = s.frontier?.ready ? s.frontier.pois[q] : undefined; if (!s.frontier?.ready && ['boss'].includes(s.frontier?.pois[q] || ''))
         return false; if ((target || poiBlocks(s, q)) && (noncapture || s.grounds?.disarm.some(d => d.square === from)))
         return false; if (target && captureProtected(s, q))
         return false; if ((target || poiBlocks(s, q)) && s.awakenedRooks?.some(r => r.square === from && r.hasCaptured && target?.type !== 'k'))
         return false; if (poi === 'boss' && p.type === 'k' && s.frontier?.boss?.health === 2)
-        return false; if (poi === 'chest' && !s.frontier?.keys[p.color])
         return false; const d = structuredClone(s); try {
         executeLandingMove(d, from, q);
         return frontierKingSafe(d, p.color);
@@ -313,29 +337,6 @@ export function executeLandingMove(s: GameState, from: string, to: string, attac
         else {
             f.pois[to] = boss.drop;frontierNotice(s,'drop',`${ITEM_NAMES[boss.drop]} dropped at ${to}.`,to,{item:boss.drop});}
         frontierNotice(s, 'boss_defeat', 'The Arcane Golem was defeated. No capture points are awarded.');
-        return;
-    }
-    if (kind === 'chest') {
-        if (!f.keys[p.color])
-            throw Error('A Key is required.');
-        f.keys[p.color]--;
-        frontierNotice(s, 'chest', 'The Key opened the Chest.');
-        delete f.pois[to];
-        moveEntity(s, from, to);
-        if (f.chestRoll === 'mimic') {
-            if (p.type === 'k') {
-                frontierNotice(s, 'mimic', 'The King defeated the Mimic.');
-                awardCaptureRefresh(s, p.color, 3);
-            }
-            else {
-                removeEntity(s, to, p.color, false);
-                f.pois[to] = 'mimic';
-                frontierNotice(s, 'mimic', 'The Mimic devoured the opener. Capture it without a Key for three points.');
-            }
-        }
-        else if (f.chestRoll)
-            addItem(s, p.color, f.chestRoll);
-        frontierLanding(s, to);
         return;
     }
     if (kind === 'mimic') {
@@ -504,7 +505,7 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
                         throw Error('Wings moves one or two squares in a straight direction without capture.');
                     moveEntity(d, from, to);
                     frontierLanding(d, to);
-                    item.readyAfter = fd.ownerTurns[c] + 4;
+                    item.readyAfter = fd.ownerTurns[c] + 8;
                 }
                 else {
                     if (occupant(d, from)?.type === 'golem')
@@ -670,6 +671,14 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
             exhaust = card.type.startsWith('awakening_') && m.type !== 'play_awakening_as_wild' && !m.asWild;
             h.consume(d, c, card, exhaust);
         }
+        if(m.type==='frontier_item'&&m.item==='wings') {
+            const original=groundPiece(s,m.from)||occupant(s,m.from);
+            const piece=original?{...original,awakened:s.awakenedPieces?.includes(m.from)}:undefined;
+            const id=uid('flight');fd.events.unshift({id,kind:'wings_flight',detail:'Wings of Flight',from:m.from,square:m.to,piece});
+        }
+        if(m.type==='frontier_item'&&m.item==='banner') {
+            const id=uid('pawn_summon');fd.events.unshift({id,kind:'pawn_summon',detail:'Footsoldier’s Banner summoned a Pawn.',square:m.to,piece:{type:'p',color:c}});
+        }
         frontierNotice(d, m.type === 'frontier_self_destruct' ? 'golem_explosion' : card?.type === 'traverse' ? 'traverse' : m.type === 'frontier_item' && m.item === 'core' ? 'summon' : m.type === 'frontier_item' || m.type === 'frontier_bind' ? 'item' : 'move', detail, m.type === 'frontier_self_destruct' ? m.from : undefined);
         if (!free) {
             if (!d.lastMoveDetails || d.lastMoveDetails.player !== c)
@@ -687,16 +696,19 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
 }
 export function frontierClockRestore(s: GameState, snapshot: BoardSnapshot) { const f = s.frontier, old = snapshot.frontier; if (!f?.expanded)
     return; if (snapshot.fen.split(' ')[0].split('/').length === 8)
-    s.fen = extendFen(s.fen); if (old?.expanded) {
+    s.fen = extendFen(s.fen); const priorBags={...f.bags}; if (old?.expanded) {
     f.pois = structuredClone(old.pois);
     f.boss = structuredClone(old.boss);
     f.golems = structuredClone(old.golems);
+    f.bags = {...old.bags};
+
     for (const c of ['w', 'b'] as const)
         f.inventories[c] = f.inventories[c].filter(item => old.inventories[c].some(x => x.id === item.id));
 }
 else {
     f.pois = { ...f.pois };
-} frontierNotice(s, 'clock', 'Board movement rewound. Spent cards, items, charges, cooldowns and capture points remain spent.'); }
+    f.bags = {w:false,b:false};
+} for(const c of ['w','b'] as const)if(priorBags[c]&&!f.bags[c]) {f.bagDiscardPending||={};f.bagDiscardPending[c]=true;} trimBagHands(s); frontierNotice(s, 'clock', 'Board movement rewound. Spent cards, items, charges, cooldowns and capture points remain spent.'); }
 export function frontierUltimate(s: GameState, m: any, c: PlayerColor) {
     if (s.frontier)
         s.frontier.clockLocked = true;
@@ -964,4 +976,13 @@ export function frontierUltimateTargets(s: GameState, c: PlayerColor, ally?: str
         catch { }
     }
     return out;
+}
+
+export function traverseTargets(s:GameState,c:PlayerColor,from:string) {
+ if(occupant(s,from)?.color!==c||blockedActor(s,from))return [];
+ return allSquares(s.fen).filter(to=>{if(!/[WXYZ]$/.test(to)||!emptyFrontierSquare(s,to))return false;const d=structuredClone(s);try{moveEntity(d,from,to);frontierLanding(d,to);return frontierKingSafe(d,c);}catch{return false;}});
+}
+export function starTargets(s:GameState,c:PlayerColor,from:string) {
+ if(occupant(s,from)?.color!==c||occupant(s,from)?.type==='golem'||blockedActor(s,from))return [];
+ return frontierMoves(s,from);
 }

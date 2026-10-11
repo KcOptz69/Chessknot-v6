@@ -598,7 +598,7 @@ export function isKingChecked(
 }
 
 export function createInitialGameState(
-  expansions: GameExpansionsConfig = { shiftedParadigm: true, championsOfTheMonolith: true, theAwakening: true }
+  expansions: GameExpansionsConfig = { shiftedParadigm: true, championsOfTheMonolith: true, theAwakening: true, arcaneFrontier:true }
 ): GameState {
   const chess = new Chess();
   const hasShiftedParadigm = expansions?.shiftedParadigm !== false;
@@ -619,7 +619,7 @@ export function createInitialGameState(
   const grounds=initialGrounds(expansions.treacherousGrounds !== false, Math.random, expansions.treacherousGroundsSelected);
   return {
     grounds,
-    frontier: expansions.arcaneFrontier ? initialFrontier() : undefined,
+    frontier: expansions.arcaneFrontier !== false ? initialFrontier() : undefined,
     pieceIds,superPawnIds:[],superKnightIds:[],
     fen: chess.fen(),
     turn: 'w',
@@ -637,7 +637,7 @@ export function createInitialGameState(
       b: 0,
     },
     expansions: {
-      arcaneFrontier: expansions.arcaneFrontier===true,
+      arcaneFrontier: expansions.arcaneFrontier!==false,
       shiftedParadigm: hasShiftedParadigm,
       championsOfTheMonolith: hasChampionsOfTheMonolith,
       theAwakening: hasTheAwakening,
