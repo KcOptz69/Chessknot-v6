@@ -1,0 +1,7 @@
+{
+  "name": "ChessKnot",
+  "description": "Tactical chess variant with card abilities, obstacles, and customizable time controls.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

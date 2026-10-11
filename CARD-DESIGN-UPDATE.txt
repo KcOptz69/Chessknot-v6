@@ -1,0 +1,3 @@
+TCG-style layered card frames with original game artwork. Card names remain at the bottom. All six Awakening cards display AWAKEN. Soul Release uses a black and silver frame. Standard cards are blue/silver; Champion and Static purple; Joker and Clock gold. No effect text added to card faces; existing tap-to-view descriptions remain.
+
+Based on the supplied Chessknot-v5-final-main source. For an existing newer project, copy src/index.css, src/components/CardHand.tsx and src/components/CardArtwork.tsx only after comparing your local changes.

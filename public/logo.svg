@@ -1,0 +1,243 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Card Drop Shadow -->
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#05142e" flood-opacity="0.45" />
+    </filter>
+    
+    <!-- King Piece Drop Shadow -->
+    <filter id="pieceShadow" x="-25%" y="-15%" width="150%" height="135%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#020c1e" flood-opacity="0.6" />
+    </filter>
+
+    <!-- Knot Glow -->
+    <filter id="goldGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#f59e0b" flood-opacity="0.5" />
+    </filter>
+
+    <!-- Metallic Gold Gradients -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="25%" stop-color="#fbbf24" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="75%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+
+    <linearGradient id="goldHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="40%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+
+    <!-- Regal Cobalt Blue Gradients -->
+    <linearGradient id="blueBase" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0e3a8a" />
+      <stop offset="22%" stop-color="#1d4ed8" />
+      <stop offset="45%" stop-color="#38bdf8" />
+      <stop offset="65%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#091e42" />
+    </linearGradient>
+
+    <linearGradient id="blueCross" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="35%" stop-color="#0284c7" />
+      <stop offset="70%" stop-color="#1e40af" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <linearGradient id="blueCrown" x1="0%" y1="0%" x2="100%" y2="80%">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="30%" stop-color="#2563eb" />
+      <stop offset="75%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#091b3a" />
+    </linearGradient>
+
+    <linearGradient id="blueWaist" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0a2558" />
+      <stop offset="30%" stop-color="#1d4ed8" />
+      <stop offset="50%" stop-color="#60a5fa" />
+      <stop offset="75%" stop-color="#1e40af" />
+      <stop offset="100%" stop-color="#061226" />
+    </linearGradient>
+
+    <linearGradient id="cyanRibbon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7dd3fc" />
+      <stop offset="40%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0369a1" />
+    </linearGradient>
+
+    <!-- Card Gradients -->
+    <linearGradient id="cardFace" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="60%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+
+    <linearGradient id="cardBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1d4ed8" />
+      <stop offset="50%" stop-color="#0e3a8a" />
+      <stop offset="100%" stop-color="#061838" />
+    </linearGradient>
+
+    <!-- Reusable Fanned Card Component -->
+    <g id="cardTemplate">
+      <!-- Outer Card with Royal Blue Border -->
+      <rect x="-85" y="-140" width="170" height="260" rx="20" ry="20" fill="url(#cardFace)" stroke="url(#cardBorder)" stroke-width="12" />
+      <!-- Inner Thin Gold Trim -->
+      <rect x="-76" y="-131" width="152" height="242" rx="14" ry="14" fill="none" stroke="url(#goldHighlight)" stroke-width="3" opacity="0.95" />
+      <!-- Soft Card Inner Shading -->
+      <rect x="-73" y="-128" width="146" height="236" rx="12" ry="12" fill="url(#cardFace)" opacity="0.9" />
+    </g>
+  </defs>
+
+  <!-- 1. Background: Four Fanned Cards -->
+  <g filter="url(#cardShadow)">
+    <!-- Far-Left Card (tilted -30 degrees) -->
+    <g transform="translate(132, 275) rotate(-30)">
+      <use href="#cardTemplate" />
+    </g>
+    <!-- Mid-Left Card (tilted -10 degrees) -->
+    <g transform="translate(214, 250) rotate(-10)">
+      <use href="#cardTemplate" />
+    </g>
+    <!-- Mid-Right Card (tilted +10 degrees) -->
+    <g transform="translate(298, 250) rotate(10)">
+      <use href="#cardTemplate" />
+    </g>
+    <!-- Far-Right Card (tilted +30 degrees) -->
+    <g transform="translate(380, 275) rotate(30)">
+      <use href="#cardTemplate" />
+    </g>
+  </g>
+
+  <!-- 2. Foreground: Regal Cobalt Blue Chess King with Celtic Knot -->
+  <g filter="url(#pieceShadow)">
+    
+    <!-- King Bottom Stepped Base -->
+    <ellipse cx="256" cy="460" rx="140" ry="24" fill="#06152e" />
+    <path d="M 120 452 C 120 435, 392 435, 392 452 L 392 464 C 392 478, 120 478, 120 464 Z" fill="url(#blueBase)" />
+    <!-- Pedestal Rim Highlight -->
+    <ellipse cx="256" cy="452" rx="136" ry="14" fill="none" stroke="#60a5fa" stroke-width="2.5" opacity="0.8" />
+
+    <!-- Wide Bell Base -->
+    <path d="M 132 448 
+             C 142 390, 185 345, 206 330 
+             C 218 322, 294 322, 306 330 
+             C 327 345, 370 390, 380 448 
+             C 330 462, 182 462, 132 448 Z" 
+          fill="url(#blueBase)" />
+
+    <!-- Base Gold Top Ring -->
+    <path d="M 198 335 C 198 325, 314 325, 314 335 C 314 345, 198 345, 198 335 Z" fill="url(#goldGrad)" stroke="#78350f" stroke-width="1.5" filter="url(#goldGlow)" />
+    <ellipse cx="256" cy="333" rx="56" ry="5" fill="#fef08a" opacity="0.6" />
+
+    <!-- CELTIC KNOT EMBROIDERY ON BELL BASE (The ChessKnot!) -->
+    <!-- Knot Background Dark Relief -->
+    <path d="M 148 440 C 160 380, 210 350, 256 350 C 302 350, 352 380, 364 440 C 320 450, 192 450, 148 440 Z" fill="#081d42" opacity="0.85" />
+
+    <!-- Woven Celtic Knot Bands: Golden Band & Cyan Blue Band Intertwined -->
+    <!-- Gold Ribbon Paths -->
+    <g filter="url(#goldGlow)">
+      <!-- Central Interlocking Loop (Gold) -->
+      <path d="M 210 425 C 220 385, 292 385, 302 425 C 285 442, 227 442, 210 425 Z" 
+            fill="none" stroke="url(#goldGrad)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Left Knot Bight (Gold) -->
+      <path d="M 160 435 C 175 395, 230 380, 256 415 C 235 442, 180 448, 160 435 Z" 
+            fill="none" stroke="url(#goldGrad)" stroke-width="12" stroke-linecap="round" />
+      <!-- Right Knot Bight (Gold) -->
+      <path d="M 352 435 C 337 395, 282 380, 256 415 C 277 442, 332 448, 352 435 Z" 
+            fill="none" stroke="url(#goldGrad)" stroke-width="12" stroke-linecap="round" />
+    </g>
+
+    <!-- Cyan/Blue Interlocking Ribbon Overlay -->
+    <g>
+      <!-- Horizontal Weave (Cyan-Blue) crossing over Gold -->
+      <path d="M 152 418 C 190 395, 235 445, 256 418 C 277 395, 322 445, 360 418" 
+            fill="none" stroke="url(#cyanRibbon)" stroke-width="11" stroke-linecap="round" />
+      <!-- Knot Shadow Depths -->
+      <path d="M 200 410 C 205 405, 215 405, 220 410" fill="none" stroke="#041228" stroke-width="4" opacity="0.7" />
+      <path d="M 292 410 C 297 405, 307 405, 312 410" fill="none" stroke="#041228" stroke-width="4" opacity="0.7" />
+      <!-- Core Knot Center Loop -->
+      <circle cx="256" cy="418" r="14" fill="url(#blueBase)" stroke="url(#goldHighlight)" stroke-width="4" />
+    </g>
+
+    <!-- Lower Gold Base Rim -->
+    <path d="M 126 448 C 126 438, 386 438, 386 448 C 386 458, 126 458, 126 448 Z" fill="url(#goldGrad)" stroke="#78350f" stroke-width="1.5" />
+    <ellipse cx="256" cy="446" rx="128" ry="6" fill="#fef08a" opacity="0.7" />
+
+    <!-- Sleek Waist / Column -->
+    <path d="M 218 332 
+             C 214 300, 220 265, 210 240 
+             C 210 236, 302 236, 302 240 
+             C 292 265, 298 300, 294 332 
+             Z" 
+          fill="url(#blueWaist)" />
+
+    <!-- Waist Vertical Specular Sheen (Left side 3D highlight) -->
+    <path d="M 228 250 C 234 275, 234 305, 230 326" fill="none" stroke="#93c5fd" stroke-width="6" stroke-linecap="round" opacity="0.7" />
+
+    <!-- Mid Collar Ring (Gold) -->
+    <path d="M 194 240 C 194 227, 318 227, 318 240 C 318 253, 194 253, 194 240 Z" fill="url(#goldGrad)" stroke="#78350f" stroke-width="1.5" filter="url(#goldGlow)" />
+    <ellipse cx="256" cy="237" rx="60" ry="6" fill="#fef08a" opacity="0.7" />
+
+    <!-- Crown Dome / Head -->
+    <path d="M 204 234 
+             C 190 200, 185 160, 202 142 
+             C 215 130, 297 130, 310 142 
+             C 327 160, 322 200, 308 234 
+             Z" 
+          fill="url(#blueCrown)" />
+
+    <!-- Crown Beveled Ribs and Reflections -->
+    <path d="M 218 150 C 208 175, 214 205, 224 230" fill="none" stroke="#7dd3fc" stroke-width="7" stroke-linecap="round" opacity="0.8" />
+    <path d="M 256 140 L 256 230" fill="none" stroke="#38bdf8" stroke-width="4" opacity="0.4" />
+    <path d="M 294 150 C 304 175, 298 205, 288 230" fill="none" stroke="#1d4ed8" stroke-width="5" stroke-linecap="round" opacity="0.6" />
+
+    <!-- Crown Top Ring (Gold) -->
+    <path d="M 226 136 C 226 127, 286 127, 286 136 C 286 145, 226 145, 226 136 Z" fill="url(#goldGrad)" stroke="#78350f" stroke-width="1.5" />
+    <ellipse cx="256" cy="134" rx="28" ry="4" fill="#fef08a" opacity="0.8" />
+
+    <!-- Top Finial: 3D Beveled Royal Blue Cross with Gold Base -->
+    <!-- Cross Finial Base Mount -->
+    <ellipse cx="256" cy="126" rx="16" ry="6" fill="url(#goldHighlight)" />
+    
+    <!-- Cross Finial (Outer Deep Border) -->
+    <path d="M 246 62 
+             C 246 54, 266 54, 266 62 
+             L 266 74 
+             L 282 74 
+             C 290 74, 290 94, 282 94 
+             L 266 94 
+             L 266 118 
+             L 246 118 
+             L 246 94 
+             L 230 94 
+             C 222 94, 222 74, 230 74 
+             L 246 74 
+             Z" 
+          fill="#0c2d6b" />
+
+    <!-- Cross Finial (Main Beveled Face) -->
+    <path d="M 248 64 
+             L 264 64 
+             L 264 76 
+             L 280 76 
+             L 280 92 
+             L 264 92 
+             L 264 116 
+             L 248 116 
+             L 248 92 
+             L 232 92 
+             L 232 76 
+             L 248 76 
+             Z" 
+          fill="url(#blueCross)" />
+
+    <!-- Cross Top-Left Specular Highlights -->
+    <path d="M 234 78 L 246 78 L 246 66 L 254 66" fill="none" stroke="#bae6fd" stroke-width="3" stroke-linecap="round" />
+    <path d="M 234 78 L 234 90" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+    <path d="M 248 94 L 248 114" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+    
+  </g>
+</svg>
