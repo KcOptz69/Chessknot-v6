@@ -192,7 +192,7 @@ export function createCard(type: CardType, index: number): Card {
     },
     awakening_bishop: {
       name: 'Awakening: Bishop',
-      description: 'Move action: move your Bishop normally and leave a summoning circle on its starting square. After three subsequent turns of yours, optionally revive a captured standard piece there for free. Any landing or Restrict interrupts it. (Can also be played as Wild Card).',
+      description: 'Move action: move your Bishop normally, then place a circle on an empty rank 4 or 5 square. After three subsequent turns of yours, optionally revive a captured standard piece there for free. Moving or losing the Bishop, landing on its circle, or Restrict interrupts the ritual. Existing traps remain dormant until revival; no new traps may be placed on the circle. (Can also be played as Wild Card).',
     },
     awakening_queen: {
       name: 'Awakening: Queen',

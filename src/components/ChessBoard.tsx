@@ -1,3 +1,4 @@
+import {bishopCircleTargets} from '../utils/summoning.ts';
 import {frontierMoves,frontierKingSafe,executeLandingMove,occupant,frontierUltimateTargets,emptyFrontierSquare} from '../utils/frontier.ts';
 import {FrontierArt} from './FrontierUI.tsx';
 import {ranksFor,isExtendedFen} from '../utils/frontierBoard.ts';
@@ -227,6 +228,10 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   } | null>(null);
   const [awaitingKnightSecondMove, setAwaitingKnightSecondMove] = React.useState<boolean>(false);
 
+  const [bishopCirclePlacement,setBishopCirclePlacement]=React.useState<{from:string;to:string}|null>(null);
+  const [bishopMoveWarning,setBishopMoveWarning]=React.useState<string|null>(null);
+  const bishopMoveAllowed=React.useRef(false);
+  React.useEffect(()=>{setBishopCirclePlacement(null);setBishopMoveWarning(null);},[selectedCard?.id,isMyTurn]);
   // Bishop revive prompt
   const [bishopRevivePrompt, setBishopRevivePrompt] = React.useState<{
     from: string;
@@ -285,7 +290,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   const staticStunnedSquares = staticEffect?.active ? staticEffect.stunnedSquares : [];
 
   const hasAnyPopupPrompt = Boolean(
-    hasPopup ||
+    hasPopup || bishopMoveWarning ||
     knightMovePrompt ||
     awaitingKnightSecondMove ||
     bishopRevivePrompt ||
@@ -561,6 +566,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     awakeningMode,
   ]);
 
+  const bishopCircleSquares=bishopCirclePlacement&&frontierGame?bishopCircleTargets(frontierGame,bishopCirclePlacement.from,bishopCirclePlacement.to):[];
   // Valid card targets (pieces or squares eligible for the currently selected card / power-up)
   const validCardTargets = React.useMemo(() => {
     if (!selectedCard && !isWildPowerUp && !isMonolithPowerUp) return [];
@@ -734,6 +740,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   const handleSquareClick = (square: string) => {
     if(tutorialGuide&&!tutorialGuide.guard(square))return;
     if(onGroundSquare?.(square))return;
+    if(bishopCirclePlacement){if(bishopCircleSquares.includes(square)){onPlayAwakeningBishop?.(bishopCirclePlacement.from,bishopCirclePlacement.to,'p',square);setBishopCirclePlacement(null);setSelectedSquare(null);}return;}
+    if(!bishopMoveAllowed.current&&selectedSquare&&validDestinations.includes(square)&&summoningCircles.some(c=>c.bishopId===pieceIds[selectedSquare]&&!c.finished&&!c.interrupted)){setBishopMoveWarning(square);return;}
     // Check if clicked a champion square (White or Black)
     const isWhiteChamp = champions?.w?.square === square;
     const isBlackChamp = champions?.b?.square === square;
@@ -1018,7 +1026,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       }
 
       if (selectedCard?.type === 'awakening_bishop' && awakeningMode === 'skill') {
-        onPlayAwakeningBishop?.(selectedSquare,square,'p','');setSelectedSquare(null);return;
+        setBishopCirclePlacement({from:selectedSquare,to:square});return;
       }
       if (selectedCard?.type === 'awakening_queen' && awakeningMode === 'skill') {
         onPlayAwakeningQueen?.(selectedSquare,square);setSelectedSquare(null);return;
@@ -1381,6 +1389,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         </div>
       )}
 
+      {bishopMoveWarning&&<Modal><section className="ground-dialog" role="dialog" aria-modal="true"><h2>Cancel the Bishop’s ritual?</h2><p>Moving this Bishop interrupts its summoning circle.</p><button onClick={()=>setBishopMoveWarning(null)}>Keep channeling</button><button onClick={()=>{const q=bishopMoveWarning;setBishopMoveWarning(null);bishopMoveAllowed.current=true;handleSquareClick(q);bishopMoveAllowed.current=false;}}>Move Bishop</button></section></Modal>}
+      {bishopCirclePlacement&&<div className="ground-controls bishop-circle-placement"><strong>Circle · choose an empty rank 4 or 5 square. The Bishop move is pending.</strong><button onClick={()=>setBishopCirclePlacement(null)}>Cancel</button></div>}
       {/* Awakening: Bishop Revive Choice Banner */}
       {bishopRevivePrompt && (
         <div className={bishopRevivePrompt.chosenPiece ? "" : "ground-popup"}><div role={bishopRevivePrompt.chosenPiece ? undefined : "dialog"} aria-modal={bishopRevivePrompt.chosenPiece ? undefined : true} aria-label="Awakened Bishop revival" className="ground-dialog w-full max-w-[560px] mb-2 p-3 rounded-xl bg-gradient-to-r from-red-950/90 via-stone-900 to-red-950/90 border-2 border-red-500/80 text-white text-xs flex flex-col gap-2 shadow-lg animate-fade-in">
@@ -1655,7 +1665,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 aria-pressed={isSelected}
                 onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleSquareClick(square); } }}
                 onClick={() => handleSquareClick(square)}
-                className={`relative flex items-center justify-center transition-colors ${/[WXYZ]/.test(rank)?'frontier-field-square':''} ${squareBg} ${groundTargets.includes(square)?"ring-2 ring-blue-400 z-10":""} ${
+                className={`relative flex items-center justify-center transition-colors ${/[WXYZ]/.test(rank)?'frontier-field-square':''} ${squareBg} ${(groundTargets.includes(square)||bishopCircleSquares.includes(square))?"ring-2 ring-blue-400 z-10":""} ${
                   isSelected ? 'ring-4 ring-blue-400 z-10' : ''
                 } ${
                   isInspectedChampion && !isSelected
@@ -1691,7 +1701,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                     : 'cursor-pointer'
                 }`}
               >
-                {(groundTargets.includes(square)||isChampionDeployTarget||isMonolithTarget||isRestrictTarget||isBishopReviveTarget||isQueenDeployTarget||(selectedCard?.type==='soul_release'&&isCardTarget)) && <div className="ground-placement-target" data-ground-target={square} aria-label={`Available tile target ${square}`}><span /></div>}
+                {(groundTargets.includes(square)||bishopCircleSquares.includes(square)||isChampionDeployTarget||isMonolithTarget||isRestrictTarget||isBishopReviveTarget||isQueenDeployTarget||(selectedCard?.type==='soul_release'&&isCardTarget)) && <div className="ground-placement-target" data-ground-target={square} aria-label={`Available tile target ${square}`}><span /></div>}
                 {grounds?.tiles[square] && <div className={`ground-tile ${piece || championPiece || frontierGolem || isMonolith ? 'occupied' : ''} ${grounds.tiles[square] === 'portal' && portalOccupied ? 'portal-linked-active' : ''}`} data-ground-type={grounds.tiles[square]} data-square-tone={isLight ? 'light' : 'dark'} aria-label={`${grounds.tiles[square]} tile at ${square}`} style={{'--tile-color':({boost:'#22c55e',gravity:'#a56b3d',defense:'#f5c542',portal:'#ff8b24'} as Record<string,string>)[grounds.tiles[square]]} as React.CSSProperties}><V5Power type={grounds.tiles[square]} className="w-full h-full"/><span className="powered-tile-aura"/>{[0,1,2].map(i=><span key={i} className="powered-tile-mote" style={{left:`${20+i*30}%`,animationDelay:`${i*.4}s`}}/>)}</div>}
                 {!!grounds?.traps.filter(t=>t.square===square).length && <div className="ground-traps" aria-label={`Your traps at ${square}`}>{grounds.traps.filter(t=>t.square===square).map(t=><V5Power key={t.id} type={t.type} className="w-4 h-4"/>)}</div>}
                 {summoningCircles.filter(c=>c.square===square&&!c.finished&&!c.interrupted).map(c=><div key={c.id} className={`summoning-circle ${c.owner==='w'?'circle-white':'circle-black'}`} title={`Summoning circle: ${c.remaining} owner turns remaining`}><span>✦</span><b>{c.remaining}</b></div>)}
@@ -1728,6 +1738,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                   </div>
                 )}
 
+                {piece&&summoningCircles.some(c=>c.bishopId===pieceIds[square]&&!c.finished&&!c.interrupted)&&<div className={`bishop-channeling ${piece.color==='b'?'channel-black':''}`} aria-label="Bishop channeling ritual"><span/><span/>{[0,1,2].map(i=><i key={i} style={{animationDelay:`${i*.35}s`}}/>)}</div>}
                 {/* Wind Highlights for piece moved by push card */}
                 {isPushMovedTo && (
                   <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-sm flex items-center justify-center z-25">

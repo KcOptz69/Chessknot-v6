@@ -2,7 +2,7 @@ import {executeFrontier,finishFrontierTurn,checkExpansion,handLimit,frontierCloc
 import {isExtendedFen,adjacent,xy,squareAt,allSquares,ranksFor} from './src/utils/frontierBoard.ts';
 import {viewingGameState,isArbiter} from './src/utils/roomViewing.ts';
 import { randomBytes } from 'node:crypto';
-import { activeCircle, isTemporary, eligibleRevives, emptySummonSquare, soulTargets, placeRevived, kingSafe, interruptCircles, tickSummons, summonNotice, removeSoul } from './src/utils/summoning.ts';
+import { validBishopCircle, activeCircle, isTemporary, eligibleRevives, emptySummonSquare, soulTargets, placeRevived, kingSafe, interruptCircles, tickSummons, summonNotice, removeSoul } from './src/utils/summoning.ts';
 import { portalTravelTarget, captureProtected, removeGroundPiece, groundMoves, groundPiece, groundImmune, groundProtected, landGround, finishGroundTurn, relocateDebuffs, groundEvent, points } from './src/utils/grounds.ts';
 import http from 'http';
 import path from 'path';
@@ -1472,14 +1472,14 @@ function executeSummoningAction(room:RoomState,msg:ClientMessage,color:PlayerCol
  draft.awakenedPieceSquare = m.to;
  draft.awakenedByPlayer = color;
  transferAwakenedState(draft,m.from,m.to,color,!!victim);relocateDebuffs(draft,m.from,m.to);
- if(isBishop){draft.summoningCircles||=[];draft.summoningCircles.push({id:`circle_${Date.now()}_${Math.random()}`,owner:color,bishopId:queenId,square:m.from,remaining:3,createdTurn:s.turnNumber});}
+ if(isBishop){if(!validBishopCircle(draft,m.circleSquare||m.reviveSquare))return fail('Choose an empty, unrestricted circle square on rank 4 or 5.');draft.summoningCircles||=[];draft.summoningCircles.push({bishopSquare:m.to,id:`circle_${Date.now()}_${Math.random()}`,owner:color,bishopId:queenId,square:m.circleSquare||m.reviveSquare,remaining:3,createdTurn:s.turnNumber});}
  else {const captured={type:s.superPawns?.includes(m.to)?'sp':s.superKnights?.includes(m.to)?'sn':victim!.type,color:enemy} as any;
   draft.hands[color].push({id:`soul_card_${Date.now()}_${Math.random()}`,type:'soul_release',name:'Soul Release',description:`Move action: summon the captured ${captured.type==='sp'?'Super Pawn':captured.type==='sn'?'Super Knight':({p:'Pawn',n:'Knight',b:'Bishop',r:'Rook',q:'Queen'} as any)[captured.type]} onto an empty unrestricted square within the 5×5 area centered on its original Queen. Lasts five of your subsequent turns. No army or capture value. Exhausts on use.`,soul:{queenId,piece:captured}});
  }
  interruptCircles(draft,[m.to]);landGround(draft,m.to);if(!kingSafe(draft,color))return fail('The move leaves your King unsafe.');
  draft.hands[color]=draft.hands[color].filter(c=>c.id!==card.id);consumeCardAndRefill(draft,color,card,true);
  draft.lastMoveDetails={player:color,actionType:'awakening',from:m.from,to:m.to,awakeningType:card.type};draft.lastMovedPiece[color]=piece.type;draft.lastMovedSquare[color]=m.to;
- draft.awakeningAlert={player:color,cardType:card.type,cardName:card.name,effectTitle:isBishop?'Summoning Circle Created':'Soul Release Earned',effectDescription:isBishop?`Circle at ${m.from} matures after three subsequent turns of yours. Landing or Restrict interrupts it.`:'The captured piece is bound to Soul Release. Its original Queen must remain yours to summon it.',pieceSquare:m.to,timestamp:Date.now()};
+ draft.awakeningAlert={player:color,cardType:card.type,cardName:card.name,effectTitle:isBishop?'Summoning Circle Created':'Soul Release Earned',effectDescription:isBishop?`Circle at ${m.circleSquare||m.reviveSquare} matures after three subsequent turns of yours. Moving or losing the Bishop, landing on the circle, or Restrict interrupts it.`:'The captured piece is bound to Soul Release. Its original Queen must remain yours to summon it.',pieceSquare:m.to,timestamp:Date.now()};
  draft.historyLog.unshift({id:`log_${Date.now()}_${Math.random()}`,turn:color,turnNumber:s.turnNumber,actionType:'awakening',cardName:card.name,detail:draft.awakeningAlert.effectDescription,timestamp:Date.now(),whitePoints:s.whitePoints,blackPoints:s.blackPoints});
  Object.assign(s,draft);groundBefore.delete(s);const next=color==='w'?'b':'w';s.fen=syncFenTurn(s.fen,next,false);advanceTurnState(s,color,next);return true;
 }

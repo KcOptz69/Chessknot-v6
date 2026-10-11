@@ -215,7 +215,7 @@ export interface GameExpansionsConfig {
 
 export interface CapturedPiece { type: StandardPieceType | ChampionType | 'sp' | 'sn' | 'golem'; color: PlayerColor; capturedTurn?:number; }
 
-export interface SummoningCircle { bishopId?:string; id:string; owner:PlayerColor; square:string; remaining:number; createdTurn:number; interrupted?:boolean; finished?:boolean; }
+export interface SummoningCircle { bishopSquare?:string; bishopId?:string; id:string; owner:PlayerColor; square:string; remaining:number; createdTurn:number; interrupted?:boolean; finished?:boolean; }
 export interface SoulSummon { id:string; owner:PlayerColor; pieceId:string; remaining:number; createdTurn:number; }
 
 export interface BoardSnapshot {
@@ -368,7 +368,7 @@ export interface RoomState {
 
 export type ClientMessage =
   | {type: 'expand_frontier'; test?: boolean}
-  | {type: 'frontier_item';item:FrontierItem;from?:string;to?:string;cardId?:string;targetCardId?:string;targetSquare?:string;targetFriendlySquare?:string;targetSquares?:string[]}
+  | {type: 'frontier_item';item:FrontierItem;captureIndex?:number;from?:string;to?:string;cardId?:string;targetCardId?:string;targetSquare?:string;targetFriendlySquare?:string;targetSquares?:string[]}
   | {type: 'frontier_golem_move';cardId:string;from:string;to:string}
   | {type: 'frontier_self_destruct';from:string}
   | {type: 'frontier_bind';targetCardId:string}
@@ -414,7 +414,7 @@ export type ClientMessage =
   | { type: 'play_awakening_pawn'; cardId: string; targetSquare: string }
   | { type: 'play_awakening_rook'; cardId: string; from: string; to: string }
   | { type: 'play_awakening_knight'; cardId: string; from?: string; to?: string; secondTo?: string; targetSquare?: string }
-  | { type: 'play_awakening_bishop'; cardId: string; from: string; to: string; revivePieceType?: PieceType; reviveSquare?: string }
+  | { type: 'play_awakening_bishop'; circleSquare?:string; cardId: string; from: string; to: string; revivePieceType?: PieceType; reviveSquare?: string }
   | { type: 'play_awakening_queen'; cardId: string; from: string; to: string; deploySquare?: string }
   | { type: 'play_awakening_king'; cardId: string; from: string; to: string }
   | { type: 'play_awakening_as_wild'; cardId: string; from: string; to: string; promotion?: string }
