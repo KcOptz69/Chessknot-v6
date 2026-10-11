@@ -1297,8 +1297,10 @@ export function getPieceCapturePoints(pieceType: string, isChampion: boolean = f
   if (isChampion) return 5;
   switch (pieceType.toLowerCase()) {
     case 'p':
+    case 'sp':
       return 1;
     case 'n':
+    case 'sn':
       return 3;
     case 'b':
       return 3;
@@ -1306,6 +1308,8 @@ export function getPieceCapturePoints(pieceType: string, isChampion: boolean = f
       return 5;
     case 'q':
       return 9;
+    case 'golem': return 10;
+    case 'berserker': case 'musketeer': case 'summoner': case 'ninja': return 5;
     default:
       return 0;
   }
@@ -1385,6 +1389,11 @@ export function awardCaptureRefresh(
     });
   }
 
+  if(refreshed.length){
+    state.powerUpAwards ||= [];
+    for(const reward of refreshed)state.powerUpAwards.push({id:`capture-award-${Date.now()}-${Math.random().toString(36).slice(2)}`,player,turnNumber:state.turnNumber,...reward,name:reward.type==='vision'&&state.frontier?.inventories[player].some(item=>item.type==='eye')?'Bind':reward.name});
+    state.powerUpAwards=state.powerUpAwards.slice(-32);
+  }
   return { refreshed, oldProgress, newProgress, stacksEarned };
 }
 

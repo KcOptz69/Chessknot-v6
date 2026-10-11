@@ -99,6 +99,10 @@ export interface Card {
 
 export type PowerUpType = 'draw' | 'monolith' | 'wild' | 'vision';
 
+export interface PowerUpAward {
+  id:string; player:PlayerColor; turnNumber:number; type:PowerUpType; name:string; newCount:number;
+}
+
 export interface PowerUpsState {
   draw: number;     // Draw 2, discard 2 (stack count)
   monolith: number; // Add or move monolith (stack count)
@@ -268,6 +272,7 @@ export interface GameState {
     w: PowerUpsState;
     b: PowerUpsState;
   };
+  powerUpAwards?: PowerUpAward[];
   powerUpProgress?: {
     w: number;
     b: number;

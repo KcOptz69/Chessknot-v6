@@ -630,12 +630,12 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
                 }
                 else if (!card || !(m.type === 'play_awakening_knight' && card.type === 'awakening_knight' && p.type === 'n' || m.type === 'play_awakening_as_wild' && card.type.startsWith('awakening_') || map[card.type] === p.type || card.type === 'wild' || card.type === 'previous' && d.lastMovedPiece[c] === p.type || card.type.startsWith('awakening_') && m.asWild))
                     throw Error('The selected card cannot move this piece.');
-                if (!frontierMoves(d, from, m.type === 'play_push' ? 'q' : undefined, m.type === 'play_push').includes(to))
+                if (!(m.type === 'play_awakening_knight' && from === to && !m.secondTo) && !frontierMoves(d, from, m.type === 'play_push' ? 'q' : undefined, m.type === 'play_push').includes(to))
                     throw Error('Invalid destination.');
                 const firstCapture = !!occupant(d, to) || poiBlocks(d, to);
                 if (m.secondTo && !d.superKnights?.includes(from))
                     throw Error('Only a Super Knight may jump twice.');
-                executeLandingMove(d, from, to);
+                if (from !== to) executeLandingMove(d, from, to);
                 if (m.secondTo) {
                     if (!occupant(d, to) || d.status !== 'playing')
                         throw Error('The first landing prevents a second jump.');
@@ -649,7 +649,8 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
                 d.lastMovedPiece[c] = ['p', 'n', 'b', 'r', 'q'].includes(p.type) ? p.type as any : null;
             }
             d.lastMovedSquare[c] = m.secondTo || to;
-            d.lastMoveDetails = { player: c, actionType: 'move', from, to: m.secondTo || to, firstTo: m.secondTo ? to : undefined };
+            d.lastMoveDetails = { player: c, actionType: m.type === 'play_awakening_knight' ? 'awakening' : 'move', from, to: m.secondTo || to, firstTo: m.secondTo ? to : undefined };
+            if(m.type==='play_awakening_knight'){const q=m.secondTo||to;d.awakenedPieces||=[];if(occupant(d,q)?.color===c&&!d.awakenedPieces.includes(q))d.awakenedPieces.push(q);d.awakenedPieceSquare=q;d.awakenedByPlayer=c;d.awakenedOnTurnNumber=d.turnNumber;d.awakeningAlert={player:c,cardType:card!.type,cardName:card!.name,effectTitle:'Super Knight Awakened!',effectDescription:'The Knight can make one double jump, with at most one capture, then returns to a normal Knight.',pieceSquare:q,timestamp:Date.now()};}
             detail = `${card?.name || p.type} ${from} → ${to}.`;
         }
         if (!free && ['frontier_item', 'frontier_self_destruct', 'play_champion_ultimate'].includes(m.type))

@@ -14,6 +14,7 @@ const code=ts.transpileModule(`const click = ${handler.getText(ast)};`,{compiler
 function click(overrides:any={}) {
   const calls:any[]=[];
   const values:any={
+    bishopMoveAllowed:{current:true},summoningCircles:[],pieceIds:{},frontierGame:undefined,
     Boolean, Math, Number, playCaptureSound:()=>{},playMoveSound:()=>{},
     champions:{w:{square:'a1',color:'w'},b:{square:'d5',color:'b'}},
     myChampion:{square:'a1',color:'w'}, enemyChampion:{square:'d5',color:'b'},

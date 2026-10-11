@@ -1,7 +1,7 @@
 import {createRoomConnection} from './utils/roomConnection.ts';
 import {GolemActionPanel,FrontierExpandOffer,FrontierDropNotices,FrontierIntro,FrontierInventory,FrontierArt} from './components/FrontierUI.tsx';
 import {golemBlastSquares,golemSelfDestructError,featherReviveChoice,wingsTargets,starTargets,traverseTargets,frontierUltimateTargets,frontierMoves,occupant,emptyFrontierSquare,frontierKingSafe} from './utils/frontier.ts';
-import {allSquares} from './utils/frontierBoard.ts';
+import {allSquares,ranksFor} from './utils/frontierBoard.ts';
 import {ViewerTools} from './components/ViewerTools.tsx';
 import {MainTutorialOverlay} from './components/MainTutorialOverlay.tsx';
 import {initialTutorial,tutorialReducer} from './components/tutorialBattle.ts';
@@ -411,7 +411,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   React.useEffect(()=>{setShowArbiterPause(arbiterPaused&&myColor!=='spectator');},[arbiterPaused,myColor,roomId]);
   const isMyTurn = !arbiterPaused && (!tutorialMode||(tutorialState.phase==='play'&&!tutorialState.pendingBot&&!tutorialState.animating&&tutorialState.step<12)) && connected && !gameState.pendingSummon && !(mode==='online'&&recovery?.length) && !handoffPending && (myColor === gameState.turn);
 
-  const validGroundTargets = groundMode && isMyTurn?allSquares(gameState.fen).filter(q=>{const g=gameState.grounds;if(!g)return false;if(groundMode==='transport'||(groundMode==='portal'&&!portalFrom))return g.tiles[q]==='portal' && (groundMode!=='transport' || createSafeChess(gameState.fen).get(q as any)?.color===activeColor || Object.values(gameState.champions).some(c=>c?.square===q && c.color===activeColor));if(createSafeChess(gameState.fen).get(q as any)||gameState.monolithSquare===q||Object.values(gameState.champions).some(c=>c?.square===q)||gameState.restrictedSquares.includes(q)||activeCircle(gameState,q))return false;if(['mine','poison','banish','disarm'].includes(groundMode))return (activeColor==='w'?Number(q[1])<=4:Number(q[1])>=5)&&!['portal','defense'].includes(g.tiles[q])&&!g.traps.some(t=>t.owner===activeColor&&t.square===q&&t.type===groundMode);return !g.tiles[q];}):[];
+  const validGroundTargets = groundMode && isMyTurn?allSquares(gameState.fen).filter(q=>{const g=gameState.grounds;if(!g)return false;if(groundMode==='transport'||(groundMode==='portal'&&!portalFrom))return g.tiles[q]==='portal' && (groundMode!=='transport' || createSafeChess(gameState.fen).get(q as any)?.color===activeColor || Object.values(gameState.champions).some(c=>c?.square===q && c.color===activeColor));if(gameState.frontier?.pois[q]||gameState.frontier?.golems.some(g=>g.square===q)||createSafeChess(gameState.fen).get(q as any)||gameState.monolithSquare===q||Object.values(gameState.champions).some(c=>c?.square===q)||gameState.restrictedSquares.includes(q)||activeCircle(gameState,q))return false;if(['mine','poison','banish','disarm'].includes(groundMode))return (activeColor==='w'?ranksFor(gameState.fen).indexOf(q.slice(1))<ranksFor(gameState.fen).length/2:ranksFor(gameState.fen).indexOf(q.slice(1))>=ranksFor(gameState.fen).length/2)&&!['portal','defense'].includes(g.tiles[q])&&!g.traps.some(t=>t.owner===activeColor&&t.square===q&&t.type===groundMode);return !g.tiles[q];}):[];
 
   const travelTarget = portalTravelTarget(gameState,activeColor);
   const currentHand = gameState.hands[activeColor] || [];
@@ -1126,6 +1126,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
               frontier={gameState.frontier} frontierGame={gameState}
               tutorialGuide={tutorialMode?{from:tutorialState.step<8?TUTORIAL_ROUTE[tutorialState.step][0]:null,to:tutorialState.step<8?TUTORIAL_ROUTE[tutorialState.step][1]:null,guard:square=>{const allowed=tutorialSquareAllowed(tutorialState,square);if(allowed&&createSafeChess(tutorialState.fen).get(square as any)?.color==='w')tutorialDispatch({type:'square',value:square});return allowed;}}:undefined}
               controlsHost={boardControlsHost}
+              powerUpRecipient={myColor==='spectator'?undefined:myColor}
               hasPopup={isAnyPopupActive}
               capturedPieceTypes={(gameState.captures?.[opponentColor]||[]).filter(p=>p.color===activeColor&&['p','sp','n','sn','b','r','q'].includes(p.type)).map(p=>(p.type==='sp'?'p':p.type==='sn'?'n':p.type) as StandardPieceType)}
               grounds={gameState.grounds}

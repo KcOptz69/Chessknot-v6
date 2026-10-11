@@ -1191,6 +1191,7 @@ function executePoweredMovement(room:RoomState,msg:ClientMessage,color:PlayerCol
  else try{moveWithGrounds(boardWithObstacles, draft, {from,to,promotion:m.promotion||'q'});}catch{return fail('Invalid move.');}
  cleanMonolithAndChampions(boardWithObstacles,draft.monolithSquare,draft.champions,to);b=boardWithObstacles;
  if(draft.champions[enemy]?.square===to)draft.champions[enemy]=null;
+ if(victim&&victim.color!==color&&!isTemporary(s,to)){draft.captures||={w:[],b:[]};draft.captures[color].push({...victim,capturedTurn:s.turnNumber});awardCaptureRefresh(draft,color,points(victim.type));}
  captured||=!!victim;}
  if(draft.pieceIds?.[from]){draft.pieceIds[to]=draft.pieceIds[from];delete draft.pieceIds[from];}draft.fen=b.fen();transferAwakenedState(draft,from,to,color,captured);relocateDebuffs(draft,from,to);landGround(draft,to);b=createSafeChess(draft.fen);
  if(isKingChecked(b,color,draft.monolithSquare,draft.champions, undefined, draft.grounds))return fail('King must be safe after each jump.');from=to;
@@ -3207,6 +3208,7 @@ function executeGameAction(
       !target ||
       chess.get(target as Square) ||
       state.monolithSquare === target ||
+      state.frontier?.golems.some(g=>g.square===target) ||
       state.restrictedSquares.includes(target)
     ) {
       return;

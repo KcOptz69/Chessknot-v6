@@ -1,24 +1,28 @@
 import React from 'react';
 import {Sparkles, Shield, Zap, X, Clock} from 'lucide-react';
-import type {AwakeningAlertState, BeaconEffectState, StaticEffectState, ClockAlertState, PlayerColor} from '../types.ts';
+import type {AwakeningAlertState, BeaconEffectState, StaticEffectState, ClockAlertState, PlayerColor, PowerUpAward} from '../types.ts';
 import {AWAKENING_DESCRIPTIONS} from '../utils/cardDescriptions.ts';
 import {Modal, PopupLayer} from './UI.tsx';
 import {V5Piece, V5Power} from './V5Art.tsx';
 
-type Notice = {id:string;kind:'awakening'|'beacon'|'static';title:string;subtitle:string;detail:string;rules:string;piece?:string;color?:PlayerColor};
-export function CardEffectNotifications({awakening,beacon,staticEffect,clock,turnNumber,onOpenChange}:{awakening?:AwakeningAlertState|null;beacon?:BeaconEffectState|null;staticEffect?:StaticEffectState|null;clock?:ClockAlertState|null;turnNumber:number;onOpenChange:(open:boolean)=>void}) {
+type Notice = {id:string;kind:'awakening'|'beacon'|'static'|'reward';title:string;subtitle:string;detail:string;rules:string;power?:string;piece?:string;color?:PlayerColor};
+export function captureAwardNotices(awards:PowerUpAward[]=[],recipient?:PlayerColor):Notice[]{
+ return awards.filter(award=>award.player===recipient).map(award=>({id:award.id,kind:'reward',title:'Power-up earned!',subtitle:'Five capture points · +1 charge',detail:`You earned ${award.name}. You now have ${award.newCount} charge${award.newCount===1?'':'s'}.`,rules:'Every five capture points grants one power-up charge. Extra points carry toward your next reward.',power:award.type}));
+}
+export function CardEffectNotifications({awards,recipient,awakening,beacon,staticEffect,clock,turnNumber,onOpenChange}:{awards?:PowerUpAward[];recipient?:PlayerColor;awakening?:AwakeningAlertState|null;beacon?:BeaconEffectState|null;staticEffect?:StaticEffectState|null;clock?:ClockAlertState|null;turnNumber:number;onOpenChange:(open:boolean)=>void}) {
  const [queue,setQueue]=React.useState<Notice[]>([]);
- const seen=React.useRef(new Set<string>());
+ const seen=React.useRef(new Set<string>((awards||[]).map(award=>award.id)));
  const [clockNotice,setClockNotice]=React.useState<ClockAlertState|null>(null);
  React.useEffect(()=>{
   const notices:Notice[]=[];
   if(awakening) notices.push({id:`awakening:${awakening.timestamp}`,kind:'awakening',title:`${awakening.cardName} activated`,subtitle:`${awakening.player==='w'?'White':'Black'} · ${awakening.effectTitle}${awakening.pieceSquare?` · ${awakening.pieceSquare.toUpperCase()}`:''}`,detail:awakening.effectDescription,rules:AWAKENING_DESCRIPTIONS[awakening.cardType]||awakening.effectDescription,piece:({awakening_pawn:'p',awakening_knight:'n',awakening_bishop:'b',awakening_rook:'r',awakening_queen:'q',awakening_king:'k'} as Record<string,string>)[awakening.cardType],color:awakening.player});
   if(beacon?.active) notices.push({id:`beacon:${beacon.expiresOnTurnNumber}`,kind:'beacon',title:'Beacon activated',subtitle:'Holy Sanctum',detail:'Pieces surrounding the Monolith are protected from every capture method.',rules:'Protection follows the Monolith’s surrounding squares. Leaving the field removes protection. The effect ends at its normal turn countdown.'});
   if(staticEffect?.pending||staticEffect?.active) notices.push({id:`static:${staticEffect.expiresOnTurnNumber}:${staticEffect.active?'active':'charging'}`,kind:'static',title:staticEffect.active?'Static shockwave active':'Static activated',subtitle:staticEffect.active?'Stun field':'Charging around the Monolith',detail:staticEffect.active?'All pieces on the highlighted squares beside the Monolith are stunned, including your own. They cannot move or activate Champion ultimates.':'Up to eight squares directly beside the Monolith are charging. Pieces can still move before the shockwave activates.',rules:'Static charges the squares adjacent to the Monolith, then activates on the caster’s next turn. The stun lasts through the following opponent turn and affects both players; stunned pieces cannot move by any method or activate Champion ultimates.'});
+  notices.push(...captureAwardNotices(awards,recipient));
   const fresh=notices.filter(n=>!seen.current.has(n.id));
   fresh.forEach(n=>seen.current.add(n.id));
   if(fresh.length)setQueue(q=>[...q,...fresh]);
- },[awakening,beacon,staticEffect]);
+ },[awakening,beacon,staticEffect,awards,recipient]);
  React.useEffect(()=>{onOpenChange(queue.length>0);},[queue.length,onOpenChange]);
  React.useEffect(()=>{
   if(!clock)return;
@@ -34,7 +38,7 @@ export function CardEffectNotifications({awakening,beacon,staticEffect,clock,tur
  const icon=notice?.kind==='awakening'?<Sparkles size={17}/>:notice?.kind==='beacon'?<Shield size={17}/>:<Zap size={17}/>;
  return <>
   {notice&&<Modal className="champion-info-modal card-effect-modal"><section className={`champion-info-dialog card-effect-dialog effect-${notice.kind}`} data-notification-kind={notice.kind}>
-   <header className="champion-info-heading"><div className="champion-info-art">{notice.kind==='awakening'?<V5Piece type={notice.piece||'q'} color={notice.color} awakened className="w-full h-full"/>:<V5Power type={notice.kind} className="w-full h-full"/>}</div><div><h2>{notice.title}</h2><p>{notice.subtitle}</p></div><button type="button" onClick={dismiss} aria-label="Close dialog"><X size={20}/></button></header>
+   <header className="champion-info-heading"><div className="champion-info-art">{notice.kind==='awakening'?<V5Piece type={notice.piece||'q'} color={notice.color} awakened className="w-full h-full"/>:<V5Power type={notice.power||notice.kind} className="w-full h-full"/>}</div><div><h2>{notice.title}</h2><p>{notice.subtitle}</p></div><button type="button" onClick={dismiss} aria-label="Close dialog"><X size={20}/></button></header>
    <div className="champion-info-section"><h3>{icon}Effect</h3><p>{notice.detail}</p></div>
    <div className="champion-info-section champion-info-ultimate"><h3><Sparkles size={17}/>How it works</h3><p>{notice.rules}</p></div>
    {notice.kind==='static'&&<div className="champion-info-rules static-timing-summary">{staticEffect?.active?<><strong>Stun active · {Math.max(0,staticEffect.expiresOnTurnNumber-turnNumber)} total turns remaining</strong><p>Affected squares: {staticEffect.stunnedSquares.map(q=>q.toUpperCase()).join(' · ')||'None'}.</p></>:staticEffect?.pending?<><strong>Charging · activates in {Math.max(0,(staticEffect.procOnTurnNumber??turnNumber)-turnNumber)} total turn(s)</strong><p>Activates on turn {staticEffect.procOnTurnNumber}; ends on turn {staticEffect.expiresOnTurnNumber}.</p></>:<strong>This Static effect has ended.</strong>}</div>}

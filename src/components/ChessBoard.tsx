@@ -76,6 +76,7 @@ interface ChessBoardProps {
   frontier?:import('../utils/frontier.ts').FrontierState;
   tutorialGuide?: {from:string|null;to:string|null;guard:(square:string)=>boolean};
   controlsHost?: HTMLElement|null;
+  powerUpRecipient?:PlayerColor;
   summoningCircles?: import('../types.ts').SummoningCircle[];
   hands?: import('../types.ts').GameState['hands'];
   historyLog?: import('../types.ts').GameState['historyLog'];
@@ -211,6 +212,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   onPlayAwakeningKing,
   onPlayAwakeningAsWild,
   controlsHost = null,
+  powerUpRecipient,
   hasPopup = false,
 }) => {
   const { isDark } = useTheme();
@@ -448,7 +450,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     if (!selectedSquare) return [];
     if(tutorialGuide?.from&&tutorialGuide.to)return selectedSquare===tutorialGuide.from?[tutorialGuide.to]:[];
     if (selectedSquare === monolithSquare) return [];
-    if(frontierGame?.frontier?.expanded && (!selectedCard||['pawn','knight','bishop','rook','queen','wild','previous','traverse'].includes(selectedCard.type)||isWildPowerUp)){const d=structuredClone(frontierGame);let from=selectedSquare;if(awaitingKnightSecondMove&&knightMovePrompt){try{executeLandingMove(d,knightMovePrompt.from,knightMovePrompt.to);}catch{return [];}from=knightMovePrompt.to;}return frontierMoves(d,from).filter(q=>!awaitingKnightSecondMove||!knightMovePrompt?.firstCaptured||(!occupant(d,q)&&!['boss','mimic'].includes(d.frontier?.pois[q]||'')));}
+    if(frontierGame?.frontier?.expanded && (!selectedCard||['pawn','knight','bishop','rook','queen','wild','previous','traverse','push'].includes(selectedCard.type)||selectedCard.type.startsWith('awakening_')||isWildPowerUp)){const d=structuredClone(frontierGame);let from=selectedSquare;if(awaitingKnightSecondMove&&knightMovePrompt){try{executeLandingMove(d,knightMovePrompt.from,knightMovePrompt.to);}catch{return [];}from=knightMovePrompt.to;}return frontierMoves(d,from,selectedCard?.type==='push'||selectedCard?.type==='awakening_king'&&awakeningMode==='skill'&&isKingInCheck?'q':undefined,selectedCard?.type==='push').filter(q=>!awaitingKnightSecondMove||!knightMovePrompt?.firstCaptured||(!occupant(d,q)&&!['boss','mimic'].includes(d.frontier?.pois[q]||'')));}
     if(grounds && selectedCard?.type!=='push' && !(selectedCard?.type==='champion')){
       const from=awaitingKnightSecondMove&&knightMovePrompt?knightMovePrompt.to:selectedSquare;
       const preview=createSafeChess(fen);
@@ -546,6 +548,9 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     );
   }, [
     grounds,
+    frontierGame,
+    isWildPowerUp,
+    isKingInCheck,
     tutorialGuide,
     selectedSquare,
     chess,
@@ -579,8 +584,9 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         for (const f of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
           const sq = `${f}${r}`;
           if (
-            (!frontierGame?.frontier?.expanded || emptyFrontierSquare(frontierGame,sq)) &&
+            (!frontierGame || monolithPlacementSquare(frontierGame,sq)) &&
             !chess.get(sq as Square) &&
+            !frontierGame?.frontier?.golems.some(g=>g.square===sq) &&
             sq !== monolithSquare &&
             !restrictedSquares.includes(sq) &&
             !(champions && (champions.w?.square === sq || champions.b?.square === sq))
@@ -594,11 +600,12 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
     // Restrict card: empty squares
     if (selectedCard?.type === 'restrict') {
-      for (let r = 1; r <= 8; r++) {
+      for (const r of ranksFor(fen)) {
         for (const f of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
           const sq = `${f}${r}`;
           if (
             !chess.get(sq as Square) &&
+            !frontierGame?.frontier?.golems.some(g=>g.square===sq) &&
             sq !== monolithSquare &&
             !restrictedSquares.includes(sq) &&
             !(champions && (champions.w?.square === sq || champions.b?.square === sq))
@@ -612,7 +619,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
     // Switch card: friendly pieces
     if (selectedCard?.type === 'switch') {
-      for (let r = 1; r <= 8; r++) {
+      for (const r of ranksFor(fen)) {
         for (const f of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
           const sq = `${f}${r}`;
           const p = chess.get(sq as Square);
@@ -634,7 +641,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
     // Push card: ALL friendly pieces (standard piece or champion) that have valid push moves
     if (selectedCard?.type === 'push') {
-      for (let r = 1; r <= 8; r++) {
+      for (const r of ranksFor(fen)) {
         for (const f of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
           const sq = `${f}${r}`;
           const p = chess.get(sq as Square);
@@ -650,7 +657,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
     // Awakening cards in skill mode:
     if (selectedCard?.type === 'awakening_pawn' && awakeningMode === 'skill') {
-      for (let r = 1; r <= 8; r++) {
+      for (const r of ranksFor(fen)) {
         for (const f of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
           const sq = `${f}${r}`;
           const p = chess.get(sq as Square);
@@ -663,7 +670,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     }
 
     if (selectedCard?.type === 'awakening_knight' && awakeningMode === 'skill') {
-      for (let r = 1; r <= 8; r++) {
+      for (const r of ranksFor(fen)) {
         for (const f of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
           const sq = `${f}${r}`;
           const p = chess.get(sq as Square);
@@ -781,7 +788,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       const champOnSquare =
         (whiteChampion && whiteChampion.square === square) ||
         (blackChampion && blackChampion.square === square);
-      if (restrictedSquares.includes(square) || pieceOnSquare || champOnSquare || frontierGame?.frontier?.expanded && !emptyFrontierSquare(frontierGame,square)) {
+      if (restrictedSquares.includes(square) || pieceOnSquare || champOnSquare || frontierGame && !monolithPlacementSquare(frontierGame,square)) {
         return; // Cannot place on occupied or restricted square
       }
       onPlaceMonolith(square);
@@ -794,7 +801,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       const champOnSquare =
         (whiteChampion && whiteChampion.square === square) ||
         (blackChampion && blackChampion.square === square);
-      if (restrictedSquares.includes(square) || pieceOnSquare || champOnSquare || square === monolithSquare) {
+      if (restrictedSquares.includes(square) || pieceOnSquare || champOnSquare || square === monolithSquare || frontierGame?.frontier?.golems.some(g=>g.square===square)) {
         return; // Restrict card can only choose empty squares
       }
       onRestrictSquare(square);
@@ -1286,7 +1293,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       {controlsHost ? createPortal(boardControls,controlsHost) : boardControls}
 
       {groundNotice && <PopupLayer enabled={Boolean(controlsHost)}><div className="board-notification small-game-notice" ><div className="board-ground-notice w-full max-w-[560px] mb-2 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/90 border border-blue-300 dark:border-blue-700 text-blue-950 dark:text-blue-200 text-xs flex items-center justify-between shadow-xs animate-fade-in" role="status"><div className="flex items-center gap-2"><Zap className="w-4 h-4 shrink-0"/><span className="font-semibold leading-snug">{groundNotice}</span></div><button onClick={onDismissGroundNotice} className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-600 text-white cursor-pointer shrink-0 ml-2">OK</button></div></div></PopupLayer>}
-      <CardEffectNotifications awakening={awakeningAlert} beacon={beaconEffect} staticEffect={staticEffect} clock={clockAlert} turnNumber={turnNumber??0} onOpenChange={setInformationOpen}/>
+      <CardEffectNotifications awards={frontierGame?.powerUpAwards} recipient={powerUpRecipient} awakening={awakeningAlert} beacon={beaconEffect} staticEffect={staticEffect} clock={clockAlert} turnNumber={turnNumber??0} onOpenChange={setInformationOpen}/>
 
       {/* Awakening: Knight Transform In-Place Banner */}
       {selectedCard?.type === 'awakening_knight' && awakeningMode === 'skill' && selectedSquare && chess.get(selectedSquare as Square)?.type === 'n' && chess.get(selectedSquare as Square)?.color === turn && !knightMovePrompt && (
@@ -1650,6 +1657,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
               !isMonolith && !summoningCircles.some(c=>c.square===square&&!c.finished&&!c.interrupted)&&(!frontierGame||monolithPlacementSquare(frontierGame,square));
             const isRestrictTarget =
               selectedCard?.type === 'restrict' &&
+              !frontier?.golems.some(g=>g.square===square) &&
               !piece &&
               !championPiece &&
               !isRestricted &&
