@@ -240,7 +240,9 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
       const availableHeight=!compactUI && region && dockTop!=null ? Math.min(region.height,dockTop-region.top-8) : region?.height||0;
       // The expanded portrait phone board uses full width and scrolls its 12 ranks.
       const fullWidth=gameState.frontier?.expanded&&!frontierZoomOut&&(!compactUI||!phoneLandscape&&window.innerWidth<=640);
-      const size=Math.max(0,(fullWidth?boardWidth:Math.min(boardWidth,availableHeight))-4);
+      // Zoom-out uses a 2:3 board: maximize its height while all 12 ranks fit.
+      const fitExpanded=compactUI&&gameState.frontier?.expanded&&frontierZoomOut;
+      const size=Math.max(0,(fitExpanded?Math.min(boardWidth*1.5,availableHeight):fullWidth?boardWidth:Math.min(boardWidth,availableHeight))-4);
       app.style.setProperty('--compact-board-size',`${size}px`);
     };
     const observer=new ResizeObserver(measure);nodes.forEach(el=>{if(el)observer.observe(el);});measure();
