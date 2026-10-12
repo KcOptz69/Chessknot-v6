@@ -373,7 +373,7 @@ export interface RoomState {
 }
 
 export type ClientMessage =
-  | {type: 'expand_frontier'; test?: boolean}
+  | {type: 'expand_frontier'; test?: boolean; chestDrop?: 'lens'|'wings'|'star'|'banner'|'sigil'|'mimic'; bossDrop?: 'eye'|'feather'|'core'}
   | {type: 'frontier_item';item:FrontierItem;captureIndex?:number;from?:string;to?:string;cardId?:string;targetCardId?:string;targetSquare?:string;targetFriendlySquare?:string;targetSquares?:string[]}
   | {type: 'frontier_golem_move';cardId:string;from:string;to:string}
   | {type: 'frontier_self_destruct';from:string}

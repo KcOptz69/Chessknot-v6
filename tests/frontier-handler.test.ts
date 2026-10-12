@@ -1,3 +1,4 @@
+import {portalTravelTarget} from "../src/utils/grounds.ts";
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync,writeFileSync,unlinkSync} from 'node:fs';
@@ -142,4 +143,25 @@ test('Restrict rejects each point of interest without consuming or changing stat
   const errors=action(r,{type:'play_restrict',cardId:card.id,targetSquare:'cX'});
   assert.deepEqual(r.gameState,before,kind);assert.ok(errors.some((e:any)=>e.type==='error'));
  }
+});
+
+test('Monolith may occupy a Portal without creating a warp choice',()=>{
+ const r=setup();r.gameState.grounds={selected:['portal'],charges:{w:{},b:{}},tiles:{cX:'portal',fX:'portal'},traps:[],poison:[],disarm:[],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};
+ const card=createCard('monolith',902);r.gameState.hands.w=[card];
+ assert.equal(monolithPlacementSquare(r.gameState,'cX'),true);
+ action(r,{type:'play_monolith',cardId:card.id,targetSquare:'cX'});
+ assert.equal(r.gameState.monolithSquare,'cX');assert.ok(!r.gameState.pendingPortal);
+});
+test('test expansion accepts chosen drops and rejects invalid rewards atomically',()=>{
+ for(const invalid of [false,true]){
+ const r=setup();r.gameState.frontier=initialFrontier();r.gameState.fen=createInitialGameState().fen;
+ const before=structuredClone(r.gameState);
+ action(r,{type:'expand_frontier',test:true,chestDrop:invalid?'core':'wings',bossDrop:'feather'});
+ if(invalid)assert.deepEqual(r.gameState,before);else{assert.equal(r.gameState.frontier.chestRoll,'wings');assert.equal(r.gameState.frontier.boss.drop,'feather');}
+ }
+});
+test('Monolith blocks portal travel to the opposite tile',()=>{
+ const r=setup();r.gameState.grounds={selected:['portal'],charges:{w:{},b:{}},tiles:{a2:'portal',cX:'portal'},traps:[],poison:[],disarm:[],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};
+ r.gameState.monolithSquare='cX';assert.equal(portalTravelTarget(r.gameState,'w','a2'),undefined);
+ const before=structuredClone(r.gameState);action(r,{type:'portal_move',from:'a2'});assert.deepEqual(r.gameState,before);
 });

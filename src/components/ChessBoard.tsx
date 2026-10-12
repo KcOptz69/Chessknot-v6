@@ -72,6 +72,7 @@ import {
 import { useTheme } from '../context/ThemeContext.tsx';
 
 interface ChessBoardProps {
+  sigilChampionSquare?:string|null;
   frontierGame?:import('../types.ts').GameState;
   frontier?:import('../utils/frontier.ts').FrontierState;
   tutorialGuide?: {from:string|null;to:string|null;guard:(square:string)=>boolean};
@@ -158,7 +159,7 @@ const PIECE_NAMES: Record<StandardPieceType, string> = {
 };
 
 export const ChessBoard: React.FC<ChessBoardProps> = ({
-  frontierGame,frontier,tutorialGuide,
+  sigilChampionSquare,frontierGame,frontier,tutorialGuide,
   summoningCircles=[],soulSummons=[],pieceIds={},hands,historyLog=[],
   onOpenChat, unreadChat = 0,
   fen,
@@ -1534,7 +1535,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             const championPiece = isWhiteChamp ? whiteChampion : isBlackChamp ? blackChampion : null;
             const isMyChampionSquare = Boolean(myChampion && myChampion.square === square);
 
-            const isSelected = selectedSquare === square || switchSquare1 === square;
+            const isSelected = selectedSquare === square || switchSquare1 === square || sigilChampionSquare === square;
             const isValidDestination = validDestinations.includes(square);
 
             const isKingSquare = piece && piece.type === 'k' && piece.color === turn;
@@ -1659,6 +1660,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
               !isMonolith && !summoningCircles.some(c=>c.square===square&&!c.finished&&!c.interrupted)&&(!frontierGame||monolithPlacementSquare(frontierGame,square));
             const isRestrictTarget =
               selectedCard?.type === 'restrict' &&
+              !frontier?.pois[square] &&
               !frontier?.golems.some(g=>g.square===square) &&
               !piece &&
               !championPiece &&

@@ -659,7 +659,6 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
             d.lastMoveDetails = { player: c, actionType: m.type === 'play_awakening_knight' ? 'awakening' : 'move', from, to: m.secondTo || to, firstTo: m.secondTo ? to : undefined };
             if(m.type==='play_awakening_knight'){const q=m.secondTo||to;d.awakenedPieces||=[];if(occupant(d,q)?.color===c&&!d.awakenedPieces.includes(q))d.awakenedPieces.push(q);d.awakenedPieceSquare=q;d.awakenedByPlayer=c;d.awakenedOnTurnNumber=d.turnNumber;d.awakeningAlert={player:c,cardType:card!.type,cardName:card!.name,effectTitle:'Super Knight Awakened!',effectDescription:'The Knight can make one double jump, with at most one capture, then returns to a normal Knight.',pieceSquare:q,timestamp:Date.now()};}
             detail = `${card?.name || p.type} ${from} → ${to}.`;
-            if(card?.type.startsWith('awakening_')&&(m.asWild||m.type==='play_awakening_as_wild'))detail=`${c==='w'?'White':'Black'} played ${card.name} as Wild: ${from} → ${to}.`;
         }
         if (!free && ['frontier_item', 'frontier_self_destruct', 'play_champion_ultimate'].includes(m.type))
             d.lastMovedPiece[c] = null;
@@ -689,7 +688,7 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
         if(m.type==='frontier_item'&&m.item==='banner') {
             const id=uid('pawn_summon');fd.events.unshift({id,kind:'pawn_summon',detail:'Footsoldier’s Banner summoned a Pawn.',square:m.to,piece:{type:'p',color:c}});
         }
-        frontierNotice(d, m.type === 'frontier_self_destruct' ? 'golem_explosion' : card?.type === 'traverse' ? 'traverse' : m.type === 'frontier_item' && m.item === 'core' ? 'summon' : m.type === 'frontier_item' || m.type === 'frontier_bind' ? 'item' : 'move', detail, m.type === 'frontier_self_destruct' ? m.from : undefined,undefined,(card?.type.startsWith('awakening_')&&(m.asWild||m.type==='play_awakening_as_wild')?card.name+' (Played as Wild)':card?.name)||(m.type==='frontier_item'?ITEM_NAMES[m.item as FrontierItem]:({play_king_move:'King Move',use_powerup_wild_move:'Wild Move',play_champion_move:'Champion Move',play_champion_ultimate:'Champion Ultimate',frontier_self_destruct:'Golem Self-destruct',frontier_bind:'Bind',portal_move:'Portal'} as Record<string,string>)[m.type]),c);
+        frontierNotice(d, m.type === 'frontier_self_destruct' ? 'golem_explosion' : card?.type === 'traverse' ? 'traverse' : m.type === 'frontier_item' && m.item === 'core' ? 'summon' : m.type === 'frontier_item' || m.type === 'frontier_bind' ? 'item' : 'move', detail, m.type === 'frontier_self_destruct' ? m.from : undefined,undefined,card?.name||(m.type==='frontier_item'?ITEM_NAMES[m.item as FrontierItem]:({play_king_move:'King Move',use_powerup_wild_move:'Wild Move',play_champion_move:'Champion Move',play_champion_ultimate:'Champion Ultimate',frontier_self_destruct:'Golem Self-destruct',frontier_bind:'Bind',portal_move:'Portal'} as Record<string,string>)[m.type]),c);
         if (!free) {
             if (!d.lastMoveDetails || d.lastMoveDetails.player !== c)
                 d.lastMoveDetails = { player: c, actionType: 'move' };

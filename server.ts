@@ -1254,7 +1254,7 @@ function groundsPreflight(s:GameState,msg:ClientMessage,color:PlayerColor):strin
  if(msg.type==='play_switch'&&[m.square1,m.square2].some(q=>groundPiece(s,q)?.color!==color))return 'Switch targets must both belong to you.';
  if(msg.type==='play_push'&&groundPiece(s,m.from)?.color!==color)return 'Push targets must belong to you.';
  if(msg.type==='play_switch'&&[m.square1,m.square2].every(q=>g?.tiles[q]==='portal'))return 'Use the portal swap instead of Switch.';
- if((msg.type==='play_restrict'||msg.type==='play_monolith')&&g?.tiles[m.targetSquare]==='portal'&&!(msg.type==='play_restrict'&&activeCircle(s,m.targetSquare)))return 'Portals cannot be restricted or occupied by a Monolith.';
+ if(msg.type==='play_restrict'&&g?.tiles[m.targetSquare]==='portal'&&!(msg.type==='play_restrict'&&activeCircle(s,m.targetSquare)))return 'Portals cannot be restricted.';
  const targets=[m.to,m.secondTo,m.targetSquare,...(m.targetSquares||[])].filter(Boolean);
  if(m.from&&m.to&&b.get(m.from)?.type==='p'&&m.from[0]!==m.to[0]&&!b.get(m.to))targets.push(m.to[0]+m.from[1]);
  if(targets.some(q=>groundPiece(s,q)?.color!==color&&groundPiece(s,q)&&groundProtected(s,q)))return 'A piece on Defense cannot be captured.';

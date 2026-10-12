@@ -156,3 +156,5 @@ dialog.frontier-drop-dialog small{font-size:11px;margin:6px 0 10px;}
 /* Readable preference in both themes; keep inspection separate from activation. */
 .awakening-guide-toggle{color:var(--ink);font-weight:700;line-height:1.5;}
 .opponent-reserve-card:disabled{opacity:1;cursor:default;}
+.frontier-test-rewards label{display:block;margin:12px 0;font-weight:700;}
+.frontier-test-rewards select{display:block;width:100%;padding:8px;margin-top:5px;border:1px solid var(--edge);border-radius:8px;background:var(--surface-raised);color:var(--ink);}
