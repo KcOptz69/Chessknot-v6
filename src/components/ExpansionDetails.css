@@ -1,0 +1,9 @@
+.expansion-details{margin:auto;padding:0;border:0;background:transparent;width:min(900px,96vw);max-width:96vw;max-height:94dvh;overflow:auto;color:white;}
+.expansion-details::backdrop{background:rgba(3,7,18,.8);backdrop-filter:blur(5px);}
+.expansion-details-poster{position:relative;width:100%;}
+.expansion-details-poster img{display:block;width:100%;height:auto;}
+.expansion-details-poster button{position:absolute;border:0;background:transparent;cursor:pointer;border-radius:12px;}
+.expansion-details-close{top:3%;right:2.5%;width:8%;height:10%;}
+.expansion-details-done{bottom:2%;left:25%;width:50%;height:16%;}
+.expansion-details-poster button:focus-visible{outline:3px solid white;outline-offset:-4px;box-shadow:0 0 12px #38bdf8;}
+@media(orientation:landscape){.expansion-details{width:min(900px,96vw,104dvh);}}
