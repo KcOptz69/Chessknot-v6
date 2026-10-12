@@ -1420,3 +1420,21 @@ body .move-error-notice>div{margin:0!important;}
 .desktop-match .tactical-powers-panel #power-ups-bar {max-height:none;overflow:visible;}
 .tactical-powers-panel .frontier-inventory {margin:10px 0 0;padding:10px 0 0;border:0;border-top:1px solid var(--edge);border-radius:0;background:transparent;}
 .tactical-powers-panel .frontier-inventory > .ui-button {display:block;width:100%;height:auto;min-height:44px;white-space:normal;padding:8px 12px;}
+
+/* Consistent charge badges in both tactical reserve panels. */
+.reserve-charge.ui-badge { color:#82bbff; border-color:#426faf; background:#102f59; font-variant-numeric:tabular-nums; }
+:root:not(.dark) .reserve-charge.ui-badge { color:#21599c; border-color:#94b9e7; background:#e7f1ff; }
+.opponent-reserves-scroll { max-height:65dvh; overflow-y:auto; overscroll-behavior:contain; }
+.opponent-reserves-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.opponent-reserve-card { position:relative; min-height:84px; width:100%; display:flex; align-items:center; gap:8px; padding:20px 9px 9px; border:1px solid var(--edge); border-radius:12px; background:var(--surface-raised); color:var(--ink); text-align:left; cursor:pointer; }
+.opponent-reserve-card:hover,.opponent-reserve-card[aria-pressed=true] { border-color:#78aafa; background:var(--surface); }
+.opponent-reserve-card:focus-visible { outline:2px solid #78aafa; outline-offset:2px; }
+.opponent-reserve-art { width:42px; height:42px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.opponent-reserve-art > .v5-art,.opponent-reserve-art > .frontier-art,.opponent-reserve-art > .frontier-bind-icon { width:40px; height:40px; }
+.opponent-reserve-copy { min-width:0; display:flex; flex-direction:column; gap:4px; }
+.opponent-reserve-copy strong { font-size:11px; line-height:1.25; overflow-wrap:anywhere; }
+.opponent-reserve-copy small { font-size:10px; line-height:1.3; color:var(--muted); }
+.opponent-reserve-card > .reserve-charge { position:absolute; top:6px; right:6px; padding:1px 5px; font-size:9px; }
+.opponent-reserve-detail { margin-top:10px; border:1px solid var(--edge); border-radius:10px; padding:10px; font-size:12px; line-height:1.5; color:var(--ink); background:var(--surface); }
+.opponent-reserve-detail strong { display:block; margin-bottom:4px; }
+.opponent-reserve-detail small { display:block; margin-top:6px; color:var(--muted); }

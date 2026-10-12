@@ -1,3 +1,5 @@
+import {OpponentPowerUps} from './OpponentPowerUps.tsx';
+import type {FrontierState} from '../utils/frontier.ts';
 import {BindIcon} from './FrontierUI.tsx';
 import {Link2} from 'lucide-react';
 import {CardArtwork} from './CardArtwork.tsx';
@@ -17,6 +19,8 @@ interface OpponentHandProps {
   hidePowerButton?: boolean;
   openRequest?: number;
   grounds?: Grounds;
+  frontier?:FrontierState;
+  turnNumber?:number;
   color?: "w" | "b";
   hand: Card[];
   champion?: ChampionPiece|null;
@@ -37,7 +41,7 @@ interface OpponentHandProps {
 
 export const OpponentHand: React.FC<OpponentHandProps> = ({
   bindRequest=0,canBind=false,boundCardId,onBind,hidePowerButton = false, openRequest = 0,
-  grounds,
+  grounds,frontier,turnNumber,
   color = "b",
   hand,champion,
   opponentHasEye=false,permanentVision=false,isVisionActive,
@@ -100,7 +104,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
                     {opponentName}'s Power-ups
                   </h3>
                   <span className="text-[11px] text-stone-500 dark:text-stone-400">
-                    Active tactical reserves and tile charges
+                    Power-ups, items and cooldowns · Tap to inspect
                   </span>
                 </div>
               </div>
@@ -114,118 +118,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
               </button>
             </div>
 
-            {/* Grid of Power-Up cards matching power-up section */}
-            <div className="opponent-powerup-grid grid grid-cols-2 gap-2.5 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
-              {/* Exchange */}
-              <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/80 flex flex-col justify-between gap-3 relative">
-                <div className="flex items-start justify-between">
-                  <div className="w-14 h-14 rounded-lg bg-blue-500/10 dark:bg-blue-400/10 flex items-center justify-center">
-                    <V5Power type="draw" className="w-12 h-12" />
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    drawCount > 0
-                      ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 border-stone-200 dark:border-stone-700'
-                  }`}>
-                    {drawCount > 0 ? `×${drawCount}` : 'Used'}
-                  </span>
-                </div>
-                <div>
-                  <strong className="text-xs font-bold block text-stone-900 dark:text-stone-100">Exchange</strong>
-                  <span className="text-[10px] text-stone-500 dark:text-stone-400">Free action</span>
-                </div>
-              </div>
-
-              {/* Monolith (if enabled) */}
-              {showMonolithPowerUp && (
-                <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/80 flex flex-col justify-between gap-3 relative">
-                  <div className="flex items-start justify-between">
-                    <div className="w-14 h-14 rounded-lg bg-sky-500/10 dark:bg-sky-400/10 flex items-center justify-center">
-                      <V5Piece type="m" className="w-12 h-12" />
-                    </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                      monolithCount > 0
-                        ? 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-700'
-                        : 'bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 border-stone-200 dark:border-stone-700'
-                    }`}>
-                      {monolithCount > 0 ? `×${monolithCount}` : 'Used'}
-                    </span>
-                  </div>
-                  <div>
-                    <strong className="text-xs font-bold block text-stone-900 dark:text-stone-100">Monolith</strong>
-                    <span className="text-[10px] text-stone-500 dark:text-stone-400">Move action</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Wild move */}
-              <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/80 flex flex-col justify-between gap-3 relative">
-                <div className="flex items-start justify-between">
-                  <div className="w-14 h-14 rounded-lg bg-amber-500/10 dark:bg-amber-400/10 flex items-center justify-center">
-                    <V5Power type="wild" className="w-12 h-12" />
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    wildCount > 0
-                      ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 border-stone-200 dark:border-stone-700'
-                  }`}>
-                    {wildCount > 0 ? `×${wildCount}` : 'Used'}
-                  </span>
-                </div>
-                <div>
-                  <strong className="text-xs font-bold block text-stone-900 dark:text-stone-100">Wild move</strong>
-                  <span className="text-[10px] text-stone-500 dark:text-stone-400">Move action</span>
-                </div>
-              </div>
-
-              {/* Vision */}
-              <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/80 flex flex-col justify-between gap-3 relative">
-                <div className="flex items-start justify-between">
-                  <div className="w-14 h-14 rounded-lg bg-cyan-500/10 dark:bg-cyan-400/10 flex items-center justify-center">
-                    {opponentHasEye?<BindIcon className="w-12 h-12"/>:<V5Power type="vision" className="w-12 h-12" />}
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    visionCount > 0
-                      ? 'bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 border-cyan-300 dark:border-cyan-700'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 border-stone-200 dark:border-stone-700'
-                  }`}>
-                    {visionCount > 0 ? `×${visionCount}` : 'Used'}
-                  </span>
-                </div>
-                <div>
-                  <strong className="text-xs font-bold block text-stone-900 dark:text-stone-100">{opponentHasEye?'Bind':'Vision'}</strong>
-                  <span className="text-[10px] text-stone-500 dark:text-stone-400">Free action</span>
-                </div>
-              </div>
-
-              {/* Treacherous Grounds tiles/traps */}
-              {grounds?.selected.map((type) => {
-                const charges = grounds.charges[color]?.[type] || 0;
-                return (
-                  <div
-                    key={type}
-                    className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700/80 flex flex-col justify-between gap-3 relative"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="w-14 h-14 rounded-lg bg-emerald-500/10 dark:bg-emerald-400/10 flex items-center justify-center">
-                        <V5Power type={type} className="w-12 h-12" />
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                        charges > 0
-                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                          : 'bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 border-stone-200 dark:border-stone-700'
-                      }`}>
-                        {charges > 0 ? `×${charges}` : '0'}
-                      </span>
-                    </div>
-                    <div>
-                      <strong className="text-xs font-bold block text-stone-900 dark:text-stone-100">{GROUND_NAMES[type]}</strong>
-                      <span className="text-[10px] text-stone-500 dark:text-stone-400">Move action</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <OpponentPowerUps powerUps={{draw:drawCount,monolith:monolithCount,wild:wildCount,vision:visionCount}} grounds={grounds} frontier={frontier} color={color} turnNumber={turnNumber} hasEye={opponentHasEye} showMonolith={showMonolithPowerUp}/>
 
             {/* Footer */}
             <div className="flex justify-end pt-2">
