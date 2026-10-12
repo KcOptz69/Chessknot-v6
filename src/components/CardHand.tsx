@@ -462,7 +462,7 @@ export const CardHand: React.FC<CardHandProps> = ({
           {/* Awakening Card Mode Selector in Drawer */}
           {selectedCard.type.startsWith('awakening_') && isMyTurn && (
             <div className="space-y-2 mt-1">
-              <div className="flex items-center gap-2 p-1 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
+              <div className="awakening-mode-buttons flex items-center gap-2 p-1 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
                 <button
                   type="button"
                   onClick={() => onSetAwakeningMode?.('skill')}
