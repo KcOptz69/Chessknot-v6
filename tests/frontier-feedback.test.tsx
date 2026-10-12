@@ -58,3 +58,8 @@ test('duplicate acquisition logs with different IDs are coalesced',()=>{
  const log=s.historyLog[0];s.historyLog.push({...log,id:'duplicate-reward'});
  assert.equal(frontierRewardEvents(s,new Set()).length,1);
 });
+
+test('repeated ownership feedback does not enqueue a second acquisition popup',()=>{
+ const s=room().gameState;addItem(s,'w','lens');addItem(s,'w','lens');
+ assert.equal(frontierRewardEvents(s,new Set()).length,1);
+});

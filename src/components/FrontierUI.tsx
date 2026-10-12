@@ -91,11 +91,12 @@ export function frontierRewardEvents(state:GameState,seen:Set<string>,recentOnly
   if(seen.has(event.id))continue;seen.add(event.id);
   if(!['loot','eye','mimic','bag','key'].includes(event.kind))continue;
   if(!event.item&&!['mimic','bag','key'].includes(event.kind))continue;
+  if(event.kind==='loot'&&event.detail.includes('already owns'))continue;
   if(recentOnly&&now-(times.get(event.id)||0)>30000)continue;
   // A drop stays on the board; announce acquisition once to each client.
   // History and live events can describe the same acquisition with different IDs.
   const turn=turns.get(event.id);
-  const key=turn===undefined?`reward:${event.id}`:'reward:'+JSON.stringify([turn,event.kind,event.item,event.recipient,event.square,event.detail]);
+  const key=turn===undefined?`reward:${event.id}`:'reward:'+JSON.stringify([turn,['loot','eye'].includes(event.kind)?'acquisition':event.kind,event.item,event.recipient]);
   if(seen.has(key))continue;seen.add(key);
   fresh.push(event);
  }
