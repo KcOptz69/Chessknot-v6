@@ -1471,3 +1471,16 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
 :root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="soul_release"] .compact-card-name{font-size:clamp(10px,1.1vw,14px)!important;}
 .card-face-label{white-space:normal;overflow-wrap:normal;max-width:100%;line-height:1.1;}
 @media(max-width:640px){:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .compact-card-name{font-size:clamp(10px,2.5vw,13px)!important;}}
+
+/* Phone hand: shorter cards, all seven visible without overlap or scrolling. */
+@media(max-width:640px){
+ :root .compact-match:not(.phone-landscape) #player-hand-container .hand-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px!important;padding:2px 0!important;overflow:visible;scroll-snap-type:none;}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .hand-grid.hand-seven{grid-template-columns:repeat(7,minmax(0,1fr));}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .hand-grid>.compact-hand-card{height:62px!important;max-height:62px!important;min-width:0!important;min-height:0!important;aspect-ratio:auto!important;margin:0!important;flex:none!important;transform:none;}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .compact-hand-card .card-art{inset:3px 4px 22px!important;max-height:none!important;}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .compact-hand-card .compact-card-name{top:auto;bottom:2px;height:19px;font-size:10px!important;}
+ .compact-match:not(.phone-landscape) .board-viewport{max-height:none!important;}
+}
+/* Landscape phones keep their existing side rail, with no card overlap. */
+:root .phone-landscape #player-hand-container .hand-grid.hand-seven{display:grid!important;grid-template-columns:1fr!important;gap:3px!important;overflow:hidden;padding:0!important;scroll-snap-type:none;}
+:root .phone-landscape #player-hand-container .hand-grid.hand-seven>.compact-hand-card{min-width:0!important;margin:0!important;flex:none!important;transform:none;}

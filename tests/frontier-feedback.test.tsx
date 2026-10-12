@@ -15,7 +15,7 @@ test('first expanded snapshot retains recent item rewards and never repeats the 
  const otherSeen=new Set<string>();assert.equal(frontierRewardEvents(s,otherSeen,true).length,1);
 });
 test('reward notices survive event-window truncation using persistent match logs',()=>{
- const s=room().gameState;frontierNotice(s,'drop','Golem Core dropped at cX.','cX',{item:'core'});s.frontier.events=[];const events=frontierRewardEvents(s,new Set<string>());assert.equal(events.length,1);assert.equal(events[0].item,'core');assert.equal(events[0].square,'cX');assert.equal(s.historyLog[0].cardName,'Golem Core');
+ const s=room().gameState;frontierNotice(s,'loot','White obtained Golem Core.','cX',{item:'core',recipient:'w'});s.frontier.events=[];const events=frontierRewardEvents(s,new Set<string>());assert.equal(events.length,1);assert.equal(events[0].item,'core');assert.equal(events[0].square,'cX');assert.equal(s.historyLog[0].cardName,'Golem Core');
 });
 test('fresh drops are not duplicated by history fallback and old reconnect rewards stay dismissed',()=>{
  const s=room().gameState;addItem(s,'b','eye');assert.equal(frontierRewardEvents(s,new Set<string>()).length,1);for(const log of s.historyLog)log.timestamp=1;assert.equal(frontierRewardEvents(s,new Set<string>(),true,50000).length,0);
@@ -43,4 +43,18 @@ test('item reward events are shown once even when the same snapshot is received 
  const s=room().gameState;addItem(s,'w','lens');addItem(s,'w','eye');
  const seen=new Set<string>();assert.equal(frontierRewardEvents(s,seen).length,2);
  assert.equal(frontierRewardEvents(structuredClone(s),seen).length,0);
+});
+
+test('a drop followed by acquisition produces one shared item popup',()=>{
+ const s=room().gameState;
+ frontierNotice(s,'drop','Lens dropped.','cX',{item:'lens'});
+ addItem(s,'w','lens');
+ const rewards=frontierRewardEvents(s,new Set());
+ assert.equal(rewards.length,1);assert.equal(rewards[0].kind,'loot');
+ const seen=new Set<string>();assert.equal(frontierRewardEvents(s,seen).length,1);assert.equal(frontierRewardEvents(s,seen).length,0);
+});
+test('duplicate acquisition logs with different IDs are coalesced',()=>{
+ const s=room().gameState;addItem(s,'b','lens');
+ const log=s.historyLog[0];s.historyLog.push({...log,id:'duplicate-reward'});
+ assert.equal(frontierRewardEvents(s,new Set()).length,1);
 });

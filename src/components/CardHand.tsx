@@ -376,7 +376,7 @@ export const CardHand: React.FC<CardHandProps> = ({
         </div>
       </div>
 
-      <div className={`hand-grid ${hand.length>5?'hand-seven':''}`} aria-label={hand.length>5?'Seven-card hand, swipe to browse':undefined}>
+      <div className={`hand-grid ${hand.length>5?'hand-seven':''}`} aria-label={hand.length>5?'Seven-card hand':undefined}>
         {hand.map((card) => {
           const isSelected = selectedCardId === card.id;
           const isCheckEscape = Boolean(isKingInCheck && isMyTurn && checkEscapeCardTypes?.has(card.type));

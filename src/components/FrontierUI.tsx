@@ -83,19 +83,25 @@ export function FrontierInventory({state,color,disabled,send,onIntro,onDeployGol
 
 type RewardEvent=NonNullable<GameState['frontier']>['events'][number];
 export function frontierRewardEvents(state:GameState,seen:Set<string>,recentOnly=false,now=Date.now()):RewardEvent[]{
- const candidates=new Map<string,RewardEvent>(),times=new Map<string,number>();
- for(const log of [...state.historyLog].reverse()){times.set(log.id,log.timestamp);if(log.frontierEvent)candidates.set(log.id,{id:log.id,detail:log.detail,...log.frontierEvent});}
+ const candidates=new Map<string,RewardEvent>(),times=new Map<string,number>(),turns=new Map<string,number>();
+ for(const log of [...state.historyLog].reverse()){times.set(log.id,log.timestamp);turns.set(log.id,log.turnNumber);if(log.frontierEvent)candidates.set(log.id,{id:log.id,detail:log.detail,...log.frontierEvent});}
  for(const event of [...(state.frontier?.events||[])].reverse())candidates.set(event.id,event);
  const fresh:RewardEvent[]=[];
  for(const event of candidates.values()){
   if(seen.has(event.id))continue;seen.add(event.id);
-  if(!['loot','eye','drop','mimic','bag','key'].includes(event.kind))continue;
+  if(!['loot','eye','mimic','bag','key'].includes(event.kind))continue;
   if(!event.item&&!['mimic','bag','key'].includes(event.kind))continue;
   if(recentOnly&&now-(times.get(event.id)||0)>30000)continue;
+  // A drop stays on the board; announce acquisition once to each client.
+  // History and live events can describe the same acquisition with different IDs.
+  const turn=turns.get(event.id);
+  const key=turn===undefined?`reward:${event.id}`:'reward:'+JSON.stringify([turn,event.kind,event.item,event.recipient,event.square,event.detail]);
+  if(seen.has(key))continue;seen.add(key);
   fresh.push(event);
  }
  return fresh;
 }
+const dismissedFrontierRewards=new Map<string,Set<string>>();
 export function FrontierDropNotices({state,paused=false}:{state:GameState;paused?:boolean}){
  const match=React.useRef(''),seen=React.useRef(new Set<string>()),timers=React.useRef(new Set<ReturnType<typeof setTimeout>>());
  const dialogRef=React.useRef<HTMLDialogElement>(null);const [queue,setQueue]=React.useState<RewardEvent[]>([]);
@@ -104,12 +110,13 @@ export function FrontierDropNotices({state,paused=false}:{state:GameState;paused
   const f=state.frontier;if(!f?.expanded){match.current='';seen.current.clear();timers.current.forEach(clearTimeout);timers.current.clear();setQueue([]);return;}
   const first=match.current!==f.id;
   if(first){match.current=f.id;seen.current.clear();timers.current.forEach(clearTimeout);timers.current.clear();setQueue([]);}
-  const fresh=frontierRewardEvents(state,seen.current,first);
+  const dismissed=dismissedFrontierRewards.get(f.id)||new Set<string>();
+  const fresh=frontierRewardEvents(state,seen.current,first).filter(event=>!dismissed.has(event.id));
   if(!fresh.length)return;
   if(fresh.some(e=>e.kind==='mimic')){const timer=setTimeout(()=>{setQueue(q=>[...q,...fresh]);timers.current.delete(timer);},2200);timers.current.add(timer);}
   else setQueue(q=>[...q,...fresh]);
  },[state.frontier,state.historyLog]);
- const e=queue[0];const dismiss=()=>{dialogRef.current?.close();setQueue(q=>q.slice(1));};
+ const e=queue[0];const dismiss=()=>{if(e){const dismissed=dismissedFrontierRewards.get(match.current)||new Set<string>();dismissed.add(e.id);dismissedFrontierRewards.set(match.current,dismissed);}dialogRef.current?.close();setQueue(q=>q.slice(1));};
  React.useEffect(()=>{const dialog=dialogRef.current;if(!e||!dialog)return;if(!dialog.open)dialog.showModal();return()=>{if(dialog.open)dialog.close();};},[e?.id]);
  if(!e)return null;
  return <PopupLayer><dialog ref={dialogRef} className="frontier-drop-dialog" aria-labelledby="frontier-drop-title" onClick={event=>{if(event.target===event.currentTarget){const rect=event.currentTarget.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dismiss();}}} onCancel={event=>{event.preventDefault();dismiss();}}><FrontierArt type={e.item||(['bag','key'].includes(e.kind)?e.kind:'mimic')} className="frontier-drop-art"/><h2 id="frontier-drop-title">{e.kind==='mimic'?'Mimic revealed!':e.kind==='drop'?'Item dropped!':'Item obtained!'}</h2><p>{e.detail}</p>{e.item&&<small>{ITEM_TEXT[e.item]}</small>}<Button aria-label="Close dialog" onClick={dismiss}>Got it{queue.length>1?` · ${queue.length-1} more`:''}</Button></dialog></PopupLayer>;

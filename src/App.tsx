@@ -213,6 +213,8 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   }, [chatOpen, compactUI, gameState.status]);
   React.useEffect(() => { setChatMessages([]); setUnreadChat(0); chatLastId.current = undefined; chatHistoryInitialized.current = false; setChatOpen(false); }, [roomId]);
 
+  const [frontierZoomOut,setFrontierZoomOut]=React.useState(false);
+
   // Tactical selections
   const [onlineSelectedCard, setSelectedCard] = React.useState<Card | null>(null);
   const selectedCard=tutorialMode?gameState.hands.w.find(c=>c.id===tutorialState.selectedCard)||null:onlineSelectedCard;
@@ -227,13 +229,15 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
       const region=nodes[5]?.getBoundingClientRect();
       const dockTop=nodes[2]?.getBoundingClientRect().top;
       const availableHeight=!compactUI && region && dockTop!=null ? Math.min(region.height,dockTop-region.top-8) : region?.height||0;
-      const size=Math.max(0,Math.min(region?.width||0,availableHeight)-4);
+      // The expanded portrait phone board uses full width and scrolls its 12 ranks.
+      const fullWidth=compactUI&&!phoneLandscape&&window.innerWidth<=640&&gameState.frontier?.expanded&&!frontierZoomOut;
+      const size=Math.max(0,(fullWidth?region?.width||0:Math.min(region?.width||0,availableHeight))-4);
       app.style.setProperty('--compact-board-size',`${size}px`);
     };
     const observer=new ResizeObserver(measure);nodes.forEach(el=>{if(el)observer.observe(el);});measure();
     window.addEventListener('resize',measure);window.visualViewport?.addEventListener('resize',measure);
     return ()=>{observer.disconnect();window.removeEventListener('resize',measure);window.visualViewport?.removeEventListener('resize',measure);};
-  },[compactUI,phoneLandscape,gameState.status,Boolean(selectedCard)]);
+  },[compactUI,phoneLandscape,gameState.status,Boolean(selectedCard),Boolean(gameState.frontier?.expanded),frontierZoomOut]);
   const [onlineWildPowerUp, setIsWildPowerUp] = React.useState(false);
   const [onlineMonolithPowerUp, setIsMonolithPowerUp] = React.useState(false);
   const isWildPowerUp=tutorialMode?tutorialState.selectedCard==='wild-power':onlineWildPowerUp;
@@ -262,7 +266,6 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const [golemActionSquare,setGolemActionSquare]=React.useState<string|null>(null);
   const [selfDestructConfirm,setSelfDestructConfirm]=React.useState<string|null>(null);
   const [golemPlacement,setGolemPlacement]=React.useState(false);
-  const [frontierZoomOut,setFrontierZoomOut]=React.useState(false);
   React.useEffect(()=>{setGolemPlacement(false);setLensMode(false);setLensCandidate(null);setFrontierItemMode(null);setWingsFrom(null);setFeatherConfirm(undefined);setFeatherChoice(undefined);setChannelMoveConfirm(null);setBoardItemFrom(null);setBoardItemTargets([]);setBannerConfirm(null);setGolemActionSquare(null);setSelfDestructConfirm(null);},[gameState.turn,gameState.status,roomId]);
   React.useEffect(()=>{const fresh=(gameState.frontier?.events||[]).filter(e=>!chestSeen.current.has(e.id));gameState.frontier?.events.forEach(e=>chestSeen.current.add(e.id));const locked=fresh.find(e=>e.kind==='chest_locked'&&e.recipient===myColor);if(!locked)return;setChestNotice(locked.detail);clearTimeout(chestNoticeTimer.current);chestNoticeTimer.current=setTimeout(()=>setChestNotice(null),3500);},[gameState.frontier?.events,myColor]);
   const [frontierFrom,setFrontierFrom]=React.useState<string|null>(null);
