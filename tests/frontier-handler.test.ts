@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync,writeFileSync,unlinkSync} from 'node:fs';
-import {createInitialGameState,createSafeChess,createCard} from '../src/utils/chessLogic.ts';
-import {expandFrontier,initialFrontier,addItem,frontierMoves,frontierKingSafe,finishFrontierTurn,featherReviveChoice,wingsTargets,frontierClockRestore,trimBagHands,traverseTargets,golemSelfDestructError,golemBlastSquares,monolithPlacementSquare} from '../src/utils/frontier.ts';
+import {createInitialGameState,createSafeChess,createCard,evaluateGameEnd} from '../src/utils/chessLogic.ts';
+import {expandFrontier,initialFrontier,addItem,frontierMoves,frontierKingSafe,finishFrontierTurn,featherReviveChoice,wingsTargets,frontierClockRestore,trimBagHands,traverseTargets,golemSelfDestructError,golemBlastSquares,monolithPlacementSquare,frontierEscape} from '../src/utils/frontier.ts';
 import {extendFen,FrontierBoard} from '../src/utils/frontierBoard.ts';
 import {viewingGameState} from '../src/utils/roomViewing.ts';
 const harness=new URL('../.frontier-handler-test.ts',import.meta.url);
@@ -115,4 +115,21 @@ test('ordinary and Champion captures in powered double jumps award exactly once'
 });
 test('invalid powered second jump awards no capture points or reward notification',()=>{
  const r=setup();const s=r.gameState;s.frontier.expanded=false;s.fen='4k3/8/8/8/8/8/8/1N2K3 w - - 0 1';s.superKnights=['b1'];s.grounds={selected:['boost','gravity'],charges:{w:{},b:{}},tiles:{b1:'boost'},traps:[],poison:[],disarm:[],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};const card=createCard('knight',805);s.hands.w=[card];const before=structuredClone(s);action(r,{type:'play_card_move',cardId:card.id,from:'b1',to:'c1',secondTo:'h8'});assert.deepEqual(r.gameState,before);
+});
+
+
+test('Refresh is a legal free action while checked on the expanded board',()=>{
+ const r=setup('q3r2k/8/8/8/8/8/1B1P1P2/3RKR2 w - - 0 1');const s=r.gameState;s.powerUps.w={draw:0,wild:0,monolith:0,vision:0};s.hands.w=[createCard('refresh',901)];s.deck=Array.from({length:8},(_,i)=>createCard('bishop',910+i));s.discard=[];
+ assert.equal(frontierKingSafe(s,'w'),false);assert.equal(frontierEscape(s,'w'),true);const old={fen:s.fen,turn:s.turn,turnNumber:s.turnNumber,clock:structuredClone(s.clock)};
+ assert.deepEqual(action(r,{type:'play_refresh',cardId:s.hands.w[0].id}),[]);assert.equal(r.gameState.hands.w.length,5);assert.ok(r.gameState.hands.w.every((c:any)=>c.type==='bishop'));for(const key of Object.keys(old))assert.deepEqual(r.gameState[key],(old as any)[key]);assert.equal(r.gameState.status,'playing');
+});
+test('Wild and Wishing Star cannot invent a controlled Golem escape from checkmate',()=>{
+ for(const star of [false,true]){const r=setup('q3r2k/8/8/8/8/8/1P1P1P2/3RKR2 w - - 0 1');const s=r.gameState;s.frontier.golems=[{id:'g',owner:'w',square:'d3'}];s.powerUps.w={draw:0,wild:0,monolith:0,vision:0};s.hands.w=[createCard('wild',930)];if(star)addItem(s,'w','star');
+ assert.equal(frontierKingSafe(s,'w'),false);assert.equal(frontierEscape(s,'w'),false);assert.equal(evaluateGameEnd(createSafeChess(s.fen),s).status,'checkmate');
+ s.hands.w=[createCard('pawn',931)];assert.equal(frontierEscape(s,'w'),true);
+ }
+});
+test('useless Refresh draws do not delay mate and invalid Refresh remains atomic in check',()=>{
+ const r=setup('q3r2k/8/8/8/8/8/1P1P1P2/3RKR2 w - - 0 1');const s=r.gameState;s.powerUps.w={draw:0,wild:0,monolith:0,vision:0};s.hands.w=[createCard('refresh',940)];s.deck=[createCard('pawn',941)];s.discard=[];assert.equal(frontierEscape(s,'w'),false);assert.equal(evaluateGameEnd(createSafeChess(s.fen),s).status,'checkmate');
+ const before=structuredClone(s);action(r,{type:'play_refresh',cardId:'missing'});assert.deepEqual(r.gameState,before);
 });

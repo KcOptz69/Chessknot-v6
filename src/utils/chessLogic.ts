@@ -2104,7 +2104,7 @@ export function getCheckEscapeCardTypes(
   defendingColor: PlayerColor
 ): Set<CardType> {
   const escapeTypes = new Set<CardType>();
-  if(isExtendedFen(state.fen)){for(const card of state.hands[defendingColor]){if(!['push','switch','monolith','clock','traverse'].includes(card.type)||card.id===state.frontier?.bind?.cardId)continue;const draft=structuredClone(state);draft.hands[defendingColor]=[card];if(frontierEscape(draft,defendingColor))escapeTypes.add(card.type);}return escapeTypes;}
+  if(isExtendedFen(state.fen)){for(const card of state.hands[defendingColor]){if(!['push','switch','monolith','clock','traverse','refresh'].includes(card.type)||card.id===state.frontier?.bind?.cardId)continue;const draft=structuredClone(state);draft.hands[defendingColor]=[card];if(frontierEscape(draft,defendingColor))escapeTypes.add(card.type);}return escapeTypes;}
   const protectedSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [];
 
   if (!isKingChecked(chess, defendingColor, state.monolithSquare, state.champions, protectedSquares, state.grounds)) {

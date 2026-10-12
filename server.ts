@@ -1337,7 +1337,7 @@ function handleGameAction(room: RoomState, msg: ClientMessage, actorColor: Playe
     const changed=JSON.stringify(draft)!==JSON.stringify(before);
     const destinations=Object.keys(draft.frontier?.pois||{}).filter(q=>['boss','mimic'].includes(draft.frontier!.pois[q]));
     const collision=destinations.some(q=>!!createSafeChess(draft.fen).get(q as Square)||Object.values(draft.champions).some(ch=>ch?.square===q)||draft.frontier?.golems.some(g=>g.square===q))||draft.frontier?.golems.some(g=>!!createSafeChess(draft.fen).get(g.square as Square)||Object.values(draft.champions).some(ch=>ch?.square===g.square));
-    const safe=!changed||msg.type==='resign'||msg.type==='play_clock'||msg.type.startsWith('dismiss_')||frontierKingSafe(draft,actorColor);
+    const safe=!changed||msg.type==='resign'||msg.type==='play_clock'||msg.type==='play_refresh'||msg.type.startsWith('dismiss_')||frontierKingSafe(draft,actorColor);
     if(!failed&&changed&&safe&&!collision){for(const c of ['w','b'] as const){const existing=before.captures?.[c].length||0;for(const loss of draft.captures?.[c].slice(existing)||[])loss.capturedTurn??=before.turnNumber;}room.gameState=draft;}
     else if(!failed&&changed&&(!safe||collision))replies.push({type:'error',message:collision?'A discovery or Golem occupies that square.':'The complete action leaves your King unsafe.'});
     if(ws)for(const reply of replies)sendToSocket(ws,reply);
@@ -1611,6 +1611,7 @@ function executeGameAction(
       turnNumber:state.turnNumber,actionType:'refresh',cardName:'Refresh',
       detail:`${currentTurn==='w'?'White':'Black'} played Refresh: discarded their hand and drew ${state.hands[currentTurn].length} new cards. Free action.${oldHand.some(c=>c.type==='brick')?' Discarded Brick.':''}`,
       timestamp:Date.now(),whitePoints:state.whitePoints,blackPoints:state.blackPoints});
+    Object.assign(state,evaluateGameEnd(createSafeChess(state.fen),state));
     return;
   }
 

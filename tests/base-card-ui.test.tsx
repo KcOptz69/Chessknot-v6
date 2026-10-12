@@ -49,7 +49,7 @@ test('rulebook opens to an image menu with unreleased banners disabled',()=>{
  assert.match(html,/CHESSKNOT OFFICIAL RULEBOOK/);
  for(const name of ['HOW TO PLAY','SHIFTING PARADIGM','CHAMPIONS OF THE MONOLITH','THE AWAKENING','THE TREACHEROUS GROUNDS'])assert.ok(html.includes(name));
  const buttons=html.match(/<button[^>]*>[\s\S]*?<\/button>/g)||[];
- for(const name of ['ARCANE FRONTIER','ELEMENTAL KINGS','QUEST FOR GLORY','FORBIDDEN ARTIFACTS']){
+ for(const name of ['ELEMENTAL KINGS','QUEST FOR GLORY','FORBIDDEN ARTIFACTS']){
   const button=buttons.find(b=>b.includes(name));assert.ok(button);assert.match(button!,/disabled=""/);
  }
  assert.ok(!html.includes('rb-detail-copy'));

@@ -795,7 +795,7 @@ export function frontierEscape(s: GameState, c: PlayerColor, freeDepth = 0) {
         if (p.type === 'k' && cardTypes.has('awakening_king') && frontierMoves(s, q, 'q').length)
             return true;
         const matching = ({ p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen' } as any)[p.type];
-        if (isFree || cardTypes.has(matching) || cardTypes.has('wild') || s.powerUps[c].wild > 0 || cardTypes.has('previous') && s.lastMovedPiece[c] === p.type) {
+        if (p.type !== 'golem' && (isFree || cardTypes.has(matching) || cardTypes.has('wild') || s.powerUps[c].wild > 0 || cardTypes.has('previous') && s.lastMovedPiece[c] === p.type)) {
             if (frontierMoves(s, q).length)
                 return true;
         }
@@ -816,7 +816,7 @@ export function frontierEscape(s: GameState, c: PlayerColor, freeDepth = 0) {
             for (const q of allSquares(s.fen)) {
                 if (occupant(s, q)?.color !== c || blockedActor(s, q))
                     continue;
-                if (item.type === 'star' && frontierMoves(s, q).length)
+                if (item.type === 'star' && occupant(s,q)?.type!=='golem' && frontierMoves(s, q).length)
                     return true;
                 if (item.type === 'wings')
                     for (const to of allSquares(s.fen)) {
@@ -868,10 +868,10 @@ export function frontierEscape(s: GameState, c: PlayerColor, freeDepth = 0) {
                 if (can({ type: 'play_champion_ultimate', cardId: card.id, targetSquare: to, targetFriendlySquare: ally, targetSquares: [to] }))
                     return true;
     }
-    if (cardTypes.has('monolith') || s.powerUps[c].monolith > 0) {
+    if ((s.expansions?.shiftedParadigm!==false||s.expansions?.championsOfTheMonolith!==false)&&(cardTypes.has('monolith') || s.powerUps[c].monolith > 0)) {
         if (s.monolithLastMovedTurn !== s.turnNumber - 1)
             for (const q of allSquares(s.fen)) {
-                if (!emptyFrontierSquare(s, q))
+                if (!monolithPlacementSquare(s, q))
                     continue;
                 const d = structuredClone(s);
                 d.monolithSquare = q;
@@ -922,6 +922,11 @@ export function frontierEscape(s: GameState, c: PlayerColor, freeDepth = 0) {
                 if (frontierKingSafe(d, c))
                     return true;
             }
+    }
+    if(freeDepth<1&&!s.jokerLocked[c]&&cardTypes.has('refresh')){
+        const cards=[...s.deck,...s.discard,...s.hands[c]].filter(card=>!['refresh','brick'].includes(card.type));
+        const draft=structuredClone(s);draft.hands[c]=cards;
+        if(frontierEscape(draft,c,freeDepth+1))return true;
     }
     if (freeDepth < 1 && !s.jokerLocked[c]) {
         for (const item of s.frontier?.inventories[c] || [])

@@ -156,3 +156,22 @@
 .rb-demo-caption>div{display:flex;align-items:center;gap:2px;}
 
 .rb-status-marker{position:absolute;top:1px;right:1px;width:16px;height:16px;display:grid;place-items:center;border:1px solid;border-radius:50%;background:#12243e;z-index:8}.rb-status-marker svg{width:12px;height:12px}.rb-protected{color:#fde047}.rb-stunned{color:#67e8f9;left:1px;right:auto;box-shadow:0 0 8px #22d3ee}.rb-push-wind{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;pointer-events:none;background:linear-gradient(45deg,#14b8a640,#34d39935);border-radius:4px;z-index:7}.rb-push-wind svg{width:80%;height:80%;color:#99f6e4;filter:drop-shadow(0 0 5px #34d399)}
+
+.rb-discovery-title{font-size:20px;line-height:1.25;font-weight:900;color:#65429b;margin:19px 0 9px;padding-left:9px;border-left:3px solid #9773c8;}
+.dark .rb-discovery-title{color:#d3b5ff;border-color:#aa87e4;}
+.rb-fixed-detail h4{font-size:20px;font-weight:900;line-height:1.15;margin:0;}
+.rb-frontier-subheading{font-size:14px;font-weight:900;color:var(--rb-accent);margin:14px 0 7px;}
+.rb-chest-rewards .rb-icon-card{width:calc((100% - 12px)/3);}
+.rb-frontier-discoveries .rb-section-heading{font-size:14px;background:transparent;padding-left:0;}
+.rb-frontier-discoveries>h3.rb-section-heading{font-size:17px;background:var(--rb-bar);padding-left:8px;}
+
+.rb-frontier-mechanics{display:grid;grid-template-columns:minmax(0,1fr) 156px;gap:14px;align-items:center;}
+.rb-frontier-map{margin:8px 0;}
+.rb-frontier-map-grid{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(12,1fr);aspect-ratio:8/12;border:3px solid var(--rb-line);}
+.rb-frontier-map-grid>span{position:relative;background:#c8d5e5;color:#152c43;}
+.rb-frontier-map-grid>span.rb-frontier-map-dark{background:#526a88;color:white;}
+.rb-frontier-map-grid>span.rb-frontier-map-mystic{background:#7ee3ee;color:#123d55;}
+.rb-frontier-map-grid>span.rb-frontier-map-mystic.rb-frontier-map-dark{background:#168cb8;color:white;}
+.rb-frontier-map-grid small{position:absolute;left:2px;top:0;font-size:9px;}
+.rb-frontier-map figcaption{font-size:11px;color:var(--rb-muted);text-align:center;margin-top:5px;}
+@media(max-width:480px){.rb-frontier-mechanics{grid-template-columns:1fr;}.rb-frontier-map{width:156px;margin:auto;}}
