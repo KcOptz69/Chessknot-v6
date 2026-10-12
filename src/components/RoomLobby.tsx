@@ -667,7 +667,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                 aria-pressed={isMyReady}
                 onClick={() => onSetPlayerReady?.(!isMyReady)}
               >
-                {isMyReady ? "Ready!" : "Ready"}
+                Ready
               </button>
               {onExitLobby && (
                 <button

@@ -1609,3 +1609,19 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
 }
 :root body :is(#lobby-btn-start-match,#lobby-btn-ready):disabled{opacity:.45;cursor:not-allowed;}
 :root body :is(#lobby-btn-start-match,#lobby-btn-ready):not(:disabled):hover{filter:brightness(1.08);}
+
+/* Generic ground-dialog button margins were pushing inventory tiles outward. */
+:root body .opponent-powerup-dialog .opponent-reserve-card{margin:0!important;min-width:0!important;width:100%;max-width:100%;}
+:root body .opponent-powerup-dialog .opponent-reserve-section{margin-left:0;margin-right:0;}
+:root body #lobby-btn-ready[aria-pressed="true"]{
+ background:linear-gradient(180deg,#39d873,#17ae51 65%,#09893c)!important;
+ border-color:#8ef5ae!important;box-shadow:inset 0 2px 0 #d7ffe566,0 3px 8px #09893c33!important;
+}
+:root body #lobby-btn-exit{
+ background:linear-gradient(180deg,#05b7fa 0%,#0084ff 65%,#0068f2 100%)!important;
+ border:2px solid #55d7ff!important;color:#fff!important;border-radius:14px;
+ min-height:48px;padding:10px 20px!important;display:flex;align-items:center;justify-content:center;
+ font-size:18px;font-weight:900;text-transform:none;letter-spacing:0;
+ box-shadow:inset 0 2px 0 #b7efff66,0 3px 8px #006bdb33!important;cursor:pointer;
+}
+:root body #lobby-btn-exit:hover{filter:brightness(1.08);}
