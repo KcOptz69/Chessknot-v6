@@ -227,11 +227,12 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
     const measure=()=>{
       nodes.forEach((el,i)=>{if(el && names[i]){const value=`${el.getBoundingClientRect().height}px`;app.style.setProperty(names[i],value);document.body.style.setProperty(names[i],value);}});
       const region=nodes[5]?.getBoundingClientRect();
+      const boardWidth=Math.max(0,(region?.width||0)-(!compactUI?180:0));
       const dockTop=nodes[2]?.getBoundingClientRect().top;
       const availableHeight=!compactUI && region && dockTop!=null ? Math.min(region.height,dockTop-region.top-8) : region?.height||0;
       // The expanded portrait phone board uses full width and scrolls its 12 ranks.
-      const fullWidth=compactUI&&!phoneLandscape&&window.innerWidth<=640&&gameState.frontier?.expanded&&!frontierZoomOut;
-      const size=Math.max(0,(fullWidth?region?.width||0:Math.min(region?.width||0,availableHeight))-4);
+      const fullWidth=gameState.frontier?.expanded&&!frontierZoomOut&&(!compactUI||!phoneLandscape&&window.innerWidth<=640);
+      const size=Math.max(0,(fullWidth?boardWidth:Math.min(boardWidth,availableHeight))-4);
       app.style.setProperty('--compact-board-size',`${size}px`);
     };
     const observer=new ResizeObserver(measure);nodes.forEach(el=>{if(el)observer.observe(el);});measure();
@@ -1116,12 +1117,14 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
 
 
           </div>,landscapeOpponentHost)}
-          <div className="frontier-board-toolbar"><div ref={setBoardControlsHost} className="compact-board-controls-host"/></div>
+          {compactUI&&<div className="frontier-board-toolbar"><div ref={setBoardControlsHost} className="compact-board-controls-host"/></div>}
           </div>
 
           {/* Clock Block Warning Notification Banner */}
           {clockBlockToast && <Toast onDismiss={()=>setClockBlockToast(null)}>Cannot Activate Clock: {clockBlockToast}</Toast>}
 
+          <div className="pc-board-region">
+          {!compactUI&&<><div className="pc-board-tools"><div ref={setBoardControlsHost} className="compact-board-controls-host"/></div>{gameState.frontier?.expanded&&<div className="pc-board-zoom"><button className="player-zoom-switch" role="switch" aria-checked={frontierZoomOut} aria-label="Zoom out board" onClick={()=>setFrontierZoomOut(v=>!v)}><span className="zoom-switch-track"><span/></span>Zoom out</button></div>}</>}
           {/* Interactive Chess Board */}
           <div ref={boardViewport} className="board-viewport"><div className="board-stage flex justify-center">
                           {frontierItemMode&&<div className="ground-controls frontier-deploy-guide"><strong>{itemGuide}</strong>{frontierItemMode==='sigil'&&<button className="ui-button ui-button--primary" disabled={!boardItemTargets.length||!isMyTurn} onClick={submitBoardItem}>Activate{boardItemTargets.length?` · ${boardItemTargets.join(', ')}`:''}</button>}<button onClick={()=>{setFrontierItemMode(null);setWingsFrom(null);setFeatherChoice(undefined);}}>Cancel</button></div>}{golemPlacement&&<div className="ground-controls frontier-deploy-guide"><strong>Deploy Golem · choose an empty square on your first rank</strong><button onClick={()=>setGolemPlacement(false)}>Cancel</button></div>}{groundMode&&<div className="ground-controls"><strong>{groundMode==='transport'?'Choose your piece on a portal to warp':groundMode==='portal'&&!portalFrom?'Choose a portal to relocate':`Place ${GROUND_NAMES[groundMode as GroundType]}`}</strong><button onClick={()=>{setGroundMode(null);setGroundSquare(null);}}>Cancel</button></div>}
@@ -1202,15 +1205,13 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
               {groundMode&&groundSquare&&<div className="ground-popup"><section className="ground-dialog placement-dialog" role="dialog" aria-modal="true" aria-label="Confirm tile action"><div className="placement-heading"><V5Power type={groundMode==='transport'?'portal':groundMode} className="w-16 h-16"/><h2>{groundMode==='transport'?'Warp through portal?':`Place ${GROUND_NAMES[groundMode as GroundType]}?`}</h2></div><p className="placement-meta"><strong>{groundSquare.toUpperCase()}</strong> · {groundMode==='transport'?'Free action, once per turn':'Uses your move action'}</p>{groundMode!=='transport'&&<p className="placement-description">{GROUND_DESCRIPTION[groundMode]}</p>}<div className="placement-actions"><button className="confirm-primary" onClick={()=>{ sendMessage(groundMode==='transport'?{type:'portal_move',from:groundSquare}:{type:'place_ground',groundType:groundMode as GroundType,square:groundSquare,portalFrom:portalFrom||undefined});setGroundMode(null);setGroundSquare(null);}}>Place here</button><button onClick={()=>setGroundSquare(null)}>Choose another square</button></div></section></div>}
 
           </div></div>
-
-
-
+          </div>
 
           {golemActionSquare&&gameState.frontier?.golems.some(g=>g.square===golemActionSquare&&g.owner===activeColor)&&<PopupLayer><aside className="golem-floating-controls"><GolemActionPanel state={gameState} color={activeColor} square={golemActionSquare} disabled={!isMyTurn} onSelfDestruct={()=>setSelfDestructConfirm(golemActionSquare)} onCancel={()=>{setGolemActionSquare(null);setSelfDestructConfirm(null);}}/></aside></PopupLayer>}
 
           {/* Player Hand */}
           <div className={`match-hand-dock ${selectedCard?'dock-has-description':''}`}>
-          {landscapeTag(<div className="dock-player-tag">{chestNotice&&<div className="chest-key-notice" role="status">{chestNotice}</div>}{gameState.frontier?.expanded&&<div className="player-zoom-row"><button className="player-zoom-switch" role="switch" aria-checked={frontierZoomOut} aria-label="Zoom out board" onClick={()=>setFrontierZoomOut(v=>!v)}><span className="zoom-switch-track"><span/></span>Zoom out</button></div>}<PlayerPanel deckCount={compactUI?(gameState.hiddenDeckCount??gameState.deck.length):undefined} onInspectCaptures={() => setCaptureViewer(activeColor)} color={activeColor}
+          {landscapeTag(<div className="dock-player-tag">{chestNotice&&<div className="chest-key-notice" role="status">{chestNotice}</div>}{compactUI&&gameState.frontier?.expanded&&<div className="player-zoom-row"><button className="player-zoom-switch" role="switch" aria-checked={frontierZoomOut} aria-label="Zoom out board" onClick={()=>setFrontierZoomOut(v=>!v)}><span className="zoom-switch-track"><span/></span>Zoom out</button></div>}<PlayerPanel deckCount={compactUI?(gameState.hiddenDeckCount??gameState.deck.length):undefined} onInspectCaptures={() => setCaptureViewer(activeColor)} color={activeColor}
             name={Object.values(roomPlayers).find(player => player.color === activeColor)?.name || (activeColor === 'w' ? 'White player' : 'Black player')}
             active={gameState.turn === activeColor} cards={gameState.handCounts?.[activeColor]??gameState.hands[activeColor].length}
             points={activeColor === 'w' ? gameState.whitePoints : gameState.blackPoints}
@@ -1220,7 +1221,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
             beaconTurns={gameState.beaconEffect?.active ? Math.max(0, (gameState.beaconEffect.expiresOnTurnNumber ?? (gameState.turnNumber + 6)) - gameState.turnNumber) : undefined}
           />
           </div>,landscapePlayerHost)}
-          {<div className="compact-dock-actions"><button onClick={()=>setCompactPanel('powers')}><Zap size={16}/>Power-ups & Items</button>{travelTarget && <button disabled={!isMyTurn || Boolean(gameState.pendingPortal)} onClick={()=>{if(isMyTurn)sendMessage({type:'portal_move',from:travelTarget.from});}}>Travel (Free)</button>}<button disabled={!isMyTurn || isJokerLocked} onClick={handleOpenDiscardRedraw}><RefreshCw size={14}/>Redraw / Pass</button></div>}
+          {compactUI&&<div className="compact-dock-actions"><button onClick={()=>setCompactPanel('powers')}><Zap size={16}/>Power-ups & Items</button>{travelTarget && <button disabled={!isMyTurn || Boolean(gameState.pendingPortal)} onClick={()=>{if(isMyTurn)sendMessage({type:'portal_move',from:travelTarget.from});}}>Travel (Free)</button>}<button disabled={!isMyTurn || isJokerLocked} onClick={handleOpenDiscardRedraw}><RefreshCw size={14}/>Redraw / Pass</button></div>}
           {lensMode&&<div className="lens-hand-guide"><span>Fateweaver’s Lens · click a card to discard and replace.</span><button onClick={()=>{setLensMode(false);setLensCandidate(null);}}>Cancel</button></div>}
           <div className="desktop-hand-layout">
           {myColor==='spectator'&&roomPlayers[playerId]?.role!=='arbiter'?<div className="viewing-hand-placeholder"><span>Spectator · hands and traps are hidden</span><Button onClick={handleReturnToLobby}>Quit viewing</Button></div>:(          <CardHand suppressJokerSurgePopup={tutorialMode} compact={compactUI} floatingDetails={!compactUI} descriptionHost={phoneLandscape?landscapeDescriptionHost:!compactUI?desktopDescriptionHost:undefined}
@@ -1249,6 +1250,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
             isKingInCheck={isCurrentKingInCheck}
             checkEscapeCardTypes={checkEscapeCardTypes}
           />)}
+          {!compactUI&&<div className="pc-hand-actions"><button disabled={!isMyTurn || isJokerLocked} onClick={handleOpenDiscardRedraw}><RefreshCw size={14}/>Redraw / Pass</button>{travelTarget&&<button disabled={!isMyTurn||Boolean(gameState.pendingPortal)} onClick={()=>{if(isMyTurn)sendMessage({type:'portal_move',from:travelTarget.from});}}>Travel (Free)</button>}</div>}
           {!compactUI && <div ref={setDesktopDescriptionHost} className="desktop-description-host"/>}
           </div>
           </div>
