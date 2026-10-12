@@ -228,6 +228,14 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
       nodes.forEach((el,i)=>{if(el && names[i]){const value=`${el.getBoundingClientRect().height}px`;app.style.setProperty(names[i],value);document.body.style.setProperty(names[i],value);}});
       const region=nodes[5]?.getBoundingClientRect();
       const boardWidth=Math.max(0,(region?.width||0)-(!compactUI?180:0));
+      if(compactUI&&!phoneLandscape&&window.innerWidth<=640&&window.innerHeight>window.innerWidth){
+        const card=app.querySelector<HTMLElement>('#player-hand-container .compact-hand-card');
+        const current=card?.getBoundingClientRect().height||62;
+        // Include the current card height so resizing converges rather than oscillates.
+        const height=gameState.frontier?.expanded?62:Math.max(62,Math.floor(current+(region?.height||0)-boardWidth));
+        const value=`${height}px`;
+        if(app.style.getPropertyValue('--portrait-hand-card-height')!==value)app.style.setProperty('--portrait-hand-card-height',value);
+      }else app.style.removeProperty('--portrait-hand-card-height');
       const dockTop=nodes[2]?.getBoundingClientRect().top;
       const availableHeight=!compactUI && region && dockTop!=null ? Math.min(region.height,dockTop-region.top-8) : region?.height||0;
       // The expanded portrait phone board uses full width and scrolls its 12 ranks.
