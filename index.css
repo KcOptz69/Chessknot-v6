@@ -1450,3 +1450,147 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
 .golem-self-destruct-confirm .lens-confirm-art{width:52px;height:52px;}
 .golem-self-destruct-confirm h2{font-size:16px;line-height:1.25;}
 .golem-self-destruct-confirm p,.golem-self-destruct-confirm small{font-size:12px;line-height:1.4;}
+
+/* Compact, theme-aware frames with a larger live label area. */
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card{
+ background:linear-gradient(145deg,#f7fbff,#dbeafe)!important;
+ border:2px solid var(--tcg-accent)!important;border-radius:9px!important;
+ box-shadow:inset 0 0 0 1px #ffffffb0,0 2px 5px #173b622b!important;color:#102e53!important;
+}
+:root.dark :is(#player-hand-container,.vision-card-grid) .compact-hand-card{
+ background:linear-gradient(145deg,#163451,#081727)!important;color:#f4f8ff!important;
+ box-shadow:inset 0 0 0 1px #ffffff20,0 2px 6px #0006!important;
+}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .card-art{inset:5% 7% 30%!important;}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .compact-card-name{
+ left:3%;right:3%;top:72%;bottom:3%;max-width:none!important;
+ padding:2px!important;border-top:1px solid var(--tcg-accent)!important;
+ color:inherit!important;text-shadow:none!important;
+ font-size:clamp(11px,1.25vw,16px)!important;line-height:1.15;white-space:normal;
+}
+:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card[data-card-type="soul_release"] .compact-card-name{font-size:clamp(10px,1.1vw,14px)!important;}
+.card-face-label{white-space:normal;overflow-wrap:normal;max-width:100%;line-height:1.1;}
+@media(max-width:640px){:root :is(#player-hand-container,.vision-card-grid) .compact-hand-card .compact-card-name{font-size:clamp(10px,2.5vw,13px)!important;}}
+
+/* Phone hand: shorter cards, all seven visible without overlap or scrolling. */
+@media(max-width:640px){
+ :root .compact-match:not(.phone-landscape) #player-hand-container .hand-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px!important;padding:2px 0!important;overflow:visible;scroll-snap-type:none;}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .hand-grid.hand-seven{grid-template-columns:repeat(7,minmax(0,1fr));}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .hand-grid>.compact-hand-card{height:62px!important;max-height:62px!important;min-width:0!important;min-height:0!important;aspect-ratio:auto!important;margin:0!important;flex:none!important;transform:none;}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .compact-hand-card .card-art{inset:3px 4px 22px!important;max-height:none!important;}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .compact-hand-card .compact-card-name{top:auto;bottom:2px;height:19px;font-size:10px!important;}
+ .compact-match:not(.phone-landscape) .board-viewport{max-height:none!important;}
+}
+/* Landscape phones keep their existing side rail, with no card overlap. */
+:root .phone-landscape #player-hand-container .hand-grid.hand-seven{display:grid!important;grid-template-columns:1fr!important;gap:3px!important;overflow:hidden;padding:0!important;scroll-snap-type:none;}
+:root .phone-landscape #player-hand-container .hand-grid.hand-seven>.compact-hand-card{min-width:0!important;margin:0!important;flex:none!important;transform:none;}
+
+/* Short desktop cards return vertical space to the board's flexible row. */
+:root .desktop-match #player-hand-container .hand-grid .compact-hand-card{
+ height:84px!important;max-height:84px!important;min-height:0!important;aspect-ratio:auto!important;
+}
+:root .desktop-match #player-hand-container .hand-grid .compact-hand-card .card-art{
+ inset:4px 6px 26px!important;max-height:none!important;
+}
+:root .desktop-match #player-hand-container .hand-grid .compact-hand-card .compact-card-name{
+ top:auto!important;bottom:3px;height:22px;font-size:13px!important;
+}
+.desktop-match .desktop-hand-layout .desktop-description-host{max-height:88px;}
+@media(max-height:740px){
+ :root .desktop-match #player-hand-container .hand-grid .compact-hand-card{height:72px!important;max-height:72px!important;}
+ .desktop-match .desktop-hand-layout .desktop-description-host{max-height:76px;}
+}
+
+/* PC controls use side gutters instead of extra horizontal rows. */
+.compact-match .pc-board-region{display:contents;}
+.desktop-match .pc-board-region{position:relative;min-height:0;height:100%;}
+.desktop-match .pc-board-region>.board-viewport{padding:0 90px;box-sizing:border-box;}
+.desktop-match .pc-board-tools{position:absolute;inset:4px 0 auto;z-index:25;pointer-events:none;}
+.desktop-match .pc-board-tools .board-controls{position:relative;padding:0!important;min-height:0;pointer-events:none;}
+.desktop-match .pc-board-tools .board-controls>div{pointer-events:auto;max-width:86px;flex-wrap:wrap;font-size:10px;gap:4px;}
+.desktop-match .pc-board-tools .board-controls>div:last-child{justify-content:flex-end;}
+.desktop-match .pc-board-zoom{position:absolute;bottom:5px;left:0;z-index:25;}
+.desktop-match .opponent-tag-row{padding-right:0;}
+.desktop-match .opponent-tag-row .player-panel,.desktop-match .dock-player-tag .player-panel{height:43px;min-height:43px;padding:5px 8px;box-sizing:border-box;}
+.desktop-match .opponent-tag-row .player-tag-actions button{height:28px;min-height:28px;padding:4px 7px;font-size:10px;}
+.desktop-match .desktop-hand-layout{grid-template-columns:minmax(0,1fr) minmax(130px,.3fr);grid-template-rows:auto minmax(0,1fr);gap:3px 8px;}
+.desktop-match .desktop-hand-layout>#player-hand-container{grid-column:1;grid-row:1/3;}
+.desktop-match .pc-hand-actions{grid-column:2;grid-row:1;display:flex;justify-content:flex-end;gap:4px;flex-wrap:wrap;}
+.desktop-match .pc-hand-actions button{display:flex;align-items:center;gap:4px;padding:4px 7px;border:1px solid var(--edge);border-radius:8px;background:var(--surface-raised);color:var(--ink);font-size:10px;min-height:27px;cursor:pointer;}
+.desktop-match .pc-hand-actions button:disabled{opacity:.45;cursor:not-allowed;}
+.desktop-match .desktop-hand-layout .desktop-description-host{grid-column:2;grid-row:2;max-height:50px;}
+
+/* Keep hand actions inside its border; details use the full adjacent area. */
+.desktop-match .pc-board-tools .board-controls>div{max-width:none;flex-wrap:nowrap;white-space:nowrap;}
+.desktop-match .pc-board-tools .board-controls button{white-space:nowrap;flex-shrink:0;}
+.desktop-match .desktop-hand-layout{grid-template-columns:minmax(0,1fr) minmax(210px,.38fr);grid-template-rows:auto;align-items:stretch;}
+.desktop-match .desktop-hand-layout>#player-hand-container{grid-column:1;grid-row:1;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:center;}
+:root .desktop-match #player-hand-container>.hand-grid{grid-column:1;grid-row:1;grid-template-columns:repeat(7,minmax(0,86px));min-width:0;}
+.desktop-match #player-hand-container>.pc-hand-actions{grid-column:2;grid-row:1;flex-direction:column;align-self:start;padding-top:3px;}
+.desktop-match .desktop-hand-layout .desktop-description-host{grid-column:2;grid-row:1;height:100%;max-height:96px;overflow:auto;}
+.desktop-match .desktop-hand-layout .desktop-description-host>.card-description-panel{margin:0!important;min-height:100%;box-sizing:border-box;}
+@media(max-height:740px){.desktop-match .desktop-hand-layout .desktop-description-host{max-height:84px;}}
+
+/* PC description matches the actual card height, with compact mode buttons. */
+.desktop-match .desktop-hand-layout{--pc-card-height:84px;}
+.desktop-match .desktop-hand-layout .desktop-description-host{
+ align-self:center;height:var(--pc-card-height);max-height:var(--pc-card-height);min-height:0;overflow:hidden;
+}
+.desktop-match .desktop-hand-layout .desktop-description-host>.card-description-panel{
+ height:var(--pc-card-height)!important;max-height:var(--pc-card-height)!important;min-height:0!important;
+ overflow-y:auto;padding:5px 7px!important;box-sizing:border-box;
+}
+.desktop-match .desktop-description-host .selected-card-thumb{width:24px;height:24px;padding:1px;flex-shrink:0;}
+.desktop-match .desktop-description-host .selected-card-thumb>svg,.desktop-match .desktop-description-host .selected-card-thumb>.v5-art{width:100%;height:100%;}
+.desktop-match .desktop-description-host .awakening-mode-buttons{padding:2px;gap:3px;border-radius:7px;margin-top:2px;}
+.desktop-match .desktop-description-host .awakening-mode-buttons>button{
+ min-height:22px;height:auto;padding:3px 4px;font-size:10px;line-height:1.1;gap:3px;border-radius:5px;
+}
+.desktop-match .desktop-description-host .awakening-mode-buttons>button svg{width:11px;height:11px;flex-shrink:0;}
+@media(max-height:740px){.desktop-match .desktop-hand-layout{--pc-card-height:72px;}}
+
+/* Wider reserve dialog eliminates horizontal scrolling and unused hint space. */
+.ui-modal>.opponent-powerup-dialog{width:min(620px,calc(100vw - 24px))!important;max-width:620px!important;padding:14px!important;min-width:0;}
+.opponent-powerup-dialog .opponent-reserves-scroll{overflow-x:hidden;max-width:100%;}
+.opponent-powerup-dialog .opponent-reserves-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+.opponent-powerup-dialog .opponent-reserve-card{min-width:0;min-height:64px;padding:14px 7px 7px;gap:6px;}
+.opponent-powerup-dialog .opponent-reserve-art{width:32px;height:32px;}
+.opponent-powerup-dialog .opponent-reserve-art>*{width:30px;height:30px;}
+@media(max-width:520px){.opponent-powerup-dialog .opponent-reserves-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+/* Use the remaining hand-box padding below the description. */
+.desktop-match .desktop-hand-layout .desktop-description-host{height:calc(var(--pc-card-height) + 10px);max-height:calc(var(--pc-card-height) + 10px);align-self:end;}
+.desktop-match .desktop-hand-layout .desktop-description-host>.card-description-panel{height:calc(var(--pc-card-height) + 10px)!important;max-height:calc(var(--pc-card-height) + 10px)!important;}
+.desktop-match .desktop-description-host .selected-card-thumb{flex-basis:24px;}
+.desktop-match .desktop-description-host .card-description-panel:is([data-card-description-type=pawn],[data-card-description-type=knight],[data-card-description-type=bishop],[data-card-description-type=rook],[data-card-description-type=queen]){
+ display:flex;flex-direction:column;gap:2px;overflow:visible;padding:5px 7px!important;
+}
+.desktop-match .desktop-description-host .card-description-panel:is([data-card-description-type=pawn],[data-card-description-type=knight],[data-card-description-type=bishop],[data-card-description-type=rook],[data-card-description-type=queen])>*{margin:0!important;}
+.desktop-match .desktop-description-host .brief-card-description{line-height:1.25;margin:2px 0!important;}
+
+/* Two balanced columns for opponent reserves on every screen. */
+.ui-modal>.opponent-powerup-dialog{width:min(520px,calc(100vw - 24px))!important;max-width:520px!important;}
+.opponent-powerup-dialog .opponent-reserves-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.opponent-powerup-dialog .opponent-reserve-card{min-height:76px;padding:18px 10px 10px;gap:10px;align-items:center;}
+.opponent-powerup-dialog .opponent-reserve-art{width:38px;height:38px;flex:0 0 38px;}
+.opponent-powerup-dialog .opponent-reserve-art>*{width:36px;height:36px;}
+.opponent-powerup-dialog .opponent-reserve-copy{gap:4px;padding-right:2px;}
+.opponent-powerup-dialog .opponent-reserve-copy strong{font-size:12px;line-height:1.25;}
+.opponent-powerup-dialog .opponent-reserve-copy small{font-size:10px;line-height:1.3;}
+.opponent-powerup-dialog .opponent-reserve-card>.reserve-charge{top:5px;right:6px;}
+@media(max-width:380px){
+ .opponent-powerup-dialog .opponent-reserve-card{padding:18px 7px 8px;gap:6px;}
+ .opponent-powerup-dialog .opponent-reserve-art{width:30px;height:30px;flex-basis:30px;}
+ .opponent-powerup-dialog .opponent-reserve-art>*{width:28px;height:28px;}
+ .opponent-powerup-dialog .opponent-reserve-copy strong{font-size:11px;}
+}
+
+/* Grouped opponent inventory, shared by PC, tablet and phone. */
+.ui-modal>.opponent-powerup-dialog{width:min(600px,calc(100vw - 24px))!important;max-width:600px!important;box-sizing:border-box;overflow-x:hidden;}
+.opponent-powerup-dialog .opponent-reserve-section{min-width:0;margin:0 0 14px;}
+.opponent-powerup-dialog .opponent-reserve-section:last-of-type{margin-bottom:0;}
+.opponent-powerup-dialog .opponent-reserve-section h4{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:13px;font-weight:800;color:var(--ink);}
+.opponent-powerup-dialog .opponent-reserve-section h4::after{content:'';height:1px;flex:1;background:var(--edge);}
+.opponent-powerup-dialog .opponent-reserve-empty{margin:0;font-size:11px;color:var(--muted);}
+.opponent-powerup-dialog .opponent-reserves-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+.opponent-powerup-dialog .opponent-reserve-copy{overflow-wrap:anywhere;}
+.opponent-powerup-dialog .opponent-reserve-card:has(.opponent-reserve-art>.frontier-art){padding-top:10px;}
