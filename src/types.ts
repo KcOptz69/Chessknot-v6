@@ -158,6 +158,7 @@ export interface GameLogEntry {
     | 'awakening'
     | 'revive'
     | 'soul_release';
+  frontierEvent?: {kind:string;square?:string;item?:import('./utils/frontier.ts').FrontierItem;recipient?:PlayerColor};
   trapEventType?: string;
   cardName?: string;
   detail: string;

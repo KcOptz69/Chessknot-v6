@@ -35,7 +35,7 @@ export const GameLog: React.FC<GameLogProps> = ({ historyLog, trapsEnabled=false
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 font-mono bg-stone-50 dark:bg-stone-800 px-2 py-0.5 rounded-full border border-stone-200 dark:border-stone-700">
-            {entries.length} {entries.length === 1 ? 'move' : 'moves'}
+            {entries.length} {entries.length === 1 ? 'event' : 'events'}
           </span>
           {/* Mobile Collapse/Expand Indicator */}
           <button

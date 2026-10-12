@@ -61,8 +61,12 @@ export interface FrontierState {
 export const initialFrontier = (): FrontierState => ({ expanded: false, id: '', preparation: { w: false, b: false }, ready: false, pois: {}, inventories: { w: [], b: [] }, bags: { w: false, b: false }, keys: { w: 0, b: 0 }, ownerTurns: { w: 0, b: 0 }, golems: [], events: [] });
 const uid = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 export const handLimit = (s: GameState, c: PlayerColor) => s.frontier?.bags[c] ? 7 : 5;
-export function frontierNotice(s: GameState, kind: string, detail: string, square?: string, loot?: {item:FrontierItem;recipient?:PlayerColor}) { const f = s.frontier; if (!f)
-    return; const id = uid('frontier'); f.events.unshift({ id, kind, detail, ...(square ? {square} : {}),...loot }); f.events = f.events.slice(0, 24); s.historyLog.unshift({ id, turn: s.turn, turnNumber: s.turnNumber, actionType: 'powerup', cardName: 'Arcane Frontier', detail, timestamp: Date.now(), whitePoints: s.whitePoints, blackPoints: s.blackPoints }); }
+export function frontierNotice(s:GameState,kind:string,detail:string,square?:string,loot?:{item:FrontierItem;recipient?:PlayerColor},label?:string,actor?:PlayerColor){
+ const f=s.frontier;if(!f)return;const id=uid('frontier'),event={id,kind,detail,...(square?{square}:{}),...loot};f.events.unshift(event);f.events=f.events.slice(0,24);
+ const names:Record<string,string>={expand:'Expand Board',ready:'Mystic Field',bag:'Backpack',key:'Chest Key',chest:'Treasure Chest',mimic:'Mimic Chest',boss_hit:'Arcane Golem',boss_defeat:'Arcane Golem',clock:'Activate the Clock'};
+ const cardName=label||(loot?ITEM_NAMES[loot.item]:names[kind])||'Frontier event';
+ s.historyLog.unshift({id,turn:actor||loot?.recipient||s.turn,turnNumber:s.turnNumber,actionType:kind==='move'?'move':'powerup',cardName,detail,timestamp:Date.now(),whitePoints:s.whitePoints,blackPoints:s.blackPoints,frontierEvent:{kind,...(square?{square}:{}),...loot}});
+}
 export function trimBagHands(s:GameState,random=Math.random) {
     for(const c of ['w','b'] as const) {
         if(!s.frontier?.bagDiscardPending?.[c]||s.frontier.bags[c]||s.jokerLocked[c])continue;
@@ -681,7 +685,7 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
         if(m.type==='frontier_item'&&m.item==='banner') {
             const id=uid('pawn_summon');fd.events.unshift({id,kind:'pawn_summon',detail:'Footsoldier’s Banner summoned a Pawn.',square:m.to,piece:{type:'p',color:c}});
         }
-        frontierNotice(d, m.type === 'frontier_self_destruct' ? 'golem_explosion' : card?.type === 'traverse' ? 'traverse' : m.type === 'frontier_item' && m.item === 'core' ? 'summon' : m.type === 'frontier_item' || m.type === 'frontier_bind' ? 'item' : 'move', detail, m.type === 'frontier_self_destruct' ? m.from : undefined);
+        frontierNotice(d, m.type === 'frontier_self_destruct' ? 'golem_explosion' : card?.type === 'traverse' ? 'traverse' : m.type === 'frontier_item' && m.item === 'core' ? 'summon' : m.type === 'frontier_item' || m.type === 'frontier_bind' ? 'item' : 'move', detail, m.type === 'frontier_self_destruct' ? m.from : undefined,undefined,card?.name||(m.type==='frontier_item'?ITEM_NAMES[m.item as FrontierItem]:({play_king_move:'King Move',use_powerup_wild_move:'Wild Move',play_champion_move:'Champion Move',play_champion_ultimate:'Champion Ultimate',frontier_self_destruct:'Golem Self-destruct',frontier_bind:'Bind',portal_move:'Portal'} as Record<string,string>)[m.type]),c);
         if (!free) {
             if (!d.lastMoveDetails || d.lastMoveDetails.player !== c)
                 d.lastMoveDetails = { player: c, actionType: 'move' };

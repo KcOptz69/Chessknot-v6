@@ -1,3 +1,4 @@
+import {CardFaceLabel} from './CardFaceLabel.tsx';
 import {Link2} from 'lucide-react';
 import {FrontierArt} from './FrontierUI.tsx';
 import {isFreeActionCard, cardDisplayName} from './CardArtwork.tsx';
@@ -411,7 +412,7 @@ export const CardHand: React.FC<CardHandProps> = ({
                 </span>
               )}
               {card.id===boundCardId&&<span className='frontier-bind-badge' title='Bound — cannot be played'><Link2 aria-hidden='true'/>BOUND</span>}<span className="compact-card-name">
-                {cardDisplayName(card)}
+                <CardFaceLabel>{cardDisplayName(card)}</CardFaceLabel>
               </span>
             </CardSurface>
           );

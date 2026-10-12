@@ -81,7 +81,38 @@ export function FrontierInventory({state,color,disabled,send,onIntro,onDeployGol
  </section>;
 }
 
-export function FrontierDropNotices({state}:{state:GameState}){const seed=React.useRef(''),seen=React.useRef(new Set<string>()),noticeTimers=React.useRef(new Set<ReturnType<typeof setTimeout>>());React.useEffect(()=>()=>{noticeTimers.current.forEach(clearTimeout);},[]);const [queue,setQueue]=React.useState<NonNullable<GameState['frontier']>['events']>([]);React.useEffect(()=>{const f=state.frontier;if(!f?.expanded){seed.current='';setQueue([]);return;}if(seed.current!==f.id){seed.current=f.id;seen.current=new Set(f.events.map(e=>e.id));return;}const fresh=[...f.events].reverse().filter(e=>!seen.current.has(e.id)&&(!!e.item||['mimic','bag','key'].includes(e.kind)));f.events.forEach(e=>seen.current.add(e.id));if(fresh.length){if(fresh.some(e=>e.kind==='mimic')){const timer=setTimeout(()=>{setQueue(q=>[...q,...fresh]);noticeTimers.current.delete(timer);},2200);noticeTimers.current.add(timer);}else setQueue(q=>[...q,...fresh]);}},[state.frontier]);const e=queue[0];if(!e)return null;return <Modal className="frontier-drop-backdrop"><section className="frontier-drop-dialog" role="dialog" aria-modal="true" aria-labelledby="frontier-drop-title"><FrontierArt type={e.item||(['bag','key'].includes(e.kind)?e.kind:'mimic')} className="frontier-drop-art"/><h2 id="frontier-drop-title">{e.kind==='mimic'?'Mimic revealed!':'Frontier treasure'}</h2><p>{e.detail}</p>{e.item&&<small>{ITEM_TEXT[e.item]}</small>}<Button onClick={()=>setQueue(q=>q.slice(1))}>Got it</Button></section></Modal>;}
+type RewardEvent=NonNullable<GameState['frontier']>['events'][number];
+export function frontierRewardEvents(state:GameState,seen:Set<string>,recentOnly=false,now=Date.now()):RewardEvent[]{
+ const candidates=new Map<string,RewardEvent>(),times=new Map<string,number>();
+ for(const log of [...state.historyLog].reverse()){times.set(log.id,log.timestamp);if(log.frontierEvent)candidates.set(log.id,{id:log.id,detail:log.detail,...log.frontierEvent});}
+ for(const event of [...(state.frontier?.events||[])].reverse())candidates.set(event.id,event);
+ const fresh:RewardEvent[]=[];
+ for(const event of candidates.values()){
+  if(seen.has(event.id))continue;seen.add(event.id);
+  if(!event.item&&!['mimic','bag','key'].includes(event.kind))continue;
+  if(recentOnly&&now-(times.get(event.id)||0)>30000)continue;
+  fresh.push(event);
+ }
+ return fresh;
+}
+export function FrontierDropNotices({state,paused=false}:{state:GameState;paused?:boolean}){
+ const match=React.useRef(''),seen=React.useRef(new Set<string>()),timers=React.useRef(new Set<ReturnType<typeof setTimeout>>());
+ const dialogRef=React.useRef<HTMLDialogElement>(null);const [queue,setQueue]=React.useState<RewardEvent[]>([]);
+ React.useEffect(()=>()=>{timers.current.forEach(clearTimeout);},[]);
+ React.useEffect(()=>{
+  const f=state.frontier;if(!f?.expanded){match.current='';seen.current.clear();timers.current.forEach(clearTimeout);timers.current.clear();setQueue([]);return;}
+  const first=match.current!==f.id;
+  if(first){match.current=f.id;seen.current.clear();timers.current.forEach(clearTimeout);timers.current.clear();setQueue([]);}
+  const fresh=frontierRewardEvents(state,seen.current,first);
+  if(!fresh.length)return;
+  if(fresh.some(e=>e.kind==='mimic')){const timer=setTimeout(()=>{setQueue(q=>[...q,...fresh]);timers.current.delete(timer);},2200);timers.current.add(timer);}
+  else setQueue(q=>[...q,...fresh]);
+ },[state.frontier,state.historyLog]);
+ const e=queue[0];const dismiss=()=>setQueue(q=>q.slice(1));
+ React.useEffect(()=>{const dialog=dialogRef.current;if(!e||paused||!dialog)return;if(!dialog.open)dialog.showModal();return()=>{if(dialog.open)dialog.close();};},[e?.id,paused]);
+ if(!e||paused)return null;
+ return <PopupLayer><dialog ref={dialogRef} className="frontier-drop-dialog" aria-labelledby="frontier-drop-title" onCancel={event=>{event.preventDefault();dismiss();}}><FrontierArt type={e.item||(['bag','key'].includes(e.kind)?e.kind:'mimic')} className="frontier-drop-art"/><h2 id="frontier-drop-title">{e.kind==='mimic'?'Mimic revealed!':e.kind==='drop'?'Item dropped!':'Item obtained!'}</h2><p>{e.detail}</p>{e.item&&<small>{ITEM_TEXT[e.item]}</small>}<Button aria-label="Close dialog" onClick={dismiss}>Got it{queue.length>1?` · ${queue.length-1} more`:''}</Button></dialog></PopupLayer>;
+}
 
 export function GolemActionPanel({state,color,square,disabled,onSelfDestruct,onCancel}:{state:GameState;color:PlayerColor;square:string;disabled:boolean;onSelfDestruct:()=>void;onCancel:()=>void}) {
  const reason=golemSelfDestructError(state,color,square);

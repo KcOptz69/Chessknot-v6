@@ -145,3 +145,10 @@ dialog.frontier-intro-poster{width:min(1100px,96vw,calc(90dvh * 1.5));max-width:
 @keyframes bishop-channel-ring{to{transform:rotateX(55deg) rotate(360deg)}}
 @keyframes bishop-channel-rise{0%{opacity:0;transform:translateY(0)}30%{opacity:1}100%{opacity:0;transform:translateY(-35px)}}
 @media(prefers-reduced-motion:reduce){.bishop-channeling,.bishop-channeling>span,.bishop-channeling>i,.summoning-circle{animation:none;}.bishop-channeling>i{display:none;}}
+
+dialog.frontier-drop-dialog{position:fixed;inset:0;margin:auto;width:min(300px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto;padding:12px;border:1px solid #6eaaff;border-radius:13px;background:var(--surface-raised);color:var(--ink);box-sizing:border-box;}
+dialog.frontier-drop-dialog::backdrop{background:#061024a8;}
+dialog.frontier-drop-dialog .frontier-drop-art{width:54px;height:54px;}
+dialog.frontier-drop-dialog h2{font-size:16px;margin:6px 0;}
+dialog.frontier-drop-dialog p{font-size:12px;line-height:1.45;margin:6px 0;}
+dialog.frontier-drop-dialog small{font-size:11px;margin:6px 0 10px;}

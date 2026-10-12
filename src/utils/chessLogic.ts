@@ -1391,7 +1391,12 @@ export function awardCaptureRefresh(
 
   if(refreshed.length){
     state.powerUpAwards ||= [];
-    for(const reward of refreshed)state.powerUpAwards.push({id:`capture-award-${Date.now()}-${Math.random().toString(36).slice(2)}`,player,turnNumber:state.turnNumber,...reward,name:reward.type==='vision'&&state.frontier?.inventories[player].some(item=>item.type==='eye')?'Bind':reward.name});
+    for(const reward of refreshed){
+      const name=reward.type==='vision'&&state.frontier?.inventories[player].some(item=>item.type==='eye')?'Bind':reward.name;
+      const id=`capture-award-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      state.powerUpAwards.push({id,player,turnNumber:state.turnNumber,...reward,name});
+      state.historyLog.unshift({id,turn:player,turnNumber:state.turnNumber,actionType:'powerup_refresh',cardName:name,detail:`${player==='w'?'White':'Black'} earned ${name} for five capture points (+1 charge, now ×${reward.newCount}).`,timestamp:Date.now(),whitePoints:state.whitePoints,blackPoints:state.blackPoints});
+    }
     state.powerUpAwards=state.powerUpAwards.slice(-32);
   }
   return { refreshed, oldProgress, newProgress, stacksEarned };
