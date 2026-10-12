@@ -1658,3 +1658,13 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
 .compact-match .card-description-panel .awakening-mode-buttons{padding:2px;gap:3px;}
 .compact-match .card-description-panel .awakening-mode-buttons>button{min-height:26px;padding:4px 6px;font-size:11px;line-height:1.15;}
 .compact-match .card-description-panel .brief-card-description{font-size:11px;line-height:1.35;}
+
+/* Tablet landscape: shorter hand returns height to the square board. */
+@media(orientation:landscape) and (min-width:641px) and (min-height:501px){
+ :root .compact-match:not(.phone-landscape) #player-hand-container .hand-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px!important;padding:2px 0!important;overflow:visible;}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .hand-grid.hand-seven{grid-template-columns:repeat(7,minmax(0,1fr));}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .hand-grid>.compact-hand-card{height:70px!important;max-height:70px!important;min-height:0!important;aspect-ratio:auto!important;min-width:0!important;margin:0!important;flex:none!important;transform:none;}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .compact-hand-card .card-art{inset:3px 6px 24px!important;max-height:none!important;}
+ :root .compact-match:not(.phone-landscape) #player-hand-container .compact-hand-card .compact-card-name{top:auto!important;bottom:2px;height:21px;font-size:12px!important;}
+ .compact-match:not(.phone-landscape) .board-viewport{max-height:none!important;}
+}
