@@ -434,6 +434,17 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const opponentColor: PlayerColor = activeColor === 'w' ? 'b' : 'w';
   const opponentHand = gameState.hands[opponentColor] || [];
   const activeVision = myColor!=='spectator' && (!!gameState.visionActive?.[activeColor] || !!gameState.frontier?.inventories[activeColor].some(i=>i.type==='eye'));
+  const knowledgeKey=noticeMatchKey+':'+activeColor;
+  const [knownOpponentCards,setKnownOpponentCards]=React.useState<{key:string;ids:string[]}>({key:'',ids:[]});
+  React.useEffect(()=>{
+    const prior=knownOpponentCards.key===knowledgeKey?knownOpponentCards.ids:readMatchNotice<string[]>('known-hand:'+knowledgeKey,[]);
+    const known=new Set(prior);
+    const ids=opponentHand.filter(card=>activeVision||known.has(card.id)||!!card.knownStartingPawnFor).map(card=>card.id);
+    if(knownOpponentCards.key!==knowledgeKey||JSON.stringify(ids)!==JSON.stringify(knownOpponentCards.ids)){
+      setKnownOpponentCards({key:knowledgeKey,ids});writeMatchNotice('known-hand:'+knowledgeKey,ids);
+    }
+  },[knowledgeKey,opponentHand,activeVision,knownOpponentCards]);
+  const unseenOpponentCards=activeVision?[]:opponentHand.filter(card=>!card.knownStartingPawnFor&&!(knownOpponentCards.key===knowledgeKey&&knownOpponentCards.ids.includes(card.id)));
   const currentPowerUps = gameState.powerUps ? gameState.powerUps[activeColor] : { draw: 1, monolith: 1, wild: 1, vision: 1 };
   const lastPieceMoved = gameState.lastMovedPiece ? gameState.lastMovedPiece[activeColor] : null;
   const lastMovedSquare = gameState.lastMovedSquare ? gameState.lastMovedSquare[activeColor] : null;
@@ -1103,7 +1114,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
         <MatchMotion game={gameState} viewColor={activeColor} session={`${roomId}:${mode}`} connected={connected}>
         <main className="game-layout flex-1 w-full mx-auto grid items-start" data-handoff={handoffPending || undefined} aria-busy={handoffPending}>
         {!compactUI && <aside className="desktop-left-column">
-          <DiscardAndDeck hiddenDeckCount={gameState.hiddenDeckCount} historyLog={gameState.historyLog} unseenHandCards={activeVision?[]:opponentHand.filter(card=>!card.knownStartingPawnFor)} deckCards={gameState.deck} discardPile={gameState.discard} exhaustedCards={gameState.exhausted || []} isMyTurn={isMyTurn}/>
+          <DiscardAndDeck hiddenDeckCount={gameState.hiddenDeckCount} historyLog={gameState.historyLog} unseenHandCards={unseenOpponentCards} deckCards={gameState.deck} discardPile={gameState.discard} exhaustedCards={gameState.exhausted || []} isMyTurn={isMyTurn}/>
           <section className="desktop-left-chat glass-panel"><h2>Chat{unreadChat>0?` (${unreadChat})`:''}</h2>{mode==='online'?<ChatPanel messages={chatMessages} onSendMessage={text=>{sendMessage({type:'send_chat',text});setUnreadChat(0);}} playerId={playerId} playerName={playerName} myColor={myColor} disabled={!connected}/>:<p className="desktop-chat-placeholder">Chat is available in online matches.</p>}</section>
         </aside>}
         {phoneLandscape && <aside className="landscape-support-column">
@@ -1273,7 +1284,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
           {/* Deck & Discard Pile */}
           {compactUI && <DiscardAndDeck
             hiddenDeckCount={gameState.hiddenDeckCount} compact={compactUI} openRequest={pileRequest}
-            historyLog={gameState.historyLog} unseenHandCards={activeVision?[]:opponentHand.filter(card=>!card.knownStartingPawnFor)} deckCards={gameState.deck}
+            historyLog={gameState.historyLog} unseenHandCards={unseenOpponentCards} deckCards={gameState.deck}
             discardPile={gameState.discard}
             exhaustedCards={gameState.exhausted || []}
             isMyTurn={isMyTurn}
