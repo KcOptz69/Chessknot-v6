@@ -102,10 +102,10 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-stone-900 dark:text-stone-100 font-sans leading-tight">
-                    {opponentName}'s Power-ups
+                    {opponentName}'s Power-ups/Items
                   </h3>
                   <span className="text-[11px] text-stone-500 dark:text-stone-400">
-                    Power-ups, items and cooldowns · Tap to inspect
+                    Opponent inventory
                   </span>
                 </div>
               </div>

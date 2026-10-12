@@ -30,11 +30,15 @@ export function OpponentPowerUps(props:Props){
  const [selected,setSelected]=React.useState<string|null>(null);
  const detailId=React.useId();const reserves=opponentReserves(props),detail=reserves.find(r=>r.id===selected);
  return <div className="opponent-reserves-scroll custom-scrollbar">
-  <div className="opponent-reserves-grid">{reserves.map(reserve=><button type="button" className="opponent-reserve-card" key={reserve.id} disabled={reserve.kind!=='item'} aria-pressed={selected===reserve.id} aria-label={`Inspect ${reserve.name}: ${reserve.status}${reserve.count!==undefined?`, ${reserve.count} charges`:''}`} aria-controls={detailId} onClick={()=>{if(reserve.kind==='item')setSelected(selected===reserve.id?null:reserve.id);}}>
+  {[
+   {title:'Standard Power-ups',entries:reserves.filter(r=>r.kind==='power'&&!r.id.startsWith('ground:'))},
+   {title:'Powered Tiles/Traps',entries:reserves.filter(r=>r.id.startsWith('ground:'))},
+   {title:'Items',entries:reserves.filter(r=>r.kind==='item')},
+  ].map(group=><section className="opponent-reserve-section" key={group.title}><h4>{group.title}</h4>{group.entries.length?<div className="opponent-reserves-grid">{group.entries.map(reserve=><button type="button" className="opponent-reserve-card" key={reserve.id} disabled={reserve.kind!=='item'} aria-pressed={selected===reserve.id} aria-label={`Inspect ${reserve.name}: ${reserve.status}${reserve.kind==='power'&&reserve.count!==undefined?`, ${reserve.count} charges`:''}`} aria-controls={detailId} onClick={()=>{if(reserve.kind==='item')setSelected(selected===reserve.id?null:reserve.id);}}>
    <span className="opponent-reserve-art">{reserve.kind==='item'?<FrontierArt type={reserve.art}/>:reserve.art==='monolith'?<V5Piece type="m"/>:reserve.art==='bind'?<BindIcon/>:<V5Power type={reserve.art}/>}</span>
    <span className="opponent-reserve-copy"><strong>{reserve.name}</strong><small>{reserve.status}</small></span>
-   {reserve.count!==undefined&&<Badge className="reserve-charge">×{reserve.count}</Badge>}
-  </button>)}</div>
+   {reserve.kind==='power'&&reserve.count!==undefined&&<Badge className="reserve-charge">×{reserve.count}</Badge>}
+  </button>)}</div>:<p className="opponent-reserve-empty">None</p>}</section>)}
   {detail&&<div id={detailId} className="opponent-reserve-detail" role="status" aria-live="polite"><><strong>{detail.name}</strong><p>{detail.description}</p><small>{detail.status} · Opponent’s item</small></></div>}
  </div>;
 }

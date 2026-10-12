@@ -1583,3 +1583,29 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
  .opponent-powerup-dialog .opponent-reserve-art>*{width:28px;height:28px;}
  .opponent-powerup-dialog .opponent-reserve-copy strong{font-size:11px;}
 }
+
+/* Grouped opponent inventory, shared by PC, tablet and phone. */
+.ui-modal>.opponent-powerup-dialog{width:min(600px,calc(100vw - 24px))!important;max-width:600px!important;box-sizing:border-box;overflow-x:hidden;}
+.opponent-powerup-dialog .opponent-reserve-section{min-width:0;margin:0 0 14px;}
+.opponent-powerup-dialog .opponent-reserve-section:last-of-type{margin-bottom:0;}
+.opponent-powerup-dialog .opponent-reserve-section h4{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:13px;font-weight:800;color:var(--ink);}
+.opponent-powerup-dialog .opponent-reserve-section h4::after{content:'';height:1px;flex:1;background:var(--edge);}
+.opponent-powerup-dialog .opponent-reserve-empty{margin:0;font-size:11px;color:var(--muted);}
+.opponent-powerup-dialog .opponent-reserves-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+.opponent-powerup-dialog .opponent-reserve-copy{overflow-wrap:anywhere;}
+.opponent-powerup-dialog .opponent-reserve-card:has(.opponent-reserve-art>.frontier-art){padding-top:10px;}
+
+/* The inventory dialog overrides generic ground-dialog sizing. */
+:root body .ui-modal>section.opponent-powerup-dialog{width:min(600px,calc(100vw - 24px))!important;max-width:600px!important;min-width:0!important;box-sizing:border-box;}
+:root body .opponent-powerup-dialog .opponent-reserves-grid{width:100%;min-width:0;grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+:root body .opponent-powerup-dialog .opponent-reserve-card{width:100%;max-width:100%;box-sizing:border-box;}
+/* Match the bright blue rematch button, with text only. */
+:root body :is(#lobby-btn-start-match,#lobby-btn-ready){
+ background:linear-gradient(180deg,#05b7fa 0%,#0084ff 65%,#0068f2 100%)!important;
+ border:2px solid #55d7ff!important;color:#fff!important;border-radius:14px;
+ min-height:48px;padding:10px 20px!important;display:flex;align-items:center;justify-content:center;
+ font-size:18px;font-weight:900;text-transform:none;letter-spacing:0;
+ box-shadow:inset 0 2px 0 #b7efff66,0 3px 8px #006bdb33!important;
+}
+:root body :is(#lobby-btn-start-match,#lobby-btn-ready):disabled{opacity:.45;cursor:not-allowed;}
+:root body :is(#lobby-btn-start-match,#lobby-btn-ready):not(:disabled):hover{filter:brightness(1.08);}

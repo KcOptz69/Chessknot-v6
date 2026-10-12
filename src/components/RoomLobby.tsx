@@ -657,7 +657,6 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
               onClick={onStartGame}
               disabled={!canStart}
             >
-              <Swords size={19} />
               Start Match
             </button>
           ) : myColor !== "spectator" ? (
@@ -668,7 +667,6 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                 aria-pressed={isMyReady}
                 onClick={() => onSetPlayerReady?.(!isMyReady)}
               >
-                <CheckSquare size={18} />
                 {isMyReady ? "Ready!" : "Ready"}
               </button>
               {onExitLobby && (
