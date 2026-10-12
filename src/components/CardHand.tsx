@@ -13,6 +13,7 @@ import { Sparkles, History, MoveRight, ArrowLeftRight, Ban, Mountain, Zap, Refre
 import { useTheme } from '../context/ThemeContext.tsx';
 
 interface CardHandProps {
+  desktopActions?: React.ReactNode;
   discardMode?: boolean;
   compact?: boolean;
   suppressJokerSurgePopup?: boolean;
@@ -268,7 +269,7 @@ const isPieceCard = (type: CardType) =>
   ['pawn', 'knight', 'bishop', 'rook', 'queen', 'wild'].includes(type);
 
 export const CardHand: React.FC<CardHandProps> = ({
-  hand, discardMode=false, disabledSoulIds=[], suppressJokerSurgePopup=false, compact=false, floatingDetails=false, descriptionHost,
+  desktopActions, hand, discardMode=false, disabledSoulIds=[], suppressJokerSurgePopup=false, compact=false, floatingDetails=false, descriptionHost,
   selectedCardId,
   onSelectCard,
   onPlayRefresh,
@@ -376,6 +377,7 @@ export const CardHand: React.FC<CardHandProps> = ({
         </div>
       </div>
 
+      {desktopActions}
       <div className={`hand-grid ${hand.length>5?'hand-seven':''}`} aria-label={hand.length>5?'Seven-card hand':undefined}>
         {hand.map((card) => {
           const isSelected = selectedCardId === card.id;

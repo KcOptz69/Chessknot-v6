@@ -1519,3 +1519,14 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
 .desktop-match .pc-hand-actions button{display:flex;align-items:center;gap:4px;padding:4px 7px;border:1px solid var(--edge);border-radius:8px;background:var(--surface-raised);color:var(--ink);font-size:10px;min-height:27px;cursor:pointer;}
 .desktop-match .pc-hand-actions button:disabled{opacity:.45;cursor:not-allowed;}
 .desktop-match .desktop-hand-layout .desktop-description-host{grid-column:2;grid-row:2;max-height:50px;}
+
+/* Keep hand actions inside its border; details use the full adjacent area. */
+.desktop-match .pc-board-tools .board-controls>div{max-width:none;flex-wrap:nowrap;white-space:nowrap;}
+.desktop-match .pc-board-tools .board-controls button{white-space:nowrap;flex-shrink:0;}
+.desktop-match .desktop-hand-layout{grid-template-columns:minmax(0,1fr) minmax(210px,.38fr);grid-template-rows:auto;align-items:stretch;}
+.desktop-match .desktop-hand-layout>#player-hand-container{grid-column:1;grid-row:1;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:center;}
+:root .desktop-match #player-hand-container>.hand-grid{grid-column:1;grid-row:1;grid-template-columns:repeat(7,minmax(0,86px));min-width:0;}
+.desktop-match #player-hand-container>.pc-hand-actions{grid-column:2;grid-row:1;flex-direction:column;align-self:start;padding-top:3px;}
+.desktop-match .desktop-hand-layout .desktop-description-host{grid-column:2;grid-row:1;height:100%;max-height:96px;overflow:auto;}
+.desktop-match .desktop-hand-layout .desktop-description-host>.card-description-panel{margin:0!important;min-height:100%;box-sizing:border-box;}
+@media(max-height:740px){.desktop-match .desktop-hand-layout .desktop-description-host{max-height:84px;}}
