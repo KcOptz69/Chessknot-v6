@@ -2,7 +2,7 @@ import type { GameState, PlayerColor, Card, ClientMessage, ChampionPiece, BoardS
 import { boardFor, FrontierBoard, isExtendedFen, extendFen, allSquares, xy, squareAt, adjacent, DIRECTIONS } from './frontierBoard.ts';
 import { createCard, drawCard, awardCaptureRefresh, isKingChecked, calculatePiecePoints, getLegalMovesForPiece, getClockBlockReason } from './chessLogic.ts';
 import { landGround, relocateDebuffs, captureProtected, groundImmune, groundPiece, removeGroundPiece, groundEvent } from './grounds.ts';
-import { placeRevived, isTemporary, kingSafe, validBishopCircle,activeCircle, interruptCircles } from './summoning.ts';
+import { placeRevived, isTemporary, kingSafe, validBishopCircle,soulTargets,activeCircle, interruptCircles } from './summoning.ts';
 import type { Square, PieceSymbol } from 'chess.js';
 export const FRONTIER_ITEMS = ['lens', 'wings', 'star', 'banner', 'sigil', 'eye', 'feather', 'core'] as const;
 export type FrontierItem = typeof FRONTIER_ITEMS[number];
@@ -786,7 +786,40 @@ export function frontierUltimate(s: GameState, m: any, c: PlayerColor) {
         s.frontier.clockLocked = true;
     s.lastMoveDetails = { player: c, actionType: 'champion_ultimate', from, to: m.targetSquare || from };
 }
+/** Legal defensive summons count as escapes before checkmate is declared. */
+export function canSummonToEscapeCheck(s:GameState,c:PlayerColor):boolean {
+    const hand=s.hands[c].filter(card=>s.frontier?.bind?.cardId!==card.id);
+    if(!s.champions[c]&&hand.some(card=>card.type==='champion')) {
+        for(const q of allSquares(s.fen)) {
+            const rank=Number(q.slice(1));
+            if(!(c==='w'?rank>=1&&rank<=4:rank>=5&&rank<=8)||!emptyFrontierSquare(s,q))continue;
+            const d=structuredClone(s);
+            d.champions[c]={type:'berserker',color:c,square:q};
+            if(frontierKingSafe(d,c))return true;
+        }
+    }
+    for(const card of hand)if(card.type==='soul_release'&&card.soul) {
+        for(const q of soulTargets(s,card,c)) {
+            const d=structuredClone(s);placeRevived(d,q,card.soul.piece,c,'escape-preview');
+            if(d.frontier?.expanded)frontierLanding(d,q);else landGround(d,q);
+            if(frontierKingSafe(d,c))return true;
+        }
+    }
+    for(const item of s.frontier?.inventories[c]||[]) {
+        if(!['banner','core','feather'].includes(item.type)||item.remaining===0||(item.readyAfter||0)>s.frontier!.ownerTurns[c]||item.usedTurn===s.turnNumber)continue;
+        for(const q of allSquares(s.fen)) {
+            const d=structuredClone(s);d.turn=c;
+            d.fen=d.fen.split(' ').map((v,i)=>i===1?c:v).join(' ');
+            let rejected=false;
+            executeFrontier(d,{type:'frontier_item',item:item.type,to:q} as any,c,{consume:()=>{},finish:()=>{},error:()=>{rejected=true;}});
+            if(!rejected&&frontierKingSafe(d,c))return true;
+        }
+    }
+    return false;
+}
+
 export function frontierEscape(s: GameState, c: PlayerColor, freeDepth = 0) {
+    if(canSummonToEscapeCheck(s,c))return true;
     const cardTypes = new Set(s.hands[c].filter(card => s.frontier?.bind?.cardId !== card.id).map(x => x.type));
     for (const q of allSquares(s.fen)) {
         const p = occupant(s, q);
@@ -803,7 +836,7 @@ export function frontierEscape(s: GameState, c: PlayerColor, freeDepth = 0) {
         if (p.type === 'k' && cardTypes.has('awakening_king') && frontierMoves(s, q, 'q').length)
             return true;
         const matching = ({ p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen' } as any)[p.type];
-        if (p.type !== 'golem' && (isFree || cardTypes.has(matching) || cardTypes.has('wild') || s.powerUps[c].wild > 0 || cardTypes.has('previous') && s.lastMovedPiece[c] === p.type)) {
+        if (p.type !== 'golem' && (isFree || cardTypes.has(matching) || cardTypes.has('wild') || cardTypes.has('joker') || s.powerUps[c].wild > 0 || cardTypes.has('previous') && s.lastMovedPiece[c] === p.type)) {
             if (frontierMoves(s, q).length)
                 return true;
         }
@@ -931,7 +964,7 @@ export function frontierEscape(s: GameState, c: PlayerColor, freeDepth = 0) {
                     return true;
             }
     }
-    if(freeDepth<1&&!s.jokerLocked[c]&&cardTypes.has('refresh')){
+    if(freeDepth<1&&!s.jokerLocked[c]&&(cardTypes.has('refresh')||s.powerUps[c].draw>0)){
         const cards=[...s.deck,...s.discard,...s.hands[c]].filter(card=>!['refresh','brick'].includes(card.type));
         const draft=structuredClone(s);draft.hands[c]=cards;
         if(frontierEscape(draft,c,freeDepth+1))return true;

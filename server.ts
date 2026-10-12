@@ -1338,7 +1338,7 @@ function handleGameAction(room: RoomState, msg: ClientMessage, actorColor: Playe
     const changed=JSON.stringify(draft)!==JSON.stringify(before);
     const destinations=Object.keys(draft.frontier?.pois||{}).filter(q=>['boss','mimic'].includes(draft.frontier!.pois[q]));
     const collision=destinations.some(q=>!!createSafeChess(draft.fen).get(q as Square)||Object.values(draft.champions).some(ch=>ch?.square===q)||draft.frontier?.golems.some(g=>g.square===q))||draft.frontier?.golems.some(g=>!!createSafeChess(draft.fen).get(g.square as Square)||Object.values(draft.champions).some(ch=>ch?.square===g.square));
-    const safe=!changed||msg.type==='resign'||msg.type==='play_clock'||msg.type==='play_refresh'||msg.type.startsWith('dismiss_')||frontierKingSafe(draft,actorColor);
+    const safe=!changed||msg.type==='resign'||msg.type==='play_clock'||['play_refresh','play_joker','play_beacon','play_static','use_powerup_vision','use_powerup_draw','frontier_bind'].includes(msg.type)||(msg.type==='frontier_item'&&(msg as any).item==='lens')||msg.type.startsWith('dismiss_')||frontierKingSafe(draft,actorColor);
     if(!failed&&changed&&safe&&!collision){for(const c of ['w','b'] as const){const existing=before.captures?.[c].length||0;for(const loss of draft.captures?.[c].slice(existing)||[])loss.capturedTurn??=before.turnNumber;}room.gameState=draft;}
     else if(!failed&&changed&&(!safe||collision))replies.push({type:'error',message:collision?'A discovery or Golem occupies that square.':'The complete action leaves your King unsafe.'});
     if(ws)for(const reply of replies)sendToSocket(ws,reply);
@@ -2437,6 +2437,13 @@ function executeGameAction(
       return;
     }
 
+    const deployment = structuredClone(state);
+    deployment.champions[currentTurn] = {type:'berserker',color:currentTurn,square:msg.targetSquare};
+    if (!emptySummonSquare(state,msg.targetSquare) || !kingSafe(deployment,currentTurn)) {
+      if(ws)sendToSocket(ws,{type:'error',message:'Champion deployment must leave your King safe.'});
+      return;
+    }
+
     const cardPlayed = state.hands[currentTurn].splice(cardIdx, 1)[0];
     consumeCardAndRefill(state, currentTurn, cardPlayed);
 
@@ -3100,6 +3107,14 @@ function executeGameAction(
     if (state.frontier?.expanded && !monolithPlacementSquare(state,target) || isSquareBlocked(target, state.restrictedSquares, null) || chess.get(target as Square) ||
         state.champions?.w?.square === target || state.champions?.b?.square === target) {
       return; // Cannot place on occupied/restricted/champion square
+    }
+
+    const placement = structuredClone(state);
+    placement.monolithSquare = target;
+    if(placement.beaconEffect?.active)placement.beaconEffect.protectedSquares=getSurroundingSquares(target,state.fen);
+    if(!kingSafe(placement,currentTurn)) {
+      if(ws)sendToSocket(ws,{type:'error',message:'Monolith placement must leave your King safe.'});
+      return;
     }
 
     // Commit resource consumption only after all placement validation succeeds.

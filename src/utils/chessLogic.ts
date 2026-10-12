@@ -1,4 +1,4 @@
-import {initialFrontier,frontierMoves,frontierKingSafe,frontierEscape} from './frontier.ts';
+import {initialFrontier,frontierMoves,frontierKingSafe,frontierEscape,canSummonToEscapeCheck} from './frontier.ts';
 import {boardFor,isExtendedFen,adjacent,ranksFor,xy,squareAt} from './frontierBoard.ts';
 import { AWAKENING_DESCRIPTIONS } from './cardDescriptions.ts';
 import { soulTargets, placeRevived, kingSafe } from './summoning.ts';
@@ -1697,6 +1697,12 @@ export function canPlayerEscapeCheck(
     return true;
   }
 
+  if(canSummonToEscapeCheck(state,defendingColor))return true;
+  if(state.monolithSquare&&state.hands[defendingColor].some(c=>c.type==='beacon')){
+    const preview=structuredClone(state);preview.beaconEffect={active:true,protectedSquares:getSurroundingSquares(state.monolithSquare,state.fen)} as any;
+    if(kingSafe(preview,defendingColor))return true;
+  }
+
   // Find King square
   let kingSquare: Square | null = null;
   const board = chess.board();
@@ -1801,7 +1807,7 @@ export function canPlayerEscapeCheck(
   const hasTacticalWild = Boolean(state.powerUps && state.powerUps[defendingColor]?.wild);
 
   // If player has a Joker card, playing it gives 5 Wild cards on this turn
-  if (allowRefresh && !state.jokerLocked?.[defendingColor] && hand.some(c=>c.type==='refresh')) {
+  if (allowRefresh && !state.jokerLocked?.[defendingColor] && (hand.some(c=>c.type==='refresh')||state.powerUps[defendingColor].draw>0||state.frontier?.inventories[defendingColor].some(i=>i.type==='lens'&&i.remaining!==0&&i.usedTurn!==state.turnNumber))) {
     const available=[...state.deck,...state.discard,...hand].filter(c=>c.type!=='refresh'&&c.type!=='brick');
     const preview={...state,hands:{...state.hands,[defendingColor]:available}};
     if(canPlayerEscapeCheck(chess,preview,defendingColor,false))return true;
@@ -2109,7 +2115,7 @@ export function getCheckEscapeCardTypes(
   defendingColor: PlayerColor
 ): Set<CardType> {
   const escapeTypes = new Set<CardType>();
-  if(isExtendedFen(state.fen)){for(const card of state.hands[defendingColor]){if(!['push','switch','monolith','clock','traverse','refresh'].includes(card.type)||card.id===state.frontier?.bind?.cardId)continue;const draft=structuredClone(state);draft.hands[defendingColor]=[card];if(frontierEscape(draft,defendingColor))escapeTypes.add(card.type);}return escapeTypes;}
+  if(isExtendedFen(state.fen)){for(const card of state.hands[defendingColor]){if(!['push','switch','monolith','clock','traverse','refresh','champion','soul_release'].includes(card.type)||card.id===state.frontier?.bind?.cardId)continue;const draft=structuredClone(state);draft.hands[defendingColor]=[card];if(frontierEscape(draft,defendingColor))escapeTypes.add(card.type);}return escapeTypes;}
   const protectedSquares = state.beaconEffect?.active && state.monolithSquare ? getSurroundingSquares(state.monolithSquare,state.fen) : [];
 
   if (!isKingChecked(chess, defendingColor, state.monolithSquare, state.champions, protectedSquares, state.grounds)) {
