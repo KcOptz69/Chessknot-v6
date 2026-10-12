@@ -2007,19 +2007,6 @@ function executeGameAction(
     let refreshDetail = '';
     if (refreshed.length > 0) {
       refreshDetail = ` | ⚡ Refreshed: ${refreshed.map((r) => `${r.name} (now x${r.newCount})`).join(', ')}`;
-      for (const r of refreshed) {
-        state.historyLog.unshift({
-          id: `log_${Date.now()}_refresh_${Math.random()}`,
-          turn: currentTurn,
-          turnNumber: state.turnNumber,
-          actionType: 'powerup_refresh',
-          cardName: 'Tactical Power-Up Refresh',
-          detail: `⚡ ${currentTurn === 'w' ? 'White' : 'Black'} refreshed ${r.name} (+1 stack, now x${r.newCount})!`,
-          timestamp: Date.now(),
-          whitePoints: calculatePiecePoints(chess, 'w', state.champions, state),
-          blackPoints: calculatePiecePoints(chess, 'b', state.champions, state),
-        });
-      }
     }
 
     state.historyLog.unshift({
@@ -2219,19 +2206,6 @@ function executeGameAction(
     let refreshDetail = '';
     if (refreshed.length > 0) {
       refreshDetail = ` | ⚡ Refreshed: ${refreshed.map((r) => `${r.name} (now x${r.newCount})`).join(', ')}`;
-      for (const r of refreshed) {
-        state.historyLog.unshift({
-          id: `log_${Date.now()}_refresh_${Math.random()}`,
-          turn: currentTurn,
-          turnNumber: state.turnNumber,
-          actionType: 'powerup_refresh',
-          cardName: 'Tactical Power-Up Refresh',
-          detail: `⚡ ${currentTurn === 'w' ? 'White' : 'Black'} refreshed ${r.name} (+1 stack, now x${r.newCount})!`,
-          timestamp: Date.now(),
-          whitePoints: calculatePiecePoints(chess, 'w', state.champions, state),
-          blackPoints: calculatePiecePoints(chess, 'b', state.champions, state),
-        });
-      }
     }
 
     state.historyLog.unshift({
@@ -2586,19 +2560,6 @@ function executeGameAction(
     let refreshDetail = '';
     if (refreshed.length > 0) {
       refreshDetail = ` | ⚡ Refreshed: ${refreshed.map((r) => `${r.name} (now x${r.newCount})`).join(', ')}`;
-      for (const r of refreshed) {
-        state.historyLog.unshift({
-          id: `log_${Date.now()}_refresh_${Math.random()}`,
-          turn: currentTurn,
-          turnNumber: state.turnNumber,
-          actionType: 'powerup_refresh',
-          cardName: 'Tactical Power-Up Refresh',
-          detail: `⚡ ${currentTurn === 'w' ? 'White' : 'Black'} refreshed ${r.name} (+1 stack, now x${r.newCount})!`,
-          timestamp: Date.now(),
-          whitePoints: calculatePiecePoints(chess, 'w', state.champions, state),
-          blackPoints: calculatePiecePoints(chess, 'b', state.champions, state),
-        });
-      }
     }
 
     state.historyLog.unshift({
@@ -2825,19 +2786,6 @@ function executeGameAction(
     let refreshDetail = '';
     if (refreshed.length > 0) {
       refreshDetail = ` | ⚡ Refreshed: ${refreshed.map((r) => `${r.name} (now x${r.newCount})`).join(', ')}`;
-      for (const r of refreshed) {
-        state.historyLog.unshift({
-          id: `log_${Date.now()}_refresh_${Math.random()}`,
-          turn: currentTurn,
-          turnNumber: state.turnNumber,
-          actionType: 'powerup_refresh',
-          cardName: 'Tactical Power-Up Refresh',
-          detail: `⚡ ${currentTurn === 'w' ? 'White' : 'Black'} refreshed ${r.name} (+1 stack, now x${r.newCount})!`,
-          timestamp: Date.now(),
-          whitePoints: calculatePiecePoints(chess, 'w', state.champions, state),
-          blackPoints: calculatePiecePoints(chess, 'b', state.champions, state),
-        });
-      }
     }
 
     state.historyLog.unshift({
@@ -3683,19 +3631,6 @@ function executeGameAction(
     let refreshDetail = '';
     if (refreshed.length > 0) {
       refreshDetail = ` | ⚡ Refreshed: ${refreshed.map((r) => `${r.name} (now x${r.newCount})`).join(', ')}`;
-      for (const r of refreshed) {
-        state.historyLog.unshift({
-          id: `log_${Date.now()}_refresh_${Math.random()}`,
-          turn: currentTurn,
-          turnNumber: state.turnNumber,
-          actionType: 'powerup_refresh',
-          cardName: 'Tactical Power-Up Refresh',
-          detail: `⚡ ${currentTurn === 'w' ? 'White' : 'Black'} refreshed ${r.name} (+1 stack, now x${r.newCount})!`,
-          timestamp: Date.now(),
-          whitePoints: calculatePiecePoints(chess, 'w', state.champions, state),
-          blackPoints: calculatePiecePoints(chess, 'b', state.champions, state),
-        });
-      }
     }
 
     state.historyLog.unshift({
