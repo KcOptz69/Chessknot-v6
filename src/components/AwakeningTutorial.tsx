@@ -16,7 +16,7 @@ export function hasOtherAwakeningDialog(candidates:Iterable<Element>) {
 // tracking are local: neither player can dismiss or see the other's guides.
 export function AwakeningTutorial({hands,color,paused,sharedDevice=false,onOpenChange}:{sharedDevice?:boolean;hands:Record<PlayerColor,Card[]>;color:PlayerColor;paused:boolean;onOpenChange:(open:boolean)=>void}) {
  const [answers,setAnswers]=React.useState<Record<PlayerColor,boolean|null>>({w:null,b:null});
- const [showGuides,setShowGuides]=React.useState(true);
+ const [showGuides,setShowGuides]=React.useState(false);
  const [guides,setGuides]=React.useState<Guide[]>([]);
  const previousHands=React.useRef<Record<PlayerColor,Set<string>>>({w:new Set(),b:new Set()});
  const sequence=React.useRef(0);

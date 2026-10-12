@@ -30,11 +30,11 @@ export function OpponentPowerUps(props:Props){
  const [selected,setSelected]=React.useState<string|null>(null);
  const detailId=React.useId();const reserves=opponentReserves(props),detail=reserves.find(r=>r.id===selected);
  return <div className="opponent-reserves-scroll custom-scrollbar">
-  <div className="opponent-reserves-grid">{reserves.map(reserve=><button type="button" className="opponent-reserve-card" key={reserve.id} aria-pressed={selected===reserve.id} aria-label={`Inspect ${reserve.name}: ${reserve.status}${reserve.count!==undefined?`, ${reserve.count} charges`:''}`} aria-controls={detailId} onClick={()=>setSelected(selected===reserve.id?null:reserve.id)}>
+  <div className="opponent-reserves-grid">{reserves.map(reserve=><button type="button" className="opponent-reserve-card" key={reserve.id} disabled={reserve.kind!=='item'} aria-pressed={selected===reserve.id} aria-label={`Inspect ${reserve.name}: ${reserve.status}${reserve.count!==undefined?`, ${reserve.count} charges`:''}`} aria-controls={detailId} onClick={()=>{if(reserve.kind==='item')setSelected(selected===reserve.id?null:reserve.id);}}>
    <span className="opponent-reserve-art">{reserve.kind==='item'?<FrontierArt type={reserve.art}/>:reserve.art==='monolith'?<V5Piece type="m"/>:reserve.art==='bind'?<BindIcon/>:<V5Power type={reserve.art}/>}</span>
    <span className="opponent-reserve-copy"><strong>{reserve.name}</strong><small>{reserve.status}</small></span>
    {reserve.count!==undefined&&<Badge className="reserve-charge">×{reserve.count}</Badge>}
   </button>)}</div>
-  <div id={detailId} className="opponent-reserve-detail" role="status" aria-live="polite">{detail?<><strong>{detail.name}</strong><p>{detail.description}</p><small>{detail.status} · Opponent’s item or power-up</small></>:<p>Tap any power-up or item to read its effects.</p>}</div>
+  <div id={detailId} className="opponent-reserve-detail" role="status" aria-live="polite">{detail?<><strong>{detail.name}</strong><p>{detail.description}</p><small>{detail.status} · Opponent’s item</small></>:<p>Tap an opponent’s item to read its effects.</p>}</div>
  </div>;
 }

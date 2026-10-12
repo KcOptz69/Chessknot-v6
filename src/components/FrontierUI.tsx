@@ -89,6 +89,7 @@ export function frontierRewardEvents(state:GameState,seen:Set<string>,recentOnly
  const fresh:RewardEvent[]=[];
  for(const event of candidates.values()){
   if(seen.has(event.id))continue;seen.add(event.id);
+  if(!['loot','eye','drop','mimic','bag','key'].includes(event.kind))continue;
   if(!event.item&&!['mimic','bag','key'].includes(event.kind))continue;
   if(recentOnly&&now-(times.get(event.id)||0)>30000)continue;
   fresh.push(event);
@@ -108,10 +109,10 @@ export function FrontierDropNotices({state,paused=false}:{state:GameState;paused
   if(fresh.some(e=>e.kind==='mimic')){const timer=setTimeout(()=>{setQueue(q=>[...q,...fresh]);timers.current.delete(timer);},2200);timers.current.add(timer);}
   else setQueue(q=>[...q,...fresh]);
  },[state.frontier,state.historyLog]);
- const e=queue[0];const dismiss=()=>setQueue(q=>q.slice(1));
- React.useEffect(()=>{const dialog=dialogRef.current;if(!e||paused||!dialog)return;if(!dialog.open)dialog.showModal();return()=>{if(dialog.open)dialog.close();};},[e?.id,paused]);
- if(!e||paused)return null;
- return <PopupLayer><dialog ref={dialogRef} className="frontier-drop-dialog" aria-labelledby="frontier-drop-title" onCancel={event=>{event.preventDefault();dismiss();}}><FrontierArt type={e.item||(['bag','key'].includes(e.kind)?e.kind:'mimic')} className="frontier-drop-art"/><h2 id="frontier-drop-title">{e.kind==='mimic'?'Mimic revealed!':e.kind==='drop'?'Item dropped!':'Item obtained!'}</h2><p>{e.detail}</p>{e.item&&<small>{ITEM_TEXT[e.item]}</small>}<Button aria-label="Close dialog" onClick={dismiss}>Got it{queue.length>1?` · ${queue.length-1} more`:''}</Button></dialog></PopupLayer>;
+ const e=queue[0];const dismiss=()=>{dialogRef.current?.close();setQueue(q=>q.slice(1));};
+ React.useEffect(()=>{const dialog=dialogRef.current;if(!e||!dialog)return;if(!dialog.open)dialog.showModal();return()=>{if(dialog.open)dialog.close();};},[e?.id]);
+ if(!e)return null;
+ return <PopupLayer><dialog ref={dialogRef} className="frontier-drop-dialog" aria-labelledby="frontier-drop-title" onClick={event=>{if(event.target===event.currentTarget){const rect=event.currentTarget.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dismiss();}}} onCancel={event=>{event.preventDefault();dismiss();}}><FrontierArt type={e.item||(['bag','key'].includes(e.kind)?e.kind:'mimic')} className="frontier-drop-art"/><h2 id="frontier-drop-title">{e.kind==='mimic'?'Mimic revealed!':e.kind==='drop'?'Item dropped!':'Item obtained!'}</h2><p>{e.detail}</p>{e.item&&<small>{ITEM_TEXT[e.item]}</small>}<Button aria-label="Close dialog" onClick={dismiss}>Got it{queue.length>1?` · ${queue.length-1} more`:''}</Button></dialog></PopupLayer>;
 }
 
 export function GolemActionPanel({state,color,square,disabled,onSelfDestruct,onCancel}:{state:GameState;color:PlayerColor;square:string;disabled:boolean;onSelfDestruct:()=>void;onCancel:()=>void}) {

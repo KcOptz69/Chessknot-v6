@@ -11,10 +11,10 @@ test('opponent inventory exposes only owned items with cooldowns counted against
  assert.match(reserves.find(i=>i.art==='wings')!.status,/7 owner turns remaining/);assert.match(reserves.find(i=>i.art==='star')!.status,/5 owner turns remaining/);assert.ok(reserves.some(i=>i.art==='bag'));assert.equal(reserves.find(i=>i.art==='key')!.count,2);assert.ok(!reserves.some(i=>i.art==='banner'||i.art==='core'));assert.deepEqual(s,before);
  f.ownerTurns.b=5;assert.match(opponentReserves(props).find(i=>i.art==='wings')!.status,/6 owner turns remaining/);
 });
-test('opponent power-ups and items are inspectable during cooldown and have no activation control',()=>{
+test('only opponent items are inspectable, including during cooldown',()=>{
  const s=createInitialGameState();addItem(s,'b','wings');const f=s.frontier!;f.inventories.b[0].readyAfter=7;
  const html=renderToStaticMarkup(<OpponentPowerUps powerUps={s.powerUps.b} frontier={f} color="b"/>);
- assert.match(html,/Inspect Wings of Flight/);assert.match(html,/7 owner turns remaining/);assert.match(html,/Tap any power-up or item/);assert.match(html,/reserve-charge/);assert.ok(!html.includes('disabled=""'));assert.ok(!html.includes('Activate'));assert.match(html,/aria-controls=/);
+ assert.match(html,/Inspect Wings of Flight/);assert.match(html,/7 owner turns remaining/);assert.match(html,/Tap an opponent’s item/);assert.match(html,/reserve-charge/);assert.ok(html.includes('disabled=""'));assert.doesNotMatch(html.match(/<button[^>]*aria-label="Inspect Wings of Flight[^>]*>/)?.[0]||'',/disabled/);assert.ok(!html.includes('Activate'));assert.match(html,/aria-controls=/);
 });
 test('descriptions include item effects, ground effects and Bind; inspection never changes state',()=>{
  const s=createInitialGameState();addItem(s,'b','eye');addItem(s,'b','star');s.grounds={selected:['gravity','banish'],charges:{w:{},b:{gravity:2,banish:1}}} as any;

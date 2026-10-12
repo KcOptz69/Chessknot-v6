@@ -175,3 +175,15 @@
 .rb-frontier-map-grid small{position:absolute;left:2px;top:0;font-size:9px;}
 .rb-frontier-map figcaption{font-size:11px;color:var(--rb-muted);text-align:center;margin-top:5px;}
 @media(max-width:480px){.rb-frontier-mechanics{grid-template-columns:1fr;}.rb-frontier-map{width:156px;margin:auto;}}
+
+/* Frontier entries grow with their copy rather than clipping narrow screens. */
+.rb-scroll{flex:1 1 auto;min-width:0;}
+.rb-frontier-discoveries,.rb-frontier-discoveries section,.rb-fixed-detail,.rb-detail-copy{min-width:0;max-width:100%;}
+.rb-fixed-detail{height:auto;min-height:0;overflow:visible;align-items:start;}
+.rb-fixed-detail h4{overflow-wrap:anywhere;}
+.rb-frontier-mechanics>*{min-width:0;}
+.rb-frontier-map{max-width:100%;}
+@media(max-width:600px){.rb-fixed-detail{grid-template-columns:55px minmax(0,1fr);padding:12px 9px;}.rb-fixed-detail h4{font-size:16px;}.rb-frontier-mechanics{grid-template-columns:1fr;}.rb-frontier-map{width:156px;justify-self:center;}}
+
+.rb-cover.rb-frontier-cover{aspect-ratio:auto;overflow:visible;flex-shrink:0;}
+.rb-frontier-cover img{height:auto;object-fit:contain;}

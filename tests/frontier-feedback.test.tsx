@@ -38,3 +38,9 @@ test('card label scaling fits both width and height without enlarging short name
  for(const [width,height,textWidth,textHeight] of [[54,9,92,12],[36,8,115,12],[72,10,54,9]]){const font=fittedCardFont(12,width,height,textWidth,textHeight);assert.ok(textWidth*font/12<=width);assert.ok(textHeight*font/12<=height);assert.ok(font<=12);}
  assert.equal(fittedCardFont(12,100,20,30,10),12);
 });
+
+test('item reward events are shown once even when the same snapshot is received again',()=>{
+ const s=room().gameState;addItem(s,'w','lens');addItem(s,'w','eye');
+ const seen=new Set<string>();assert.equal(frontierRewardEvents(s,seen).length,2);
+ assert.equal(frontierRewardEvents(structuredClone(s),seen).length,0);
+});

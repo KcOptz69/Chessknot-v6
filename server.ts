@@ -1246,6 +1246,7 @@ const groundBefore = new WeakMap<GameState,GameState>();
 const groundRequests=new WeakMap<GameState,ClientMessage>();
 function groundsPreflight(s:GameState,msg:ClientMessage,color:PlayerColor):string|null {
  const m=msg as any; const b=createSafeChess(s.fen);const g=s.grounds;
+ if(msg.type==='play_restrict'&&s.frontier?.pois[m.targetSquare])return 'Points of interest cannot be restricted.';
  if((msg.type==='play_monolith'||msg.type==='place_ground')&&activeCircle(s,m.targetSquare||m.square))return 'A summoning circle is not an empty square.';
  const sources=[m.from,m.square1,m.square2,m.targetFriendlySquare].filter(Boolean);
  if(msg.type==='play_champion_ultimate'&&s.champions[color])sources.push(s.champions[color]!.square);
@@ -3158,6 +3159,7 @@ function executeGameAction(
       chess.get(target as Square) ||
       state.monolithSquare === target ||
       state.frontier?.golems.some(g=>g.square===target) ||
+      !!state.frontier?.pois[target] ||
       state.restrictedSquares.includes(target)
     ) {
       return;

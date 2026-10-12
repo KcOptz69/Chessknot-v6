@@ -133,3 +133,13 @@ test('useless Refresh draws do not delay mate and invalid Refresh remains atomic
  const r=setup('q3r2k/8/8/8/8/8/1P1P1P2/3RKR2 w - - 0 1');const s=r.gameState;s.powerUps.w={draw:0,wild:0,monolith:0,vision:0};s.hands.w=[createCard('refresh',940)];s.deck=[createCard('pawn',941)];s.discard=[];assert.equal(frontierEscape(s,'w'),false);assert.equal(evaluateGameEnd(createSafeChess(s.fen),s).status,'checkmate');
  const before=structuredClone(s);action(r,{type:'play_refresh',cardId:'missing'});assert.deepEqual(r.gameState,before);
 });
+
+test('Restrict rejects each point of interest without consuming or changing state',()=>{
+ for(const kind of ['bag','key','chest','boss'] as const){
+  const r=setup();r.gameState.frontier.pois.cX=kind;
+  const card=createCard('restrict',901);r.gameState.hands.w=[card];
+  const before=structuredClone(r.gameState);
+  const errors=action(r,{type:'play_restrict',cardId:card.id,targetSquare:'cX'});
+  assert.deepEqual(r.gameState,before,kind);assert.ok(errors.some((e:any)=>e.type==='error'));
+ }
+});

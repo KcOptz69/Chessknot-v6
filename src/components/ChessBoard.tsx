@@ -587,6 +587,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             (!frontierGame || monolithPlacementSquare(frontierGame,sq)) &&
             !chess.get(sq as Square) &&
             !frontierGame?.frontier?.golems.some(g=>g.square===sq) &&
+            !frontierGame?.frontier?.pois[sq] &&
             sq !== monolithSquare &&
             !restrictedSquares.includes(sq) &&
             !(champions && (champions.w?.square === sq || champions.b?.square === sq))
@@ -606,6 +607,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
           if (
             !chess.get(sq as Square) &&
             !frontierGame?.frontier?.golems.some(g=>g.square===sq) &&
+            !frontierGame?.frontier?.pois[sq] &&
             sq !== monolithSquare &&
             !restrictedSquares.includes(sq) &&
             !(champions && (champions.w?.square === sq || champions.b?.square === sq))
@@ -801,7 +803,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       const champOnSquare =
         (whiteChampion && whiteChampion.square === square) ||
         (blackChampion && blackChampion.square === square);
-      if (restrictedSquares.includes(square) || pieceOnSquare || champOnSquare || square === monolithSquare || frontierGame?.frontier?.golems.some(g=>g.square===square)) {
+      if (restrictedSquares.includes(square) || pieceOnSquare || champOnSquare || square === monolithSquare || frontierGame?.frontier?.golems.some(g=>g.square===square) || frontierGame?.frontier?.pois[square]) {
         return; // Restrict card can only choose empty squares
       }
       onRestrictSquare(square);
