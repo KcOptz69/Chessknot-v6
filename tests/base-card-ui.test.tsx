@@ -29,7 +29,7 @@ function event(overrides:Partial<GameLogEntry>):GameLogEntry{return {id:'event',
 test('opponent notices include trap placement without its location, Wild Awakening, Refresh and discarded Brick',()=>{
  const cases=[event({trapEventType:'trap-place',detail:'Black placed a trap.'}),event({cardName:'Awakening: Queen (Played as Wild)'}),event({actionType:'refresh'}),event({actionType:'pass',detail:'Discarded Brick.'})];
  const text=cases.flatMap(e=>activityInfoNotices(e,'w')).map(n=>n.text).join(' ');
- assert.match(text,/placed a trap/);assert.ok(!/[a-h][1-8]/.test(text));assert.match(text,/Awakening card as Wild/);assert.match(text,/played Refresh/);assert.match(text,/discarded Brick/);
+ assert.match(text,/placed a trap/);assert.ok(!/[a-h][1-8]/.test(text));assert.match(text,/Awakening: Queen as Wild/);assert.match(text,/played Refresh/);assert.match(text,/discarded Brick/);
  assert.deepEqual(cases.flatMap(e=>activityInfoNotices(e,'b')),[]);
 });
 test('Refresh plus Brick notices have distinct IDs so both dismiss after their timer',()=>{

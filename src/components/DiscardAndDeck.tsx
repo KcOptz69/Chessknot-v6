@@ -289,7 +289,7 @@ export const DiscardAndDeck: React.FC<DiscardAndDeckProps> = ({
                   <span className="text-stone-500 dark:text-stone-400 font-mono text-[11px]">Total: {unseenCount} cards</span>
                 </div>
 
-                <p className="text-xs text-stone-600 dark:text-stone-300">The two guaranteed starting Pawns are excluded while still known in the opponent hand. Counts combine the draw pile and unknown opponent cards; they do not tell you which cards are in either location or guarantee your next draw.</p>
+                <p className="text-xs text-stone-600 dark:text-stone-300">Known opponent cards, including revealed cards and the two guaranteed starting Pawns, are excluded while they remain in that hand. Counts combine the draw pile and unknown opponent cards; they do not tell you which cards are in either location or guarantee your next draw.</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {Object.entries(deckTypeCounts).sort(([a],[b])=>{
                     const group=(type:string)=>type.startsWith('awakening_')?2:['pawn','knight','bishop','rook','queen'].includes(type)?0:1;
