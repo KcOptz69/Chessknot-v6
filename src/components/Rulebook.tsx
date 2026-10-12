@@ -39,8 +39,8 @@ export function RuleGallery({title,items,introduction}:{title:string;items:RuleI
    {!selected.noDemo&&<RuleDemo key={`${selected.id}-${wild}`} item={wild?{...selected,demo:'wild'}:selected}/>}
   </div>}
   {selected?.related&&<RuleEntryPanel item={selected.related}/>}
-  <p className="rb-grid-help">Tap a card or icon to read its effect. Hover also works with a mouse.</p>
-  <div className="rb-icon-grid" ref={gridRef}>{items.map(item=><button type="button" key={item.id} data-rule-item={item.id} className={`rb-icon-card ${item.card?.startsWith('awakening_')?'rb-red':item.card==='soul_release'?'rb-black':['joker','clock'].includes(item.card||'')?'rb-gold':item.card==='champion'?'rb-purple':''}`} aria-pressed={selected?.id===item.id} aria-controls={detailId} onClick={()=>select(item)} onMouseEnter={()=>{if(window.matchMedia('(hover: hover)').matches&&!hoverBlocked.current)select(item);}} onMouseLeave={()=>{hoverBlocked.current=false;}}><span className="rb-grid-art" aria-hidden="true"><RuleArtwork item={item}/></span><strong>{item.name}</strong>{item.count!==undefined&&<small>×{item.count}</small>}</button>)}</div>
+  <p className="rb-grid-help">Tap a card or icon to read its effect.</p>
+  <div className="rb-icon-grid" ref={gridRef}>{items.map(item=><button type="button" key={item.id} data-rule-item={item.id} className={`rb-icon-card ${item.card?.startsWith('awakening_')?'rb-red':item.card==='soul_release'?'rb-black':['joker','clock'].includes(item.card||'')?'rb-gold':item.card==='champion'?'rb-purple':''}`} aria-pressed={selected?.id===item.id} aria-controls={detailId} onClick={()=>select(item)}><span className="rb-grid-art" aria-hidden="true"><RuleArtwork item={item}/></span><strong>{item.name}</strong>{item.count!==undefined&&<small>×{item.count}</small>}</button>)}</div>
  </section>;
 }
 
