@@ -1,3 +1,4 @@
+import {readMatchNotice,writeMatchNotice} from './utils/matchNotices.ts';
 import {createRoomConnection} from './utils/roomConnection.ts';
 import {GolemActionPanel,FrontierExpandOffer,FrontierDropNotices,FrontierIntro,FrontierInventory,FrontierArt} from './components/FrontierUI.tsx';
 import {golemBlastSquares,golemSelfDestructError,featherReviveChoice,wingsTargets,starTargets,traverseTargets,frontierUltimateTargets,frontierMoves,occupant,emptyFrontierSquare,frontierKingSafe} from './utils/frontier.ts';
@@ -258,6 +259,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const [groundSquare,setGroundSquare]=React.useState<string|null>(null);
   const [portalFrom,setPortalFrom]=React.useState<string|null>(null);
   const [expansionOfferOpen,setExpansionOfferOpen]=React.useState(false);
+  const noticeMatchKey=roomId+':'+(gameState.historyLog.at(-1)?.id||'pending');
   const [frontierIntro,setFrontierIntro]=React.useState(false);
   const [channelMoveConfirm,setChannelMoveConfirm]=React.useState<ClientMessage|null>(null);
   const [frontierItemMode,setFrontierItemMode]=React.useState<'wings'|'feather'|'star'|'banner'|'sigil'|null>(null);
@@ -282,7 +284,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const [frontierFrom,setFrontierFrom]=React.useState<string|null>(null);
   const frontierSeen=React.useRef('');
   const frontierSounds=React.useRef(new Set<string>());
-  React.useEffect(()=>{const f=gameState.frontier;if(!f?.expanded){frontierSeen.current='';return;}if(frontierSeen.current!==f.id){frontierSeen.current=f.id;setFrontierIntro(true);}const audioMap:Record<string,string>={expand:'01-board-expansion',key:'02-chest-key',bag:'03-wayfarers-satchel',chest:'04-chest-opening',mimic:'05-mimic-chest',item:'06-item-use',boss_hit:'07-boss-first-damage',boss_defeat:'08-boss-fallen',summon:'09-golem-summon',traverse:'10-traverse',golem_explosion:'11-golem-explosion'};for(const e of [...f.events].reverse()){if(frontierSounds.current.has(e.id))continue;frontierSounds.current.add(e.id);if(audioMap[e.kind]&&isSoundEnabled()){const a=new Audio(`/audio/frontier/${audioMap[e.kind]}.mp3`);a.volume=.3 * getSoundVolume();void a.play().catch(()=>{});}}},[gameState.frontier]);
+  React.useEffect(()=>{const f=gameState.frontier;if(!f?.expanded){frontierSeen.current='';return;}if(frontierSeen.current!==f.id){frontierSeen.current=f.id;if(!readMatchNotice('frontier:'+f.id,false)){writeMatchNotice('frontier:'+f.id,true);setFrontierIntro(true);}}const audioMap:Record<string,string>={expand:'01-board-expansion',key:'02-chest-key',bag:'03-wayfarers-satchel',chest:'04-chest-opening',mimic:'05-mimic-chest',item:'06-item-use',boss_hit:'07-boss-first-damage',boss_defeat:'08-boss-fallen',summon:'09-golem-summon',traverse:'10-traverse',golem_explosion:'11-golem-explosion'};for(const e of [...f.events].reverse()){if(frontierSounds.current.has(e.id))continue;frontierSounds.current.add(e.id);if(audioMap[e.kind]&&isSoundEnabled()){const a=new Audio(`/audio/frontier/${audioMap[e.kind]}.mp3`);a.volume=.3 * getSoundVolume();void a.play().catch(()=>{});}}},[gameState.frontier]);
   React.useEffect(()=>setFrontierFrom(null),[gameState.turnNumber]);
   const [groundsIntro,setGroundsIntro]=React.useState(false);
   const groundsMatchRef=React.useRef<string>('');
@@ -291,7 +293,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   React.useEffect(()=>{
     if(gameState.status!=='playing'){groundsMatchRef.current='';return;}
     const key=gameState.grounds?.selected.join(',');
-    if(key&&groundsMatchRef.current!==key){groundsMatchRef.current=key;setGroundsIntro(true);}
+    if(key&&groundsMatchRef.current!==key){groundsMatchRef.current=key;if(!readMatchNotice('grounds:'+noticeMatchKey,false)){writeMatchNotice('grounds:'+noticeMatchKey,true);setGroundsIntro(true);}}
     const event=gameState.grounds?.events[0];
     if(event&&event.id!==groundEventRef.current){
       groundEventRef.current=event.id;
@@ -1293,7 +1295,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
         {compactPanel==='log' && <GameLog historyLog={gameState.historyLog} trapsEnabled={Boolean(gameState.expansions?.treacherousGrounds)}/>}
       </section></Modal>}
       {gameState.status==='playing'&&<MatchActivityNotices key={`${roomId}:${mode}`} state={gameState} color={activeColor} sharedDevice={false}/> }
-      {gameState.status==='playing'&&gameState.expansions?.theAwakening===true&&(myColor!=='spectator')&&<AwakeningTutorial key={roomId} sharedDevice={false} hands={gameState.hands} color={activeColor} paused={handoffPending||groundsIntro} onOpenChange={setAwakeningTutorialOpen}/>}
+      {gameState.status==='playing'&&gameState.expansions?.theAwakening===true&&(myColor!=='spectator')&&<AwakeningTutorial sessionKey={noticeMatchKey} key={noticeMatchKey} sharedDevice={false} hands={gameState.hands} color={activeColor} paused={handoffPending||groundsIntro} onOpenChange={setAwakeningTutorialOpen}/>}
       {mode === 'online' && <ChatDrawer isOpen={chatOpen} onClose={() => setChatOpen(false)} messages={chatMessages} onSendMessage={text => sendMessage({type:'send_chat',text})} playerId={playerId} playerName={playerName} myColor={myColor} disabled={!connected} />}
       {deployedChampion && <ChampionInfoDialog champion={deployedChampion} deployed onClose={()=>setDeployedChampion(null)}/>}
       {uiNotice && <Toast onDismiss={() => setUiNotice(null)}>{uiNotice}</Toast>}

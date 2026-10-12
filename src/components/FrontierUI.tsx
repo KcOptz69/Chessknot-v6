@@ -1,3 +1,4 @@
+import {readMatchNotice,writeMatchNotice} from '../utils/matchNotices.ts';
 import {Link2} from 'lucide-react';
 import {Modal,Button,PopupLayer} from './UI.tsx';
 import React from 'react';
@@ -110,9 +111,10 @@ export function FrontierDropNotices({state,paused=false}:{state:GameState;paused
  React.useEffect(()=>{
   const f=state.frontier;if(!f?.expanded){match.current='';seen.current.clear();timers.current.forEach(clearTimeout);timers.current.clear();setQueue([]);return;}
   const first=match.current!==f.id;
-  if(first){match.current=f.id;seen.current.clear();timers.current.forEach(clearTimeout);timers.current.clear();setQueue([]);}
+  if(first){match.current=f.id;seen.current=new Set(readMatchNotice<string[]>('items:'+f.id,[]));timers.current.forEach(clearTimeout);timers.current.clear();setQueue([]);}
   const dismissed=dismissedFrontierRewards.get(f.id)||new Set<string>();
   const fresh=frontierRewardEvents(state,seen.current,first).filter(event=>!dismissed.has(event.id));
+  writeMatchNotice('items:'+f.id,[...seen.current]);
   if(!fresh.length)return;
   if(fresh.some(e=>e.kind==='mimic')){const timer=setTimeout(()=>{setQueue(q=>[...q,...fresh]);timers.current.delete(timer);},2200);timers.current.add(timer);}
   else setQueue(q=>[...q,...fresh]);

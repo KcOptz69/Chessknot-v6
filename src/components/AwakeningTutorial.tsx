@@ -1,3 +1,4 @@
+import {readMatchNotice,writeMatchNotice} from '../utils/matchNotices.ts';
 import React from 'react';
 import {BookOpen, Sparkles, Star, X} from 'lucide-react';
 import type {Card, PlayerColor} from '../types.ts';
@@ -14,8 +15,8 @@ export function hasOtherAwakeningDialog(candidates:Iterable<Element>) {
 }
 // This component is mounted for one active match only. Preferences and hand
 // tracking are local: neither player can dismiss or see the other's guides.
-export function AwakeningTutorial({hands,color,paused,sharedDevice=false,onOpenChange}:{sharedDevice?:boolean;hands:Record<PlayerColor,Card[]>;color:PlayerColor;paused:boolean;onOpenChange:(open:boolean)=>void}) {
- const [answers,setAnswers]=React.useState<Record<PlayerColor,boolean|null>>({w:null,b:null});
+export function AwakeningTutorial({sessionKey='',hands,color,paused,sharedDevice=false,onOpenChange}:{sessionKey?:string;sharedDevice?:boolean;hands:Record<PlayerColor,Card[]>;color:PlayerColor;paused:boolean;onOpenChange:(open:boolean)=>void}) {
+ const [answers,setAnswers]=React.useState<Record<PlayerColor,boolean|null>>(()=>readMatchNotice('awakening:'+sessionKey,{w:null,b:null}));
  const [showGuides,setShowGuides]=React.useState(false);
  const [guides,setGuides]=React.useState<Guide[]>([]);
  const previousHands=React.useRef<Record<PlayerColor,Set<string>>>({w:new Set(),b:new Set()});
@@ -39,7 +40,7 @@ export function AwakeningTutorial({hands,color,paused,sharedDevice=false,onOpenC
  const visible=!paused&&!anotherDialog&&(introduction||Boolean(guide));
  React.useEffect(()=>{onOpenChange(visible);},[visible,onOpenChange]);
  React.useEffect(()=>()=>onOpenChange(false),[onOpenChange]);
- const answer=(familiar:boolean)=>{setAnswers(a=>sharedDevice?{w:familiar,b:familiar}:{...a,[color]:familiar});};
+ const answer=(familiar:boolean)=>{setAnswers(a=>{const next=sharedDevice?{w:familiar,b:familiar}:{...a,[color]:familiar};writeMatchNotice('awakening:'+sessionKey,next);return next;});};
  const dismiss=()=>setGuides(q=>q.filter(g=>g.key!==guide?.key));
  if(!visible)return null;
  if(introduction)return <Modal className="awakening-tutorial-modal"><section className="ground-dialog grounds-intro awakening-intro" role="dialog" aria-modal="true" aria-labelledby="awakening-intro-title" data-awakening-tutorial="intro"><div className="grounds-intro-eyebrow">EXPANSION III · THIS MATCH</div><h2 id="awakening-intro-title">The <span>Awakening</span></h2><p className="grounds-intro-lead">Awaken your army. Unlock each piece’s skill.</p><div className="grounds-intro-options">{Object.entries(PIECES).map(([type,piece])=><article key={type} className="grounds-intro-option"><div className="grounds-intro-icon"><V5Piece type={piece} color={color} awakened className="w-full h-full"/></div><div><span className="grounds-intro-kind">Awakening skill</span><h3>{({p:'Super Pawn',n:'Super Knight',b:'Awakened Bishop',r:'Awakened Rook',q:'Awakened Queen',k:'Awakened King'} as Record<string,string>)[piece]}</h3></div><p>{AWAKENING_DESCRIPTIONS[type]}</p></article>)}</div><div className="grounds-intro-timing"><strong>Play as Wild</strong><span>{AWAKENING_WILD_DESCRIPTION}</span></div><label className="awakening-guide-toggle"><input type="checkbox" checked={showGuides} onChange={e=>setShowGuides(e.target.checked)}/>Show a guide when I draw an Awakening card</label><p className="grounds-intro-privacy">This choice applies to this match. Activation notifications still appear.</p><button className="grounds-intro-continue" onClick={()=>answer(!showGuides)}>Let’s play <span aria-hidden="true">→</span></button></section></Modal>;
