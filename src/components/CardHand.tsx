@@ -423,7 +423,7 @@ export const CardHand: React.FC<CardHandProps> = ({
 
       {/* ACTIVE CARD DRAWER: Shows selected card description & large thumb-friendly action buttons */}
       {selectedCard && renderDescription(
-        <div className={`card-description-panel ${selectedCard.type === 'soul_release' ? 'soul-release-description' : ''} mt-2 p-2.5 rounded-xl border ${selectedCard.type === 'soul_release' ? 'border-stone-500 bg-gradient-to-b from-stone-800 to-black text-stone-100' : 'border-blue-300 dark:border-blue-600 bg-blue-50/70 dark:bg-blue-950/40'} shadow-xs animate-fade-in space-y-2 block`}>
+        <div data-card-description-type={selectedCard.type} className={`card-description-panel ${selectedCard.type === 'soul_release' ? 'soul-release-description' : ''} mt-2 p-2.5 rounded-xl border ${selectedCard.type === 'soul_release' ? 'border-stone-500 bg-gradient-to-b from-stone-800 to-black text-stone-100' : 'border-blue-300 dark:border-blue-600 bg-blue-50/70 dark:bg-blue-950/40'} shadow-xs animate-fade-in space-y-2 block`}>
           {/* Check Escape Notice Banner */}
           {isKingInCheck && checkEscapeCardTypes?.has(selectedCard.type) && (
             <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/80 border-2 border-amber-400 dark:border-amber-600 text-amber-950 dark:text-amber-200 text-xs font-bold flex items-center gap-2 shadow-xs">

@@ -1548,3 +1548,21 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
 }
 .desktop-match .desktop-description-host .awakening-mode-buttons>button svg{width:11px;height:11px;flex-shrink:0;}
 @media(max-height:740px){.desktop-match .desktop-hand-layout{--pc-card-height:72px;}}
+
+/* Wider reserve dialog eliminates horizontal scrolling and unused hint space. */
+.ui-modal>.opponent-powerup-dialog{width:min(620px,calc(100vw - 24px))!important;max-width:620px!important;padding:14px!important;min-width:0;}
+.opponent-powerup-dialog .opponent-reserves-scroll{overflow-x:hidden;max-width:100%;}
+.opponent-powerup-dialog .opponent-reserves-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+.opponent-powerup-dialog .opponent-reserve-card{min-width:0;min-height:64px;padding:14px 7px 7px;gap:6px;}
+.opponent-powerup-dialog .opponent-reserve-art{width:32px;height:32px;}
+.opponent-powerup-dialog .opponent-reserve-art>*{width:30px;height:30px;}
+@media(max-width:520px){.opponent-powerup-dialog .opponent-reserves-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+/* Use the remaining hand-box padding below the description. */
+.desktop-match .desktop-hand-layout .desktop-description-host{height:calc(var(--pc-card-height) + 10px);max-height:calc(var(--pc-card-height) + 10px);align-self:end;}
+.desktop-match .desktop-hand-layout .desktop-description-host>.card-description-panel{height:calc(var(--pc-card-height) + 10px)!important;max-height:calc(var(--pc-card-height) + 10px)!important;}
+.desktop-match .desktop-description-host .selected-card-thumb{flex-basis:24px;}
+.desktop-match .desktop-description-host .card-description-panel:is([data-card-description-type=pawn],[data-card-description-type=knight],[data-card-description-type=bishop],[data-card-description-type=rook],[data-card-description-type=queen]){
+ display:flex;flex-direction:column;gap:2px;overflow:visible;padding:5px 7px!important;
+}
+.desktop-match .desktop-description-host .card-description-panel:is([data-card-description-type=pawn],[data-card-description-type=knight],[data-card-description-type=bishop],[data-card-description-type=rook],[data-card-description-type=queen])>*{margin:0!important;}
+.desktop-match .desktop-description-host .brief-card-description{line-height:1.25;margin:2px 0!important;}

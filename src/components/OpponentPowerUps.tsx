@@ -35,6 +35,6 @@ export function OpponentPowerUps(props:Props){
    <span className="opponent-reserve-copy"><strong>{reserve.name}</strong><small>{reserve.status}</small></span>
    {reserve.count!==undefined&&<Badge className="reserve-charge">×{reserve.count}</Badge>}
   </button>)}</div>
-  <div id={detailId} className="opponent-reserve-detail" role="status" aria-live="polite">{detail?<><strong>{detail.name}</strong><p>{detail.description}</p><small>{detail.status} · Opponent’s item</small></>:<p>Tap an opponent’s item to read its effects.</p>}</div>
+  {detail&&<div id={detailId} className="opponent-reserve-detail" role="status" aria-live="polite"><><strong>{detail.name}</strong><p>{detail.description}</p><small>{detail.status} · Opponent’s item</small></></div>}
  </div>;
 }
