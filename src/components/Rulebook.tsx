@@ -17,7 +17,7 @@ export function RuleArtwork({item}:{item:RuleItem}) {
 }
 
 export function RuleGallery({title,items,introduction}:{title:string;items:RuleItem[];introduction?:string}) {
- const [selected,setSelected]=React.useState<RuleItem|null>(items[0]);
+ const [selected,setSelected]=React.useState<RuleItem|null>(null);
  const [wild,setWild]=React.useState(false);
  const detailId=React.useId();
  const gridRef=React.useRef<HTMLDivElement>(null);
@@ -40,7 +40,7 @@ export function RuleGallery({title,items,introduction}:{title:string;items:RuleI
   </div>}
   {selected?.related&&<RuleEntryPanel item={selected.related}/>}
   <p className="rb-grid-help">Tap a card or icon to read its effect. Hover also works with a mouse.</p>
-  <div className="rb-icon-grid" ref={gridRef}>{items.map(item=><button type="button" key={item.id} data-rule-item={item.id} className={`rb-icon-card ${item.card?.startsWith('awakening_')?'rb-red':item.card==='soul_release'?'rb-black':['joker','clock'].includes(item.card||'')?'rb-gold':item.card==='champion'?'rb-purple':''}`} aria-pressed={selected?.id===item.id} aria-controls={detailId} onClick={()=>select(item)} onPointerEnter={e=>{if(e.pointerType==='mouse'&&!hoverBlocked.current)select(item);}} onPointerLeave={()=>{hoverBlocked.current=false;}}><span className="rb-grid-art" aria-hidden="true"><RuleArtwork item={item}/></span><strong>{item.name}</strong>{item.count!==undefined&&<small>×{item.count}</small>}</button>)}</div>
+  <div className="rb-icon-grid" ref={gridRef}>{items.map(item=><button type="button" key={item.id} data-rule-item={item.id} className={`rb-icon-card ${item.card?.startsWith('awakening_')?'rb-red':item.card==='soul_release'?'rb-black':['joker','clock'].includes(item.card||'')?'rb-gold':item.card==='champion'?'rb-purple':''}`} aria-pressed={selected?.id===item.id} aria-controls={detailId} onClick={()=>select(item)} onMouseEnter={()=>{if(window.matchMedia('(hover: hover)').matches&&!hoverBlocked.current)select(item);}} onMouseLeave={()=>{hoverBlocked.current=false;}}><span className="rb-grid-art" aria-hidden="true"><RuleArtwork item={item}/></span><strong>{item.name}</strong>{item.count!==undefined&&<small>×{item.count}</small>}</button>)}</div>
  </section>;
 }
 
@@ -67,7 +67,7 @@ export function Rulebook({isOpen,onClose,initialSection=null,onStartTutorial}:{i
  const content=section?RULE_SECTIONS[section]:null;
  return <Modal className="rb-backdrop">
   <div className="rb-dialog">
-   <div className={`rb-navigation ${section?'':'rb-navigation-menu'}`}>{section?<button type="button" onClick={()=>setSection(null)}><ArrowLeft size={17}/>Menu</button>:<span/>}<button type="button" onClick={onClose} aria-label="Close dialog"><X size={20}/></button></div>
+   <div className={`rb-navigation ${section?'':'rb-navigation-menu'}`}><span/><button type="button" onClick={onClose} aria-label="Close dialog"><X size={20}/></button></div>
    <div className="rb-scroll" ref={scrollRef}>
     <header className="rb-header"><div className={`rb-cover ${section==='expansion5'?'rb-frontier-cover':''}`}><>{banner?<img src={`/art/menu/${banner.image}.webp`} alt=""/>:<><img className="rb-hero-light" src="/art/menu/hero-light.webp" alt=""/><img className="rb-hero-dark" src="/art/menu/hero-dark.webp" alt=""/></>}</></div><div className="rb-brand"><div><img src="/logo.png" alt="ChessKnot logo"/><span><strong>ChessKnot</strong><small>made by Kaze</small></span></div><p><b>Chess meets cards:</b><br/>Your next move changes everything.</p></div></header>
     <h2 ref={titleRef} tabIndex={-1} className={section?'rb-section-heading rb-page-title':'rb-menu-title'}>{banner?.title||'CHESSKNOT OFFICIAL RULEBOOK'}</h2>

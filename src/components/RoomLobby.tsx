@@ -671,7 +671,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
               </button>
               {onExitLobby && (
                 <button
-                  className="ck-menu-exit"
+                  className="ck-menu-exit ck-leave-button"
                   id="lobby-btn-exit"
                   onClick={onExitLobby}
                 >
@@ -680,7 +680,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
               )}
             </>
           ) : (
-            <button className="ck-menu-exit" onClick={onExitLobby}>Quit viewing</button>
+            <button className="ck-menu-exit ck-leave-button" onClick={onExitLobby}>Quit viewing</button>
           )}
           <p className="ck-menu-caption">
             {isHost
