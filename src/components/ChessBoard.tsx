@@ -1954,7 +1954,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                     {rank}
                   </span>
                 )}
-                {rIdx === 7 && (
+                {rIdx === displayRanks.length - 1 && (
                   <span
                     className={`absolute bottom-0.5 right-1 text-[9px] font-mono font-bold select-none pointer-events-none ${
                       isDark
