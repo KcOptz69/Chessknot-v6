@@ -518,7 +518,7 @@ export const CardHand: React.FC<CardHandProps> = ({
               ? 'Requires Monolith on the board to activate.'
               : selectedCard.type === 'static' && !monolithSquare
               ? 'Requires Monolith on the board to activate.'
-              : ((!compact || descriptionHost) && desktopDescription) || briefCardDescriptions[selectedCard.type] || selectedCard.description}
+              : desktopDescription || briefCardDescriptions[selectedCard.type] || selectedCard.description}
           </p>}
 
           {selectedCard.type==='soul_release'&&<p className="text-xs text-stone-100">{disabledSoulIds.includes(selectedCard.id)?'Unavailable: Queen banished or no legal square.':'Choose a highlighted square. Exhausts after summoning.'}</p>}

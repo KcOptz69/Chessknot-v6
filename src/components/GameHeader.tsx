@@ -136,7 +136,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 
         {/* Center on Desktop / Row 2 on Mobile: Clocks & Army Points */}
         <div className="header-clock-row flex items-center justify-between lg:justify-center gap-2 sm:gap-3 w-full lg:w-auto">
-          <div className="header-viewing-group"><GroundReminder grounds={grounds} onOpen={onOpenGrounds}/>{viewerTools}</div>
+          <div className="header-viewing-group"><GroundReminder compact={compact} grounds={grounds} onOpen={onOpenGrounds}/>{viewerTools}</div>
           {/* Chess Clocks */}
           {clock.enabled && (
             <div className="header-clock-pair flex items-center gap-1 sm:gap-1.5 bg-stone-50 dark:bg-stone-800/90 border border-stone-200 dark:border-stone-700 px-2 sm:px-2.5 py-1 rounded-xl shadow-xs shrink-0">
