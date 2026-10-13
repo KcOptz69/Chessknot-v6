@@ -240,3 +240,25 @@ test('activated trap log records its original placement turn alongside the activ
  const after=r.gameState,b=createSafeChess(after.fen);b.put({type:'p',color:'b'},'a3');after.fen=b.fen();after.turnNumber=12;landGround(after,'a3');
  const log=after.historyLog.find((e:any)=>e.trapEventType==='poison');assert.equal(log.turnNumber,12);assert.match(log.detail,/Placed on turn 7/);
 });
+
+
+test('Push trail retains source through opponent free actions and clears on completed move',()=>{
+ const r=setup(),card=createCard('push',987);r.gameState.hands.w=[card];
+ assert.equal(action(r,{type:'play_push',cardId:card.id,from:'a2',to:'aX'}).length,0);
+ assert.deepEqual({...r.gameState.pushTrail,id:undefined},{id:undefined,owner:'w',from:'a2',to:'aX'});
+ const id=r.gameState.pushTrail.id;r.gameState.powerUps.b.vision=1;
+ assert.equal(action(r,{type:'use_powerup_vision'},'b').length,0);assert.equal(r.gameState.pushTrail.id,id);
+ const bad=JSON.stringify(r.gameState);action(r,{type:'play_king_move',from:'e8',to:'a1'},'b');assert.equal(JSON.stringify(r.gameState),bad);
+ const rook=createCard('rook',988);r.gameState.hands.b=[rook];
+ assert.equal(action(r,{type:'play_card_move',cardId:rook.id,from:'h7',to:'h6'},'b').length,0);assert.equal(r.gameState.pushTrail,undefined);
+});
+test('Boss effects carry exact coordinates for melee and ranged attacks',()=>{
+ const r=setup();r.gameState.frontier.pois.aW='boss';r.gameState.frontier.boss={square:'aW',health:2,drop:'core'};
+ play(r,'rook','a2','aW');assert.equal(r.gameState.frontier.events.find((e:any)=>e.kind==='boss_hit').square,'aW');
+});
+
+test('base-board Push trail clears after the opponent completes a turn',()=>{
+ const r=setup();r.gameState.fen='4k1q1/7r/8/8/8/8/R7/1QR1K3 w - - 0 1';r.gameState.frontier=undefined;
+ const card=createCard('push',989);r.gameState.hands.w=[card];assert.equal(action(r,{type:'play_push',cardId:card.id,from:'a2',to:'a3'}).length,0);assert.ok(r.gameState.pushTrail);
+ const rook=createCard('rook',990);r.gameState.hands.b=[rook];assert.equal(action(r,{type:'play_card_move',cardId:rook.id,from:'h7',to:'h6'},'b').length,0);assert.equal(r.gameState.pushTrail,undefined);
+});

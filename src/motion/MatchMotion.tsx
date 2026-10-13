@@ -92,7 +92,11 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
       const plan = planBoardMotion(previous.game, this.props.game);
       for (const { from, to } of plan.moves) {
         const visual = old.pieces.get(from), target = this.find(`#square-${to} [data-motion-piece]`);
-        if (visual && target) fly(this.batch, visual, target.getBoundingClientRect(), target);
+        if (visual && target && this.props.game.lastMoveDetails?.actionType!=='monolith') {
+          const action=this.props.game.lastMoveDetails?.actionType;
+          const portal=this.props.game.grounds?.events.some(e=>e.type==='portal'&&!previous.game.grounds?.events.some(old=>old.id===e.id)) || this.props.game.frontier?.events.some(e=>e.kind==='move'&&e.detail.startsWith('Portal:')&&!previous.game.frontier?.events.some(old=>old.id===e.id));
+          fly(this.batch, visual, target.getBoundingClientRect(), target,0,false, action==='switch'?'switch':portal?'portal':action==='push'?'push':'move');
+        }
       }
       for (const square of plan.captures) {
         const visual = old.pieces.get(square);
@@ -101,7 +105,7 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
         ghost.className = 'match-flight match-capture'; ghost.inert = true; ghost.setAttribute('aria-hidden', 'true');
         Object.assign(ghost.style, { left: `${visual.rect.left}px`, top: `${visual.rect.top}px`, width: `${visual.rect.width}px`, height: `${visual.rect.height}px` });
         ghost.append(visual.node); document.body.append(ghost);
-        this.batch.animate(ghost, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.8)' }], 130, 100, () => ghost.remove());
+        this.batch.animate(ghost, [{ opacity: 1, transform: 'rotate(0deg)',transformOrigin:'50% 85%' }, {opacity:1,transform:'rotate(78deg) translateX(12%)',offset:.65,transformOrigin:'50% 85%'},{ opacity: 0, transform: 'rotate(90deg) translateX(16%)',transformOrigin:'50% 85%' }], 650, 0, () => ghost.remove());
         this.impact(square);
       }
       const removed = new Set([...this.props.game.discard, ...(this.props.game.exhausted || [])].map(card => card.id));
@@ -162,11 +166,8 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
     const game = this.props.game, move = game.lastMoveDetails;
     if (!move) return;
     if (move.actionType === 'monolith' && game.monolithSquare) {
-      if (!previous.monolithSquare) {
-        const piece = this.find(`#square-${game.monolithSquare} [data-motion-piece]`);
-        if (piece) this.batch.animate(piece, [{ opacity: 0, translate: '0 14px' }, { opacity: 1, translate: '0 0' }]);
-      }
-      this.impact(game.monolithSquare, 'stone', 80);
+      const piece = this.find(`#square-${game.monolithSquare} [data-motion-piece]`);
+      if (piece) this.batch.animate(piece, [{ translate: '0 -220%',opacity:0 }, {translate:'0 -180%',opacity:1,offset:.15},{ translate: '0 0',opacity:1 }],650);
     } else if (move.actionType === 'restrict' && move.restrictedSquare) {
       this.impact(move.restrictedSquare, 'restrict', 0);
     } else if ((move.actionType === 'beacon' || move.actionType === 'static') && game.monolithSquare) {

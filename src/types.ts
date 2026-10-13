@@ -247,6 +247,7 @@ export interface BoardSnapshot {
 }
 
 export interface GameState {
+  pushTrail?: {id:string;owner:PlayerColor;from:string;to:string};
   frontier?: FrontierState;
   handCounts?: {w:number;b:number};
   hiddenDeckCount?: number;

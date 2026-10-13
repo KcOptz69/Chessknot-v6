@@ -1,6 +1,7 @@
+import {ranksFor} from '../utils/frontierBoard';
 import type { GameState } from '../types';
 
-export type MotionState = Pick<GameState, 'fen' | 'turn' | 'turnNumber' | 'status' | 'historyLog' | 'lastMoveDetails' | 'champions' | 'monolithSquare'>;
+export type MotionState = Pick<GameState, 'fen' | 'turn' | 'turnNumber' | 'status' | 'historyLog' | 'lastMoveDetails' | 'champions' | 'monolithSquare' | 'frontier'>;
 export interface BoardMotion { moves: { from: string; to: string }[]; captures: string[] }
 
 export function matchIdentity(state: MotionState): string {
@@ -22,13 +23,14 @@ function units(state: MotionState): Map<string, string> {
     let file = 0;
     for (const ch of row) {
       if (/\d/.test(ch)) file += Number(ch);
-      else { result.set(`${'abcdefgh'[file]}${8 - rank}`, ch); file++; }
+      else { result.set(`${'abcdefgh'[file]}${ranksFor(state.fen)[ranksFor(state.fen).length-1-rank]}`, ch); file++; }
     }
   });
   for (const color of ['w', 'b'] as const) {
     const champion = state.champions?.[color];
     if (champion) result.set(champion.square, `${color}:${champion.type}`);
   }
+  for(const golem of state.frontier?.golems||[])result.set(golem.square,`${golem.owner}:golem`);
   if (state.monolithSquare) result.set(state.monolithSquare, 'monolith');
   return result;
 }
@@ -45,7 +47,7 @@ export function planBoardMotion(before: MotionState, after: MotionState): BoardM
       result.moves.push({ from, to });
     }
   };
-  if (move.actionType === 'switch' && move.swappedSquares) {
+  if (move.swappedSquares && (move.actionType === 'switch' || move.actionType === 'powerup')) {
     add(move.swappedSquares[0], move.swappedSquares[1], true);
     add(move.swappedSquares[1], move.swappedSquares[0], true);
   } else if (move.actionType === 'monolith') {

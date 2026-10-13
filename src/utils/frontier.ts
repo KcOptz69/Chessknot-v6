@@ -331,7 +331,7 @@ export function executeLandingMove(s: GameState, from: string, to: string, attac
             }
             else
                 removeEntity(s, from, p.color, false);
-            frontierNotice(s, 'boss_hit', 'The Boss is weakened: one capture remains.');
+            frontierNotice(s, 'boss_hit', 'The Boss is weakened: one capture remains.',to);
             return;
         }
         delete f.pois[to];
@@ -342,7 +342,7 @@ export function executeLandingMove(s: GameState, from: string, to: string, attac
             addItem(s, p.color, boss.drop);
         else {
             f.pois[to] = boss.drop;frontierNotice(s,'drop',`${ITEM_NAMES[boss.drop]} dropped at ${to}.`,to,{item:boss.drop});}
-        frontierNotice(s, 'boss_defeat', 'The Arcane Golem was defeated. No capture points are awarded.');
+        frontierNotice(s, 'boss_defeat', 'The Arcane Golem was defeated. No capture points are awarded.',to);
         return;
     }
     if (kind === 'mimic') {
@@ -659,6 +659,7 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
                 d.lastMovedPiece[c] = ['p', 'n', 'b', 'r', 'q'].includes(p.type) ? p.type as any : null;
             }
             d.lastMovedSquare[c] = m.secondTo || to;
+            if(m.type==='play_push')d.pushTrail={id:uid('push'),owner:c,from,to:m.secondTo||to};
             d.lastMoveDetails = { player: c, actionType: m.type === 'play_push' ? 'push' : m.type === 'play_champion_move' ? 'champion_move' : m.type === 'play_awakening_knight' ? 'awakening' : 'move', from, to: m.secondTo || to, firstTo: m.secondTo ? to : undefined };
             if(m.type==='play_awakening_knight'){const q=m.secondTo||to;d.awakenedPieces||=[];if(occupant(d,q)?.color===c&&!d.awakenedPieces.includes(q))d.awakenedPieces.push(q);d.awakenedPieceSquare=q;d.awakenedByPlayer=c;d.awakenedOnTurnNumber=d.turnNumber;d.awakeningAlert={player:c,cardType:card!.type,cardName:card!.name,effectTitle:'Super Knight Awakened!',effectDescription:'The Knight can make one double jump, with at most one capture, then returns to a normal Knight.',pieceSquare:q,timestamp:Date.now()};}
             detail = `${card?.name || p.type} ${from} → ${to}.`;
@@ -1004,14 +1005,14 @@ export function rangedCapture(s: GameState, to: string, c: PlayerColor) {
         const boss = f.boss;
         if (boss.health === 2) {
             boss.health = 1;
-            frontierNotice(s, 'boss_hit', 'The ranged attack weakened the Boss.');
+            frontierNotice(s, 'boss_hit', 'The ranged attack weakened the Boss.',to);
         }
         else {
             delete f.pois[to];
             delete f.boss;
             f.pois[to] = boss.drop;
             frontierNotice(s,'drop',`${ITEM_NAMES[boss.drop]} dropped at ${to}.`,to,{item:boss.drop});
-            frontierNotice(s, 'boss_defeat', 'The Boss dropped a reward on its square.');
+            frontierNotice(s, 'boss_defeat', 'The Boss dropped a reward on its square.',to);
         }
         return;
     }

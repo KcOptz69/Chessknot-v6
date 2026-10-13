@@ -288,7 +288,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   const blackChampion = champions ? champions.b : null;
   const portalOccupied = Object.entries(grounds?.tiles ?? {}).some(([square, type]) =>
     type === 'portal' && Boolean(chess.get(square as Square) ||
-      whiteChampion?.square === square || blackChampion?.square === square)
+      whiteChampion?.square === square || blackChampion?.square === square || frontier?.golems.some(g=>g.square===square))
   );
 
   const staticStunnedSquares = staticEffect?.active ? staticEffect.stunnedSquares : [];
@@ -1763,26 +1763,9 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                     <span className="ck-traverse-flash"/>
                   </div>
                 )}
-                {/* Wind Highlights for piece moved by push card */}
-                {isPushMovedTo && (
-                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-sm flex items-center justify-center z-25">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-teal-500/25 via-cyan-400/35 to-emerald-400/25 animate-pulse" />
-                    <div key={`push-wind-${lastMoveDetails?.from}-${lastMoveDetails?.to}-${historyLog?.[0]?.id ?? ""}`} className="absolute inset-0 flex items-center justify-center opacity-80 animate-wind-gust">
-                      <Wind className="w-10 h-10 text-teal-200 filter drop-shadow-[0_0_8px_rgba(45,212,191,0.9)]" />
-                    </div>
-                  </div>
-                )}
-
-                {/* Wind Origin Trail Highlight */}
-                {isPushMovedFrom && (
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-40 z-15">
-                    <Wind className="w-6 h-6 text-teal-300" />
-                  </div>
-                )}
-
                 {/* Restricted Square Indicator */}
                 {isRestricted && (
-                  <div className="restricted-tile-overlay absolute inset-0 flex flex-col items-center justify-center bg-red-950/60 pointer-events-none">
+                  <div className="restricted-tile-overlay absolute inset-0 flex flex-col items-center justify-center bg-red-950/60 pointer-events-none"><span className="ck-lock-glow"/>
                     <Ban className="w-6 h-6 text-red-400 animate-pulse" />
                     <span className="text-[8px] font-extrabold text-red-200 uppercase tracking-tighter">
                       LOCKED
@@ -1792,7 +1775,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
                 {/* King in check warning glow */}
                 {inCheckGlow && (
-                  <div className="absolute inset-0 bg-red-600/40 animate-pulse rounded-sm pointer-events-none" />
+                  <div className="ck-check-alert absolute inset-0 bg-red-600/40 animate-pulse rounded-sm pointer-events-none"><span>!</span></div>
                 )}
 
                 {(frontierGolem||frontierPOI)&&<div data-motion-piece={frontierGolem?'golem':undefined} className={`absolute inset-0 z-10 pointer-events-none ${!frontier?.ready&&!frontierGolem?'frontier-silhouette':''} ${['bag','key','chest'].includes(frontierPOI||'')?`frontier-board-item ${frontierPOI==='chest'?'frontier-chest':''} ${piece||championPiece||frontierGolem||isMonolith?'with-piece':''}`:''}`} data-frontier-item={['bag','key','chest'].includes(frontierPOI||'')?frontierPOI:undefined} title={frontierGolem?'Controlled Golem · 10 points':frontierPOI==='boss'?'Arcane Golem':frontierPOI}>
@@ -1986,7 +1969,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             );
           })
         )}
-        <BoardEffects frontier={frontier} jokerEventId={historyLog.find(e=>e.actionType==='joker')?.id} refreshEventId={historyLog.find(e=>e.actionType==='refresh')?.id} fen={fen} pieceIds={pieceIds} champions={champions} grounds={grounds} clockAlert={clockAlert} flipped={flipBoard}/>
+        <BoardEffects pushTrail={frontierGame?.pushTrail} awards={frontierGame?.powerUpAwards} frontier={frontier} jokerEventId={historyLog.find(e=>e.actionType==='joker')?.id} refreshEventId={historyLog.find(e=>e.actionType==='refresh')?.id} fen={fen} pieceIds={pieceIds} champions={champions} grounds={grounds} clockAlert={clockAlert} flipped={flipBoard}/>
         </div>
         {/* End of 8x8 Chessboard */}
       </div>

@@ -1,5 +1,5 @@
 export const MOVE_MS = 240;
-export const HANDOFF_MS = 300;
+export const HANDOFF_MS = 800;
 export const MOTION_EASE = 'cubic-bezier(.22,.7,.25,1)';
 export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -67,14 +67,14 @@ export function snapshot(node: HTMLElement): Visual {
   return { node: clone, rect: node.getBoundingClientRect() };
 }
 
-export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HTMLElement, delay = 0, card = false) {
+export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HTMLElement, delay = 0, card = false, kind: 'move'|'switch'|'portal'|'push' = 'move') {
   const from = visual.rect;
   if (!visibleRect(from) || !visibleRect(to) || reducedMotion() || document.hidden) return;
   // Hand cards can be partly clipped by a mobile rail. Never let their copy
   // escape the viewport and introduce horizontal scrolling during a flight.
   if (card && (from.left < 0 || from.right > innerWidth || to.left < 0 || to.right > innerWidth)) return;
   const ghost = document.createElement('div');
-  ghost.className = `match-flight ${card ? 'match-flight--card' : ''}`;
+  ghost.className = `match-flight match-flight--${kind} ${card ? 'match-flight--card' : ''}`;
   ghost.setAttribute('aria-hidden', 'true');
   ghost.inert = true;
   Object.assign(ghost.style, { left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px` });
@@ -82,8 +82,20 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
   document.body.append(ghost);
   if (target) target.dataset.inFlight = 'true';
   const dx = from.left - to.left, dy = from.top - to.top;
-  batch.animate(ghost, [
-    { transform: `translate(${dx}px,${dy}px) scale(${from.width / to.width},${from.height / to.height})`, opacity: 1 },
-    { transform: 'translate(0,0) scale(1)', opacity: card && !target ? .15 : 1 },
-  ], MOVE_MS, delay, () => { ghost.remove(); if (target) delete target.dataset.inFlight; });
+  if(kind==='switch'){
+    const trail=document.createElement('div');trail.className='match-flight match-switch-trail';trail.inert=true;trail.setAttribute('aria-hidden','true');
+    const left=Math.min(from.left,to.left)-from.width,top=Math.min(from.top,to.top)-from.height;
+    const width=Math.abs(from.left-to.left)+from.width*3,height=Math.abs(from.top-to.top)+from.height*3;
+    Object.assign(trail.style,{left:`${left}px`,top:`${top}px`,width:`${width}px`,height:`${height}px`});
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+    const path=document.createElementNS(svg.namespaceURI,'path');
+    const ax=from.left-left+from.width/2,ay=from.top-top+from.height/2,bx=to.left-left+to.width/2,by=to.top-top+to.height/2;
+    path.setAttribute('d',`M${ax} ${ay} Q${(ax+bx)/2-(by-ay)*.36} ${(ay+by)/2+(bx-ax)*.36} ${bx} ${by}`);
+    svg.append(path);trail.append(svg);document.body.append(trail);
+    batch.animate(trail,[{opacity:0},{opacity:.9,offset:.35},{opacity:0}],850,0,()=>trail.remove());
+  }
+  const start = { transform: `translate(${dx}px,${dy}px) scale(${from.width / to.width},${from.height / to.height})`, opacity: 1 };
+  const end = { transform: 'translate(0,0) scale(1)', opacity: card && !target ? .15 : 1 };
+  const frames:Keyframe[]=kind==='switch'?[start,{transform:`translate(${dx/2-dy*.18}px,${dy/2+dx*.18}px) scale(1.06)`,filter:'drop-shadow(0 0 10px #bb70ff)',offset:.5},end]:kind==='portal'?[{...start,opacity:1},{transform:`translate(${dx}px,${dy}px) scale(.08)`,opacity:0,offset:.35},{transform:'translate(0,0) scale(.08)',opacity:0,offset:.55},end]:[start,end];
+  batch.animate(ghost, frames, kind==='move'?MOVE_MS:700, delay, () => { ghost.remove(); if (target) delete target.dataset.inFlight; });
 }

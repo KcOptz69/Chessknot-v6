@@ -1068,6 +1068,7 @@ function completeTurnState(state:GameState,currentTurn:PlayerColor,nextTurn:Play
     state.awakeningAlert = null;
   }
 
+  if(state.pushTrail && state.pushTrail.owner!==currentTurn)state.pushTrail=undefined;
   trimBagHands(state);
   const priorBags={...state.frontier?.bags};
   finishFrontierTurn(state,currentTurn);
@@ -3357,6 +3358,7 @@ function executeGameAction(
     }
     state.lastMovedSquare[currentTurn] = msg.to;
 
+    state.pushTrail={id:`push_${Date.now()}_${Math.random()}`,owner:currentTurn,from:msg.from,to:msg.to};
     state.lastMoveDetails = {
       player: currentTurn,
       actionType: 'push',

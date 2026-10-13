@@ -77,3 +77,12 @@ test('champion teleport metadata cannot label a friendly relocation as a capture
     lastMoveDetails: { player: 'w', actionType: 'champion_ultimate' } } as MotionState;
   assert.deepEqual(planBoardMotion(before, after), { moves: [{ from: 'e2', to: 'e4' }], captures: [] });
 });
+
+
+test('expanded board movement preserves Mystic rank coordinates',async()=>{
+ const {extendFen,FrontierBoard}=await import('../src/utils/frontierBoard.ts');
+ const before=state(extendFen('4k3/8/8/8/8/8/R7/4K3 w - - 0 1'));
+ const board=new FrontierBoard(before.fen);board.remove('a2' as any);board.put({type:'r',color:'w'},'aX' as any);
+ const after={...before,fen:board.fen(),turnNumber:2,historyLog:[{id:'push'} as any,...before.historyLog],lastMoveDetails:{player:'w' as const,actionType:'push' as const,from:'a2',to:'aX'}};
+ assert.deepEqual(planBoardMotion(before,after),{moves:[{from:'a2',to:'aX'}],captures:[]});
+});
