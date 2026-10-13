@@ -1621,9 +1621,10 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             );
 
             // Determine square base background: smooth classic ivory & walnut tones with dark mode palette
-            let squareBg = isDark
+            const baseSquareBg = isDark
               ? (isLight ? 'bg-[#a7b7cb]' : 'bg-[#4c6380]')
               : (isLight ? 'bg-[#e4eaf2]' : 'bg-[#8b9db5]');
+            let squareBg = baseSquareBg;
 
             if (isRestricted) {
               squareBg = 'bg-red-900/80 border-2 border-red-500/80';
@@ -1675,6 +1676,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
               <div
                 key={square}
                 data-tone={isLight?'light':'dark'} id={`square-${square}`}
+                data-stone-highlighted={squareBg!==baseSquareBg?'true':undefined}
+                style={{'--stone-x':`${(square.charCodeAt(0)-97)*100/7}%`,'--stone-y':`${['1','2','3','4','W','X','Y','Z','5','6','7','8'].indexOf(rank)*100/11}%`} as React.CSSProperties}
                 data-last-move={isMoveTo?'to':isMoveFrom?'from':isIntermediateMove?'via':undefined}
                 role="button" tabIndex={0} aria-label={`${square}${piece ? ` ${piece.color === 'w' ? 'White' : 'Black'} ${PIECE_NAMES[piece.type as StandardPieceType] || piece.type}` : ''}`}
                 aria-pressed={isSelected}

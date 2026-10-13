@@ -162,6 +162,13 @@ body .match-activity-notice{pointer-events:none;}
 }
 
 /* Visible, irregular stone grain without carvings or geometric patterns. */
-.game-app:is(.desktop-match,.compact-match) #chess-board>[id^="square-"]{background-image:url('/art/board/stone-grain.svg?v=stone-2')!important;background-size:100% 100%!important;background-repeat:no-repeat!important;}
+/* Each square selects its own unique slab; the actual board grid is untouched. */
+.game-app:is(.desktop-match,.compact-match) #chess-board>[id^="square-"]{background-image:none!important;isolation:isolate;}
+.game-app:is(.desktop-match,.compact-match) #chess-board>[id^="square-"]::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:url('/art/board/stone-slabs-light.svg');background-size:800% 1200%;background-position:var(--stone-x) var(--stone-y);background-repeat:no-repeat;}
+.game-app #chess-board>[data-tone="dark"]::before{background-image:url('/art/board/stone-slabs-dark.svg')!important;}
+.game-app #chess-board>.frontier-field-square[data-tone="light"]::before{background-image:url('/art/board/stone-slabs-mystic-light.svg')!important;}
+.game-app #chess-board>.frontier-field-square[data-tone="dark"]::before{background-image:url('/art/board/stone-slabs-mystic-dark.svg')!important;}
+.game-app #chess-board>[data-stone-highlighted="true"]::before{opacity:.32;}
+
 /* Portaled confirmations cover the viewport, above board/hand stacking contexts. */
 body>.ground-popup{z-index:9000!important;position:fixed!important;inset:0!important;}
