@@ -1298,7 +1298,7 @@ function executeGroundAction(room:RoomState,msg:ClientMessage,color:PlayerColor,
   if(trap){if(!trapOnOwnSide(q,color))return fail('Place traps on your side: White ranks 1–4, Black ranks 5–8.');if(['portal','defense'].includes(g.tiles[q]))return fail('Traps cannot be placed on Portal or Defense.');if(g.traps.some(t=>t.square===q&&t.owner===color&&t.type===type))return fail('Your same trap already exists here.');}
   else {if(g.tiles[q])return fail('Power tiles cannot overlap.');if(type==='portal'&&g.tiles[m.portalFrom]!=='portal')return fail('Choose which portal to relocate.');}
   g.charges[color][type as keyof typeof g.charges.w]!--;
-  if(trap)g.traps.push({id:`trap_${Date.now()}_${Math.random()}`,type,owner:color,square:q});else{if(type==='portal')delete g.tiles[m.portalFrom];g.tiles[q]=type;if(type==='portal'||type==='defense')g.traps=g.traps.filter(t=>t.square!==q);}
+  if(trap)g.traps.push({id:`trap_${Date.now()}_${Math.random()}`,type,owner:color,square:q,placedTurn:s.turnNumber});else{if(type==='portal')delete g.tiles[m.portalFrom];g.tiles[q]=type;if(type==='portal'||type==='defense')g.traps=g.traps.filter(t=>t.square!==q);}
   g.placementTurns.push(g.completedTurns+1);groundEvent(s,trap?'trap-place':'tile-place',trap?`${color==='w'?'White':'Black'} placed a trap.`:`${color==='w'?'White':'Black'} placed ${type} at ${q}.`);
   s.lastMoveDetails={player:color,actionType:'powerup'};const next=color==='w'?'b':'w';s.fen=syncFenTurn(s.fen,next);advanceTurnState(s,color,next);return true;
  }

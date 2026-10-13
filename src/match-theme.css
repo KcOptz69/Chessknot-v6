@@ -160,3 +160,8 @@ body .match-activity-notice{pointer-events:none;}
 @media (prefers-reduced-motion:reduce) {
   [data-motion-piece][data-poisoned="true"] > .v5-art {animation:none;}
 }
+
+/* Visible, irregular stone grain without carvings or geometric patterns. */
+.game-app:is(.desktop-match,.compact-match) #chess-board>[id^="square-"]{background-image:url('/art/board/stone-grain.svg?v=stone-2')!important;background-size:100% 100%!important;background-repeat:no-repeat!important;}
+/* Portaled confirmations cover the viewport, above board/hand stacking contexts. */
+body>.ground-popup{z-index:9000!important;position:fixed!important;inset:0!important;}

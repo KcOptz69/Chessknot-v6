@@ -1,4 +1,4 @@
-import {portalTravelTarget,initialGrounds,trapOnOwnSide} from "../src/utils/grounds.ts";
+import {portalTravelTarget,initialGrounds,trapOnOwnSide,landGround} from "../src/utils/grounds.ts";
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync,writeFileSync,unlinkSync} from 'node:fs';
@@ -231,4 +231,12 @@ for(const color of ['w','b'] as const)for(const type of ['mine','poison','disarm
  const r=setup(),s=r.gameState;s.turn=color;s.fen=s.fen.replace(' w ',` ${color} `);s.grounds=initialGrounds(true,()=>.2,[type,'boost']);s.grounds.charges[color][type]=1;
  const square=color==='w'?'a3':'a6';assert.equal(trapOnOwnSide(square,color),true);
  assert.equal(action(r,{type:'place_ground',groundType:type,square},color).length,0);assert.ok(r.gameState.grounds.traps.some((t:any)=>t.square===square&&t.owner===color));
+});
+
+test('activated trap log records its original placement turn alongside the activation turn',()=>{
+ const r=setup(),s=r.gameState;s.turnNumber=7;s.grounds=initialGrounds(true,()=>.2,['poison','boost']);s.grounds.charges.w.poison=1;
+ assert.equal(action(r,{type:'place_ground',groundType:'poison',square:'a3'}).length,0);
+ assert.equal(r.gameState.grounds.traps[0].placedTurn,7);
+ const after=r.gameState,b=createSafeChess(after.fen);b.put({type:'p',color:'b'},'a3');after.fen=b.fen();after.turnNumber=12;landGround(after,'a3');
+ const log=after.historyLog.find((e:any)=>e.trapEventType==='poison');assert.equal(log.turnNumber,12);assert.match(log.detail,/Placed on turn 7/);
 });
