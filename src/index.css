@@ -1686,3 +1686,27 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
 }
 .activity-notice-art{display:flex;align-items:center;justify-content:center;gap:12px;margin:4px 0 10px;}
 .activity-notice-art>.v5-art{width:64px;height:64px;}
+
+/* Traverse arrival visual effect (replays for each new frontier event). */
+.ck-traverse-effect{position:absolute;inset:0;pointer-events:none;z-index:35;overflow:hidden;animation:ck-traverse-fade 1.4s ease-out both;}
+.ck-traverse-ring{position:absolute;inset:9%;border:3px solid #a78bfa;border-radius:50%;box-shadow:0 0 12px #8b5cf6, inset 0 0 12px #c4b5fd;animation:ck-traverse-expand 1s ease-out both;}
+.ck-traverse-ring-delayed{animation-delay:.18s;}
+.ck-traverse-flash{position:absolute;inset:15%;border-radius:50%;background:radial-gradient(circle,rgba(240,220,255,.9),rgba(139,92,246,.35) 45%,transparent 75%);animation:ck-traverse-flash .9s ease-out both;}
+@keyframes ck-traverse-expand{from{transform:scale(.15) rotate(-30deg);opacity:1}to{transform:scale(1.6) rotate(70deg);opacity:0}}
+@keyframes ck-traverse-flash{0%{opacity:0;transform:scale(.2)}35%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.6)}}
+@keyframes ck-traverse-fade{0%,75%{opacity:1}100%{opacity:0}}
+
+/* Compact hand growth is capped; surplus expands header padding, not controls.
+   Keep the existing card widths, scroll/stack rules, descriptions and actions. */
+:root .compact-match:not(.phone-landscape) #player-hand-container .hand-grid>.compact-hand-card{
+ height:var(--compact-hand-card-height,62px)!important;
+ max-height:var(--compact-card-height-limit,100px)!important;
+ min-height:0!important;aspect-ratio:auto!important;
+}
+:root .compact-match.phone-landscape #player-hand-container .hand-grid>.compact-hand-card{
+ max-height:var(--compact-card-height-limit,100px)!important;min-height:0!important;
+}
+:root .compact-match>header{
+ padding-top:calc(3px + env(safe-area-inset-top) + var(--compact-header-extra,0px)/2)!important;
+ padding-bottom:calc(3px + var(--compact-header-extra,0px)/2)!important;
+}

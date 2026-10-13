@@ -229,14 +229,53 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
       nodes.forEach((el,i)=>{if(el && names[i]){const value=`${el.getBoundingClientRect().height}px`;app.style.setProperty(names[i],value);document.body.style.setProperty(names[i],value);}});
       const region=nodes[5]?.getBoundingClientRect();
       const boardWidth=Math.max(0,(region?.width||0)-(!compactUI?180:0));
-      if(compactUI&&!phoneLandscape&&window.innerWidth<=640&&window.innerHeight>window.innerWidth){
-        const card=app.querySelector<HTMLElement>('#player-hand-container .compact-hand-card');
-        const current=card?.getBoundingClientRect().height||62;
-        // Include the current card height so resizing converges rather than oscillates.
-        const height=gameState.frontier?.expanded?62:Math.max(62,Math.floor(current+(region?.height||0)-boardWidth));
-        const value=`${height}px`;
-        if(app.style.getPropertyValue('--portrait-hand-card-height')!==value)app.style.setProperty('--portrait-hand-card-height',value);
-      }else app.style.removeProperty('--portrait-hand-card-height');
+      if(compactUI){
+        const hand=app.querySelector<HTMLElement>('#player-hand-container .hand-grid');
+        const cards=hand?.querySelectorAll<HTMLElement>('.compact-hand-card');
+        const card=cards?.[0];
+        const mobile=phoneLandscape||Math.min(window.innerWidth,window.innerHeight)<=640;
+        const maxCardHeight=mobile?100:120;
+        const headerExtra=parseFloat(app.style.getPropertyValue('--compact-header-extra'))||0;
+        const expanded=Boolean(gameState.frontier?.expanded);
+        const boardHeight=boardWidth*(expanded?1.5:1);
+        let extra=0;
+        app.style.setProperty('--compact-card-height-limit',`${maxCardHeight}px`);
+        if(phoneLandscape){
+          // The existing hand rail has multiple rows. Keep its widths and tracks;
+          // only give space to the header once every row has reached the cap.
+          if(hand&&cards?.length&&!expanded){
+            const style=getComputedStyle(hand);
+            const padding=parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
+            const gaps=(parseFloat(style.rowGap)||0)*Math.max(0,cards.length-1);
+            const railSurplus=hand.getBoundingClientRect().height+headerExtra-padding-gaps-maxCardHeight*cards.length;
+            const boardSurplus=(region?.height||0)+headerExtra-boardHeight;
+            const support=app.querySelector<HTMLElement>('.landscape-support-column');
+            let supportSurplus=Infinity;
+            if(support){
+              const children=Array.from(support.children) as HTMLElement[];
+              const content=children.reduce((n,el)=>n+el.getBoundingClientRect().height,0)+(parseFloat(getComputedStyle(support).rowGap)||0)*Math.max(0,children.length-1);
+              supportSurplus=support.getBoundingClientRect().height+headerExtra-content;
+            }
+            extra=Math.max(0,Math.floor(Math.min(railSurplus,boardSurplus,supportSurplus)));
+          }
+          app.style.removeProperty('--compact-hand-card-height');
+        }else{
+          const minimum=mobile?62:window.innerWidth>window.innerHeight?70:62;
+          const current=card?.getBoundingClientRect().height||minimum;
+          // Reclaim our previous allocation before recomputing it. This keeps
+          // ResizeObserver stable when the header and hand change each other.
+          const spare=Math.max(0,Math.floor((region?.height||0)+headerExtra+current-minimum-boardHeight));
+          const height=expanded?minimum:Math.min(maxCardHeight,minimum+spare);
+          if(card&&!expanded)extra=Math.max(0,spare-(height-minimum));
+          const value=`${height}px`;
+          if(app.style.getPropertyValue('--compact-hand-card-height')!==value)app.style.setProperty('--compact-hand-card-height',value);
+        }
+        const spacing=`${extra}px`;
+        if(app.style.getPropertyValue('--compact-header-extra')!==spacing)app.style.setProperty('--compact-header-extra',spacing);
+        app.style.removeProperty('--portrait-hand-card-height');
+      }else{
+        ['--compact-hand-card-height','--compact-header-extra','--compact-card-height-limit','--portrait-hand-card-height'].forEach(name=>app.style.removeProperty(name));
+      }
       const dockTop=nodes[2]?.getBoundingClientRect().top;
       const availableHeight=!compactUI && region && dockTop!=null ? Math.min(region.height,dockTop-region.top-8) : region?.height||0;
       // The expanded portrait phone board uses full width and scrolls its 12 ranks.
@@ -246,10 +285,12 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
       const size=Math.max(0,(fitExpanded?Math.min(boardWidth*1.5,availableHeight):fullWidth?boardWidth:Math.min(boardWidth,availableHeight))-4);
       app.style.setProperty('--compact-board-size',`${size}px`);
     };
-    const observer=new ResizeObserver(measure);nodes.forEach(el=>{if(el)observer.observe(el);});measure();
-    window.addEventListener('resize',measure);window.visualViewport?.addEventListener('resize',measure);
-    return ()=>{observer.disconnect();window.removeEventListener('resize',measure);window.visualViewport?.removeEventListener('resize',measure);};
-  },[compactUI,phoneLandscape,gameState.status,Boolean(selectedCard),Boolean(gameState.frontier?.expanded),frontierZoomOut]);
+    let frame=0;
+    const schedule=()=>{if(!frame)frame=requestAnimationFrame(()=>{frame=0;measure();});};
+    const observer=new ResizeObserver(schedule);nodes.forEach(el=>{if(el)observer.observe(el);});measure();
+    window.addEventListener('resize',schedule);window.visualViewport?.addEventListener('resize',schedule);
+    return ()=>{observer.disconnect();cancelAnimationFrame(frame);window.removeEventListener('resize',schedule);window.visualViewport?.removeEventListener('resize',schedule);};
+  },[compactUI,phoneLandscape,gameState.status,Boolean(selectedCard),Boolean(gameState.frontier?.expanded),frontierZoomOut,gameState.hands.w.length,gameState.hands.b.length]);
   const [onlineWildPowerUp, setIsWildPowerUp] = React.useState(false);
   const [onlineMonolithPowerUp, setIsMonolithPowerUp] = React.useState(false);
   const isWildPowerUp=tutorialMode?tutorialState.selectedCard==='wild-power':onlineWildPowerUp;
