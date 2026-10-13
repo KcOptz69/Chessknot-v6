@@ -1578,8 +1578,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
               lastMoveDetails?.actionType === 'monolith' && lastMoveDetails.monolithFrom === square;
 
             // Push Card Wind Highlighting:
-            const latestTraverse = frontier?.events?.[0]?.kind === 'traverse' ? frontier.events[0] : null;
-            const isTraverseArrival = Boolean(latestTraverse && lastMoveDetails?.to === square);
+            const latestTraverse = frontier?.traverseArrival;
+            const isTraverseArrival = latestTraverse?.square === square;
             const isPushMove = lastMoveDetails?.actionType === 'push';
             const isPushMovedFrom = isPushMove && lastMoveDetails?.from === square;
             const isPushMovedTo = isPushMove && lastMoveDetails?.to === square;

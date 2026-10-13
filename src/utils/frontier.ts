@@ -57,6 +57,7 @@ export interface FrontierState {
         piece?: {type:string;color:PlayerColor;awakened?:boolean};
     }>;
     clockLocked?: boolean;
+    traverseArrival?: {id:string;owner:PlayerColor;square:string};
 }
 export const initialFrontier = (): FrontierState => ({ expanded: false, id: '', preparation: { w: false, b: false }, ready: false, pois: {}, inventories: { w: [], b: [] }, bags: { w: false, b: false }, keys: { w: 0, b: 0 }, ownerTurns: { w: 0, b: 0 }, golems: [], events: [] });
 const uid = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -88,7 +89,7 @@ export function expandFrontier(s: GameState, random = Math.random) { const f = s
 export function checkExpansion(s: GameState) { if (!s.frontier?.expanded && s.status === 'playing' && ((s.whitePoints <= 25 && s.blackPoints <= 25) || s.turnNumber > 50))
     expandFrontier(s); }
 export function finishFrontierTurn(s: GameState, c: PlayerColor) { const f = s.frontier; if (!f)
-    return; trimBagHands(s); f.ownerTurns[c]++; if (f.expanded && !f.ready && s.turnNumber >= (f.expandedTurn || 0)) {
+    return; if(f.traverseArrival&&f.traverseArrival.owner!==c)delete f.traverseArrival; trimBagHands(s); f.ownerTurns[c]++; if (f.expanded && !f.ready && s.turnNumber >= (f.expandedTurn || 0)) {
     f.preparation[c] = true;
     if (f.preparation.w && f.preparation.b) {
         f.ready = true;
@@ -607,6 +608,7 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
                     throw Error('Traverse requires an empty, unrestricted Mystic Field square.');
                 moveEntity(d, from, to);
                 frontierLanding(d, to);
+                fd.traverseArrival={id:uid('traverse-arrival'),owner:c,square:to};
                 d.lastMovedPiece[c] = null;
             }
             else {

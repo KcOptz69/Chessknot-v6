@@ -165,3 +165,18 @@ test('Monolith blocks portal travel to the opposite tile',()=>{
  r.gameState.monolithSquare='cX';assert.equal(portalTravelTarget(r.gameState,'w','a2'),undefined);
  const before=structuredClone(r.gameState);action(r,{type:'portal_move',from:'a2'});assert.deepEqual(r.gameState,before);
 });
+test('Traverse marker survives free actions and disappears after the opponent completes a move',()=>{
+ const r=setup();play(r,'traverse','a2','aX');
+ const arrival=structuredClone(r.gameState.frontier.traverseArrival);
+ assert.equal(arrival.owner,'w');assert.equal(arrival.square,'aX');
+ assert.equal(action(r,{type:'use_powerup_vision'},'b').length,0);
+ assert.deepEqual(r.gameState.frontier.traverseArrival,arrival);
+ const card=createCard('rook',881);r.gameState.hands.b=[card];
+ assert.equal(action(r,{type:'play_card_move',cardId:card.id,from:'h7',to:'h6'},'b').length,0);
+ assert.equal(r.gameState.frontier.traverseArrival,undefined);
+});
+test('invalid Traverse cannot create an arrival marker or consume a card',()=>{
+ const r=setup(),card=createCard('traverse',882);r.gameState.hands.w=[card];const before=JSON.stringify(r.gameState);
+ assert.ok(action(r,{type:'play_card_move',cardId:card.id,from:'a2',to:'a8'}).length);
+ assert.equal(JSON.stringify(r.gameState),before);assert.equal(r.gameState.frontier.traverseArrival,undefined);
+});
