@@ -183,6 +183,7 @@ export const DiscardModal: React.FC<DiscardModalProps> = ({
 // --- DISCARD & REDRAW MODAL (Counts as a Move) ---
 interface DiscardRedrawModalProps {
   hand: Card[];
+  maxCards?: number;
   isOpen: boolean;
   onConfirm: (selectedCardIds: string[]) => void;
   onPassTurn?: () => void;
@@ -191,6 +192,7 @@ interface DiscardRedrawModalProps {
 
 export const DiscardRedrawModal: React.FC<DiscardRedrawModalProps> = ({
   hand,
+  maxCards=5,
   isOpen,
   onConfirm,
   onPassTurn,
@@ -207,13 +209,13 @@ export const DiscardRedrawModal: React.FC<DiscardRedrawModalProps> = ({
   const toggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter((i) => i !== id));
-    } else if (selectedIds.length < 5) {
+    } else if (selectedIds.length < maxCards) {
       setSelectedIds([...selectedIds, id]);
     }
   };
 
   const selectAll = () => {
-    const ids = hand.slice(0, 5).map((c) => c.id);
+    const ids = hand.slice(0, maxCards).map((c) => c.id);
     setSelectedIds(ids);
   };
 
@@ -244,13 +246,13 @@ export const DiscardRedrawModal: React.FC<DiscardRedrawModalProps> = ({
         </div>
 
         <p className="text-xs text-stone-600 dark:text-stone-400 mb-3">
-          Select up to 5 cards to discard and redraw from the deck (counts as your move), or choose to pass the turn without exchanging cards:
+          Select up to {maxCards} cards to discard and redraw from the deck (counts as your move), or choose to pass the turn without exchanging cards:
         </p>
 
         {/* Quick select buttons */}
         <div className="flex items-center justify-between mb-3 text-xs">
           <span className="text-stone-500 dark:text-stone-400 font-medium">
-            Selected: <strong className="text-teal-800 dark:text-teal-400 font-bold">{selectedIds.length}</strong> / up to 5 cards
+            Selected: <strong className="text-teal-800 dark:text-teal-400 font-bold">{selectedIds.length}</strong> / up to {maxCards} cards
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -258,7 +260,7 @@ export const DiscardRedrawModal: React.FC<DiscardRedrawModalProps> = ({
               onClick={selectAll}
               className="text-[11px] text-teal-700 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 font-bold hover:underline cursor-pointer"
             >
-              Select All ({Math.min(hand.length, 5)})
+              Select All ({Math.min(hand.length, maxCards)})
             </button>
             <span className="text-stone-300 dark:text-stone-600">•</span>
             <button

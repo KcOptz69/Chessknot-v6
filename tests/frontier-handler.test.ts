@@ -1,4 +1,4 @@
-import {portalTravelTarget} from "../src/utils/grounds.ts";
+import {portalTravelTarget,initialGrounds,trapOnOwnSide} from "../src/utils/grounds.ts";
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync,writeFileSync,unlinkSync} from 'node:fs';
@@ -179,4 +179,56 @@ test('invalid Traverse cannot create an arrival marker or consume a card',()=>{
  const r=setup(),card=createCard('traverse',882);r.gameState.hands.w=[card];const before=JSON.stringify(r.gameState);
  assert.ok(action(r,{type:'play_card_move',cardId:card.id,from:'a2',to:'a8'}).length);
  assert.equal(JSON.stringify(r.gameState),before);assert.equal(r.gameState.frontier.traverseArrival,undefined);
+});
+test('expanded Push retains wind-effect metadata for Mystic Field and ordinary destinations',()=>{
+ for(const to of ['aW','aX','a3']){
+  const r=setup(),card=createCard('push',883);r.gameState.hands.w=[card];
+  assert.equal(action(r,{type:'play_push',cardId:card.id,from:'a2',to}).length,0);
+  assert.equal(r.gameState.lastMoveDetails.actionType,'push');
+  assert.equal(r.gameState.lastMoveDetails.from,'a2');assert.equal(r.gameState.lastMoveDetails.to,to);
+  assert.equal(createSafeChess(r.gameState.fen).get(to as any)?.type,'r');
+ }
+});
+test('Golem summon and self-destruct carry explicit visual artwork metadata',()=>{
+ const r=setup();addItem(r.gameState,'w','core');
+ assert.equal(action(r,{type:'frontier_item',item:'core',to:'a1'}).length,0);
+ const summon=r.gameState.frontier.events.find((e:any)=>e.kind==='golem_summon');
+ assert.equal(summon.square,'a1');assert.deepEqual(summon.piece,{type:'golem',color:'w'});
+ r.gameState.turn='w';r.gameState.status='playing';r.gameState.fen=r.gameState.fen.replace(' b ',' w ');
+ assert.equal(action(r,{type:'frontier_self_destruct',from:'a1'}).length,0);
+ const blast=r.gameState.frontier.events.find((e:any)=>e.kind==='golem_blast');
+ assert.equal(blast.square,'a1');assert.deepEqual(blast.piece,{type:'golem',color:'w'});
+ assert.equal(r.gameState.frontier.events.filter((e:any)=>e.kind==='golem_explosion').length,1);
+});
+test('Golem blast persists through free actions and invalid moves, then clears on opponent turn completion',()=>{
+ const r=setup();r.gameState.frontier.golems=[{id:'blast',owner:'w',square:'c3'}];
+ const b=createSafeChess(r.gameState.fen);b.put({type:'p',color:'b'},'c4');r.gameState.fen=b.fen();
+ assert.equal(action(r,{type:'frontier_self_destruct',from:'c3'}).length,0);
+ const blast=structuredClone(r.gameState.frontier.activeGolemBlast);
+ assert.equal(blast.owner,'w');assert.ok(blast.affected.some((v:any)=>v.square==='c4'&&v.piece.type==='p'));
+ assert.equal(action(r,{type:'use_powerup_vision'},'b').length,0);assert.deepEqual(r.gameState.frontier.activeGolemBlast,blast);
+ const card=createCard('rook',901);r.gameState.hands.b=[card];
+ assert.ok(action(r,{type:'play_card_move',cardId:card.id,from:'h7',to:'f6'},'b').length);assert.deepEqual(r.gameState.frontier.activeGolemBlast,blast);
+ assert.equal(action(r,{type:'play_card_move',cardId:card.id,from:'h7',to:'h6'},'b').length,0);
+ assert.equal(r.gameState.frontier.activeGolemBlast,undefined);
+});
+
+test('Backpack permits seven-card Redraw; without it seven-card requests are atomic failures',()=>{
+ for(const bag of [false,true]){
+  const r=setup();r.gameState.frontier.bags.w=bag;r.gameState.hands.w=Array.from({length:7},(_,i)=>createCard('pawn',920+i));
+  const ids=r.gameState.hands.w.map((c:any)=>c.id),before=JSON.stringify(r.gameState);
+  const replies=action(r,{type:'discard_redraw',cardIds:ids});
+  if(bag){assert.equal(replies.length,0);assert.equal(r.gameState.hands.w.length,7);assert.equal(r.gameState.turn,'b');}
+  else{assert.ok(replies.length);assert.equal(JSON.stringify(r.gameState),before);}
+ }
+});
+for(const color of ['w','b'] as const)for(const type of ['mine','poison','disarm','banish'] as const)test(`${color} ${type} rejects enemy and Mystic ranks without consuming charges`,()=>{
+ for(const square of [color==='w'?'a6':'a3','aW','aX','aY','aZ']){
+  const r=setup(),s=r.gameState;s.turn=color;s.fen=s.fen.replace(' w ',` ${color} `);s.grounds=initialGrounds(true,()=>.2,[type,'boost']);s.grounds.charges[color][type]=1;
+  assert.equal(trapOnOwnSide(square,color),false);const before=JSON.stringify(s);
+  assert.ok(action(r,{type:'place_ground',groundType:type,square},color).length);assert.equal(JSON.stringify(r.gameState),before);
+ }
+ const r=setup(),s=r.gameState;s.turn=color;s.fen=s.fen.replace(' w ',` ${color} `);s.grounds=initialGrounds(true,()=>.2,[type,'boost']);s.grounds.charges[color][type]=1;
+ const square=color==='w'?'a3':'a6';assert.equal(trapOnOwnSide(square,color),true);
+ assert.equal(action(r,{type:'place_ground',groundType:type,square},color).length,0);assert.ok(r.gameState.grounds.traps.some((t:any)=>t.square===square&&t.owner===color));
 });

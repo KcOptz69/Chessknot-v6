@@ -58,6 +58,7 @@ export interface FrontierState {
     }>;
     clockLocked?: boolean;
     traverseArrival?: {id:string;owner:PlayerColor;square:string};
+    activeGolemBlast?: {id:string;owner:PlayerColor;square:string;piece:{type:string;color:PlayerColor};affected:Array<{square:string;piece:{type:string;color:PlayerColor}}>};
 }
 export const initialFrontier = (): FrontierState => ({ expanded: false, id: '', preparation: { w: false, b: false }, ready: false, pois: {}, inventories: { w: [], b: [] }, bags: { w: false, b: false }, keys: { w: 0, b: 0 }, ownerTurns: { w: 0, b: 0 }, golems: [], events: [] });
 const uid = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -89,7 +90,7 @@ export function expandFrontier(s: GameState, random = Math.random) { const f = s
 export function checkExpansion(s: GameState) { if (!s.frontier?.expanded && s.status === 'playing' && ((s.whitePoints <= 25 && s.blackPoints <= 25) || s.turnNumber > 50))
     expandFrontier(s); }
 export function finishFrontierTurn(s: GameState, c: PlayerColor) { const f = s.frontier; if (!f)
-    return; if(f.traverseArrival&&f.traverseArrival.owner!==c)delete f.traverseArrival; trimBagHands(s); f.ownerTurns[c]++; if (f.expanded && !f.ready && s.turnNumber >= (f.expandedTurn || 0)) {
+    return; if(f.traverseArrival&&f.traverseArrival.owner!==c)delete f.traverseArrival; if(f.activeGolemBlast&&f.activeGolemBlast.owner!==c)delete f.activeGolemBlast; trimBagHands(s); f.ownerTurns[c]++; if (f.expanded && !f.ready && s.turnNumber >= (f.expandedTurn || 0)) {
     f.preparation[c] = true;
     if (f.preparation.w && f.preparation.b) {
         f.ready = true;
@@ -658,7 +659,7 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
                 d.lastMovedPiece[c] = ['p', 'n', 'b', 'r', 'q'].includes(p.type) ? p.type as any : null;
             }
             d.lastMovedSquare[c] = m.secondTo || to;
-            d.lastMoveDetails = { player: c, actionType: m.type === 'play_awakening_knight' ? 'awakening' : 'move', from, to: m.secondTo || to, firstTo: m.secondTo ? to : undefined };
+            d.lastMoveDetails = { player: c, actionType: m.type === 'play_push' ? 'push' : m.type === 'play_champion_move' ? 'champion_move' : m.type === 'play_awakening_knight' ? 'awakening' : 'move', from, to: m.secondTo || to, firstTo: m.secondTo ? to : undefined };
             if(m.type==='play_awakening_knight'){const q=m.secondTo||to;d.awakenedPieces||=[];if(occupant(d,q)?.color===c&&!d.awakenedPieces.includes(q))d.awakenedPieces.push(q);d.awakenedPieceSquare=q;d.awakenedByPlayer=c;d.awakenedOnTurnNumber=d.turnNumber;d.awakeningAlert={player:c,cardType:card!.type,cardName:card!.name,effectTitle:'Super Knight Awakened!',effectDescription:'The Knight can make one double jump, with at most one capture, then returns to a normal Knight.',pieceSquare:q,timestamp:Date.now()};}
             detail = `${card?.name || p.type} ${from} → ${to}.`;
             if(card?.type.startsWith('awakening_')&&(m.asWild||m.type==='play_awakening_as_wild'))detail=`${c==='w'?'White':'Black'} played ${card.name} as Wild: ${from} → ${to}.`;
@@ -687,6 +688,18 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
             const original=groundPiece(s,m.from)||occupant(s,m.from);
             const piece=original?{...original,awakened:s.awakenedPieces?.includes(m.from)}:undefined;
             const id=uid('flight');fd.events.unshift({id,kind:'wings_flight',detail:'Wings of Flight',from:m.from,square:m.to,piece});
+        }
+        if(m.type==='frontier_item'&&m.item==='core') {
+            fd.events.unshift({id:uid('golem_summon'),kind:'golem_summon',detail:'Golem Core summoned a controllable Golem.',square:m.to||m.targetSquare,piece:{type:'golem',color:c}});
+        }
+        if(m.type==='frontier_self_destruct') {
+            const affected=adjacent(m.from,s.fen).flatMap(square=>{
+                const piece=occupant(s,square);
+                return piece&&!occupant(d,square)?[{square,piece:{type:piece.type,color:piece.color}}]:[];
+            });
+            const blast={id:uid('golem_blast'),owner:c,square:m.from,piece:{type:'golem',color:c},affected};
+            fd.activeGolemBlast=blast;
+            fd.events.unshift({...blast,kind:'golem_blast',detail:'Golem self-destructed.'});
         }
         if(m.type==='frontier_item'&&m.item==='banner') {
             const id=uid('pawn_summon');fd.events.unshift({id,kind:'pawn_summon',detail:'Footsoldier’s Banner summoned a Pawn.',square:m.to,piece:{type:'p',color:c}});

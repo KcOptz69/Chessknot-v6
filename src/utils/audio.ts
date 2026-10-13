@@ -1725,3 +1725,31 @@ export function playGroundEffect(type: 'mine' | 'poison' | 'banish' | 'disarm' |
 }
 
 
+
+/** Frontier clips use the sound controls and a synthetic fallback on failure. */
+export function playFrontierSound(clip:string,fallback?:'wind'|'explosion'|'summon') {
+ if(!isSoundEnabled()||getSoundVolume()<=0.001)return;
+ let failed=false;
+ const recover=()=>{if(failed)return;failed=true;if(fallback==='wind')playWindSound();else if(fallback==='explosion')playMineSound();else if(fallback==='summon')playAwakeningPowerupSound();};
+ try{const sound=new Audio(`/audio/frontier/${clip}.mp3`);sound.volume=.5*getSoundVolume();sound.onerror=recover;void sound.play().catch(recover);}catch{recover();}
+}
+
+/** A single detonation: sharp noise attack, descending bass and debris rumble. */
+export function playGolemExplosionSound() {
+ if(!isSoundEnabled()||getSoundVolume()<=0.001)return;
+ const ctx=getAudioContext();if(!ctx)return;
+ try{
+  const now=ctx.currentTime,dest=getAudioDest(ctx);
+  const bass=ctx.createOscillator(),bassGain=ctx.createGain();
+  bass.type='sine';bass.frequency.setValueAtTime(115,now);bass.frequency.exponentialRampToValueAtTime(28,now+.75);
+  bassGain.gain.setValueAtTime(.001,now);bassGain.gain.linearRampToValueAtTime(.7,now+.012);bassGain.gain.exponentialRampToValueAtTime(.001,now+1.25);
+  bass.connect(bassGain);bassGain.connect(dest);bass.start(now);bass.stop(now+1.3);
+  const buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*1.8),ctx.sampleRate),data=buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
+  const noise=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+  noise.buffer=buffer;filter.type='lowpass';filter.frequency.setValueAtTime(6000,now);filter.frequency.exponentialRampToValueAtTime(140,now+1.6);
+  gain.gain.setValueAtTime(.001,now);gain.gain.linearRampToValueAtTime(.65,now+.008);gain.gain.exponentialRampToValueAtTime(.22,now+.18);gain.gain.exponentialRampToValueAtTime(.001,now+1.7);
+  noise.connect(filter);filter.connect(gain);gain.connect(dest);noise.start(now);noise.stop(now+1.8);
+  bass.onended=()=>{bass.disconnect();bassGain.disconnect();};noise.onended=()=>{noise.disconnect();filter.disconnect();gain.disconnect();};
+ }catch{}
+}

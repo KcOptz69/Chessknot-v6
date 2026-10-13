@@ -6,6 +6,10 @@ import type { GameState, PlayerColor, CapturedPiece, ChampionPiece } from '../ty
 export const GROUND_TYPES = ['mine','poison','disarm','banish','portal','boost','gravity','defense'] as const;
 export type GroundType = typeof GROUND_TYPES[number];
 export const GROUND_NAMES: Record<GroundType,string> = {mine:'Mine Trap',poison:'Poison Trap',disarm:'Disarm Trap',banish:'Banish Trap',portal:'Portal',boost:'Boost',gravity:'Gravity',defense:'Defense'};
+/** Mystic Field ranks never extend a player's trap-placement territory. */
+export function trapOnOwnSide(square:string,color:PlayerColor):boolean {
+ const rank=Number(square.slice(1));return /^[a-h][1-8]$/.test(square)&&(color==='w'?rank<=4:rank>=5);
+}
 export interface Trap {id:string;type:GroundType;owner:PlayerColor;square:string}
 export interface Debuff {square:string;color:PlayerColor;owner:PlayerColor;remaining?:number;appliedTurn:number}
 export interface Banished {pieceId?:string;appliedTurn:number;square:string;piece:CapturedPiece;champion?:ChampionPiece;remaining:number;owner:PlayerColor;superPawn:boolean;superKnight:boolean;rook?:any;golem?:{id:string;owner:PlayerColor;square:string};poison?:Debuff;disarm?:Debuff}

@@ -1,3 +1,4 @@
+import {trapOnOwnSide} from './utils/grounds.ts';
 import {readMatchNotice,writeMatchNotice} from './utils/matchNotices.ts';
 import {createRoomConnection} from './utils/roomConnection.ts';
 import {GolemActionPanel,FrontierExpandOffer,FrontierDropNotices,FrontierIntro,FrontierInventory,FrontierArt} from './components/FrontierUI.tsx';
@@ -64,6 +65,8 @@ import {
 } from './components/Modals.tsx';
 import { Wifi, WifiOff, ArrowRightLeft, Ban, RefreshCw, Info, X, Layers, ScrollText, Zap, Maximize, ZoomIn, Crosshair, MessageSquare } from 'lucide-react';
 import {
+  playFrontierSound,
+  playGolemExplosionSound,
   playOpponentMoveSound,
   playMoveSound,
   playWindSound,
@@ -325,7 +328,18 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const [frontierFrom,setFrontierFrom]=React.useState<string|null>(null);
   const frontierSeen=React.useRef('');
   const frontierSounds=React.useRef(new Set<string>());
-  React.useEffect(()=>{const f=gameState.frontier;if(!f?.expanded){frontierSeen.current='';return;}if(frontierSeen.current!==f.id){frontierSeen.current=f.id;if(!readMatchNotice('frontier:'+f.id,false)){writeMatchNotice('frontier:'+f.id,true);setFrontierIntro(true);}}const audioMap:Record<string,string>={expand:'01-board-expansion',key:'02-chest-key',bag:'03-wayfarers-satchel',chest:'04-chest-opening',mimic:'05-mimic-chest',item:'06-item-use',boss_hit:'07-boss-first-damage',boss_defeat:'08-boss-fallen',summon:'09-golem-summon',traverse:'10-traverse',golem_explosion:'11-golem-explosion'};for(const e of [...f.events].reverse()){if(frontierSounds.current.has(e.id))continue;frontierSounds.current.add(e.id);if(audioMap[e.kind]&&isSoundEnabled()){const a=new Audio(`/audio/frontier/${audioMap[e.kind]}.mp3`);a.volume=.3 * getSoundVolume();void a.play().catch(()=>{});}}},[gameState.frontier]);
+  React.useEffect(()=>{
+    const f=gameState.frontier;if(!f)return;
+    if(f.expanded&&frontierSeen.current!==f.id){frontierSeen.current=f.id;if(!readMatchNotice('frontier:'+f.id,false)){writeMatchNotice('frontier:'+f.id,true);setFrontierIntro(true);}}
+    const audioMap:Record<string,string>={expand:'01-board-expansion',key:'02-chest-key',bag:'03-wayfarers-satchel',chest:'04-chest-opening',mimic:'05-mimic-chest',item:'06-item-use',boss_hit:'07-boss-first-damage',boss_defeat:'08-boss-fallen',summon:'09-golem-summon',traverse:'10-traverse',golem_explosion:'11-golem-explosion'};
+    for(const e of [...f.events].reverse()){
+      if(frontierSounds.current.has(e.id))continue;
+      frontierSounds.current.add(e.id);
+      if(e.kind==='wings_flight'){playWindSound();continue;}
+      if(e.kind==='golem_explosion'){playGolemExplosionSound();continue;}
+      if(audioMap[e.kind])playFrontierSound(audioMap[e.kind],e.kind==='golem_explosion'?'explosion':e.kind==='summon'?'summon':undefined);
+    }
+  },[gameState.frontier]);
   React.useEffect(()=>setFrontierFrom(null),[gameState.turnNumber]);
   const [groundsIntro,setGroundsIntro]=React.useState(false);
   const groundsMatchRef=React.useRef<string>('');
@@ -468,7 +482,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   React.useEffect(()=>{setShowArbiterPause(arbiterPaused&&myColor!=='spectator');},[arbiterPaused,myColor,roomId]);
   const isMyTurn = !arbiterPaused && (!tutorialMode||(tutorialState.phase==='play'&&!tutorialState.pendingBot&&!tutorialState.animating&&tutorialState.step<12)) && connected && !gameState.pendingSummon && !(mode==='online'&&recovery?.length) && !handoffPending && (myColor === gameState.turn);
 
-  const validGroundTargets = groundMode && isMyTurn?allSquares(gameState.fen).filter(q=>{const g=gameState.grounds;if(!g)return false;if(groundMode==='transport'||(groundMode==='portal'&&!portalFrom))return g.tiles[q]==='portal' && (groundMode!=='transport' || createSafeChess(gameState.fen).get(q as any)?.color===activeColor || Object.values(gameState.champions).some(c=>c?.square===q && c.color===activeColor));if(gameState.frontier?.pois[q]||gameState.frontier?.golems.some(g=>g.square===q)||createSafeChess(gameState.fen).get(q as any)||gameState.monolithSquare===q||Object.values(gameState.champions).some(c=>c?.square===q)||gameState.restrictedSquares.includes(q)||activeCircle(gameState,q))return false;if(['mine','poison','banish','disarm'].includes(groundMode))return (activeColor==='w'?ranksFor(gameState.fen).indexOf(q.slice(1))<ranksFor(gameState.fen).length/2:ranksFor(gameState.fen).indexOf(q.slice(1))>=ranksFor(gameState.fen).length/2)&&!['portal','defense'].includes(g.tiles[q])&&!g.traps.some(t=>t.owner===activeColor&&t.square===q&&t.type===groundMode);return !g.tiles[q];}):[];
+  const validGroundTargets = groundMode && isMyTurn?allSquares(gameState.fen).filter(q=>{const g=gameState.grounds;if(!g)return false;if(groundMode==='transport'||(groundMode==='portal'&&!portalFrom))return g.tiles[q]==='portal' && (groundMode!=='transport' || createSafeChess(gameState.fen).get(q as any)?.color===activeColor || Object.values(gameState.champions).some(c=>c?.square===q && c.color===activeColor));if(gameState.frontier?.pois[q]||gameState.frontier?.golems.some(g=>g.square===q)||createSafeChess(gameState.fen).get(q as any)||gameState.monolithSquare===q||Object.values(gameState.champions).some(c=>c?.square===q)||gameState.restrictedSquares.includes(q)||activeCircle(gameState,q))return false;if(['mine','poison','banish','disarm'].includes(groundMode))return trapOnOwnSide(q,activeColor)&&!['portal','defense'].includes(g.tiles[q])&&!g.traps.some(t=>t.owner===activeColor&&t.square===q&&t.type===groundMode);return !g.tiles[q];}):[];
 
   const travelTarget = portalTravelTarget(gameState,activeColor);
   const currentHand = gameState.hands[activeColor] || [];
@@ -1024,12 +1038,12 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   const boardItemSquares=frontierItemMode==='star'?(boardItemFrom?starTargets(gameState,activeColor,boardItemFrom):allSquares(gameState.fen).filter(q=>starTargets(gameState,activeColor,q).length>0)):frontierItemMode==='banner'?allSquares(gameState.fen).filter(q=>q.slice(1)===(activeColor==='w'?'2':'7')&&emptyFrontierSquare(gameState,q)):frontierItemMode==='sigil'?(selectedChampion?.type==='summoner'&&!boardItemFrom?allSquares(gameState.fen).filter(q=>occupant(gameState,q)?.color===activeColor&&frontierUltimateTargets(gameState,activeColor,q).length>0):frontierUltimateTargets(gameState,activeColor,boardItemFrom||undefined)):[];
   const itemGuide=frontierItemMode==='star'?(boardItemFrom?'Wishing Star · click a highlighted destination':'Wishing Star · choose your piece'):frontierItemMode==='banner'?'Banner · choose an empty square on your second rank':frontierItemMode==='sigil'?(selectedChampion?.type==='summoner'&&!boardItemFrom?'Sigil · choose a friendly piece':selectedChampion?.type==='ninja'?'Sigil · choose one or two targets, then Activate':'Sigil · choose a highlighted ultimate target'):frontierItemMode==='wings'?(wingsFrom?'Wings · click a highlighted empty destination':'Wings · click your piece'):'Feather · choose an empty square on your first rank';
   const submitBoardItem=()=>{if(!isMyTurn||!boardItemTargets.length)return;const to=boardItemTargets[0];if(frontierItemMode==='sigil')sendMessage({type:'frontier_item',item:'sigil',targetFriendlySquare:boardItemFrom||undefined,targetSquare:to,targetSquares:boardItemTargets});setFrontierItemMode(null);setBoardItemFrom(null);setBoardItemTargets([]);};
-  const itemActionGuide=(frontierItemMode||golemPlacement||lensMode)?(
+  const itemActionGuide=(frontierItemMode||golemPlacement||lensMode||groundMode)?(
     <section className="item-action-guide" aria-label="Item targeting controls">
-      <span>{lensMode?'Fateweaver’s Lens · choose a card to replace':golemPlacement?'Golem Core · choose an empty square on your first rank':itemGuide}</span>
+      <span>{groundMode?(groundMode==='transport'?'Portal · choose your piece to warp':groundMode==='portal'&&!portalFrom?'Portal · choose one to relocate':`Place ${GROUND_NAMES[groundMode as GroundType]}`):lensMode?'Fateweaver’s Lens · choose a card to replace':golemPlacement?'Golem Core · choose an empty square on your first rank':itemGuide}</span>
       <div className="item-action-buttons">
         {frontierItemMode==='sigil'&&selectedChampion?.type==='ninja'&&<button type="button" disabled={!boardItemTargets.length||!isMyTurn} onClick={submitBoardItem}>Activate{boardItemTargets.length?` · ${boardItemTargets.join(', ')}`:''}</button>}
-        <button type="button" onClick={clearFrontierSelection}>Cancel</button>
+        <button type="button" onClick={()=>{clearFrontierSelection();setGroundMode(null);setGroundSquare(null);setPortalFrom(null);}}>Cancel</button>
       </div>
     </section>
   ):null;
@@ -1202,7 +1216,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
           {!compactUI&&<><div className="pc-board-tools"><div ref={setBoardControlsHost} className="compact-board-controls-host"/></div>{gameState.frontier?.expanded&&<div className="pc-board-zoom"><button className="player-zoom-switch" role="switch" aria-checked={frontierZoomOut} aria-label="Zoom out board" onClick={()=>setFrontierZoomOut(v=>!v)}><span className="zoom-switch-track"><span/></span>Zoom out</button></div>}</>}
           {/* Interactive Chess Board */}
           <div ref={boardViewport} className="board-viewport"><div className="board-stage flex justify-center">
-                          {groundMode&&<div className="ground-controls"><strong>{groundMode==='transport'?'Choose your piece on a portal to warp':groundMode==='portal'&&!portalFrom?'Choose a portal to relocate':`Place ${GROUND_NAMES[groundMode as GroundType]}`}</strong><button onClick={()=>{setGroundMode(null);setGroundSquare(null);}}>Cancel</button></div>}
+
 <ChessBoard sigilChampionSquare={frontierItemMode==='sigil'?gameState.champions[activeColor]?.square:null}
               frontier={gameState.frontier} frontierGame={gameState}
               tutorialGuide={tutorialMode?{from:tutorialState.step<8?TUTORIAL_ROUTE[tutorialState.step][0]:null,to:tutorialState.step<8?TUTORIAL_ROUTE[tutorialState.step][1]:null,guard:square=>{const allowed=tutorialSquareAllowed(tutorialState,square);if(allowed&&createSafeChess(tutorialState.fen).get(square as any)?.color==='w')tutorialDispatch({type:'square',value:square});return allowed;}}:undefined}
@@ -1407,6 +1421,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
       />
 
       <DiscardRedrawModal
+        maxCards={gameState.frontier?.bags[activeColor]?7:5}
         hand={currentHand}
         isOpen={isDiscardRedrawModalOpen}
         onConfirm={handleConfirmDiscardRedraw}

@@ -1794,7 +1794,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
                 {(frontierGolem||frontierPOI)&&<div data-motion-piece={frontierGolem?'golem':undefined} className={`absolute inset-0 z-10 pointer-events-none ${!frontier?.ready&&!frontierGolem?'frontier-silhouette':''} ${['bag','key','chest'].includes(frontierPOI||'')?`frontier-board-item ${frontierPOI==='chest'?'frontier-chest':''} ${piece||championPiece||frontierGolem||isMonolith?'with-piece':''}`:''}`} data-frontier-item={['bag','key','chest'].includes(frontierPOI||'')?frontierPOI:undefined} title={frontierGolem?'Controlled Golem · 10 points':frontierPOI==='boss'?'Arcane Golem':frontierPOI}>
                   {frontierGolem||frontierPOI==='boss'?<GolemIdleArt type={frontierGolem?(frontierGolem.owner==='w'?'golem':'black_golem'):frontier?.boss?.health===1?'weakened':'boss'} weakened={frontierPOI==='boss'&&frontier?.boss?.health===1}/>:<FrontierArt type={frontierPOI!}/>}
-                  {frontierPOI==='boss'&&frontier?.ready&&<div className={`frontier-boss-hp ${frontier.boss?.health===1?'weakened':''}`} role="progressbar" aria-label="Arcane Golem health" aria-valuenow={frontier.boss?.health===1?50:100} aria-valuemin={0} aria-valuemax={100}><span style={{width:frontier.boss?.health===1?'50%':'100%'}}/></div>}
+                  {frontierPOI==='boss'&&frontier?.ready&&<div className={`frontier-boss-hp ${frontier.boss?.health===1?'weakened':''}`} role="progressbar" aria-label="Arcane Golem health" aria-valuenow={frontier.boss?.health===1?1:2} aria-valuemin={0} aria-valuemax={2} aria-valuetext={`${frontier.boss?.health===1?1:2} captures remaining`}><span className={frontier.boss?.health===1?'spent':'filled'}/><span className="filled"/></div>}
                 </div>}
                 {blastSquares.includes(square)&&<div className='golem-blast-preview' aria-label='Golem explosion area'/>}
                 {/* Monolith Piece */}
@@ -1983,7 +1983,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             );
           })
         )}
-        <BoardEffects frontier={frontier} jokerEventId={historyLog.find(e=>e.actionType==='joker')?.id} fen={fen} pieceIds={pieceIds} champions={champions} grounds={grounds} clockAlert={clockAlert} flipped={flipBoard}/>
+        <BoardEffects frontier={frontier} jokerEventId={historyLog.find(e=>e.actionType==='joker')?.id} refreshEventId={historyLog.find(e=>e.actionType==='refresh')?.id} fen={fen} pieceIds={pieceIds} champions={champions} grounds={grounds} clockAlert={clockAlert} flipped={flipBoard}/>
         </div>
         {/* End of 8x8 Chessboard */}
       </div>

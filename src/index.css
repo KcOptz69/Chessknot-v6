@@ -1731,3 +1731,6 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
 .compact-match:not(.phone-landscape) .item-action-guide{margin-bottom:4px;padding:4px 6px;font-size:10px;}
 .compact-match:not(.phone-landscape) .item-action-buttons>button{font-size:10px;min-height:24px;padding:3px 6px;}
 .phone-landscape .landscape-description-host>.item-action-guide{display:flex;flex-wrap:wrap;align-content:start;gap:6px;}
+
+/* Plain stone grain; colors and all gameplay highlights remain intact. */
+#chess-board>[id^="square-"]{background-image:url('/art/board/stone-grain.svg');background-size:100% 100%;background-repeat:no-repeat;}

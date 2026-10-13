@@ -1,3 +1,4 @@
+import {trapOnOwnSide} from './src/utils/grounds.ts';
 import {executeFrontier,finishFrontierTurn,checkExpansion,handLimit,frontierClockRestore,frontierKingSafe,canExpand,frontierUltimate,emptyFrontierSquare,frontierLanding,trimBagHands,monolithPlacementSquare} from './src/utils/frontier.ts';
 import {isExtendedFen,adjacent,xy,squareAt,allSquares,ranksFor} from './src/utils/frontierBoard.ts';
 import {viewingGameState,isArbiter} from './src/utils/roomViewing.ts';
@@ -1294,7 +1295,7 @@ function executeGroundAction(room:RoomState,msg:ClientMessage,color:PlayerColor,
   if(!allSquares(s.fen).includes(q)||groundPiece(s,q)||!!s.frontier?.pois[q]||activeCircle(s,q)||s.monolithSquare===q||s.restrictedSquares.includes(q))return fail('Choose an empty unrestricted square.');
   if(isKingChecked(createSafeChess(s.fen),color,s.monolithSquare,s.champions, undefined, s.grounds))return fail('A tile placement cannot leave your King in check.');
   const trap=['mine','poison','disarm','banish'].includes(type);
-  if(trap){if((color==='w'?xy(q,s.fen)[1]>=ranksFor(s.fen).length/2:xy(q,s.fen)[1]<ranksFor(s.fen).length/2))return fail('Place traps on your half of the board.');if(['portal','defense'].includes(g.tiles[q]))return fail('Traps cannot be placed on Portal or Defense.');if(g.traps.some(t=>t.square===q&&t.owner===color&&t.type===type))return fail('Your same trap already exists here.');}
+  if(trap){if(!trapOnOwnSide(q,color))return fail('Place traps on your side: White ranks 1–4, Black ranks 5–8.');if(['portal','defense'].includes(g.tiles[q]))return fail('Traps cannot be placed on Portal or Defense.');if(g.traps.some(t=>t.square===q&&t.owner===color&&t.type===type))return fail('Your same trap already exists here.');}
   else {if(g.tiles[q])return fail('Power tiles cannot overlap.');if(type==='portal'&&g.tiles[m.portalFrom]!=='portal')return fail('Choose which portal to relocate.');}
   g.charges[color][type as keyof typeof g.charges.w]!--;
   if(trap)g.traps.push({id:`trap_${Date.now()}_${Math.random()}`,type,owner:color,square:q});else{if(type==='portal')delete g.tiles[m.portalFrom];g.tiles[q]=type;if(type==='portal'||type==='defense')g.traps=g.traps.filter(t=>t.square!==q);}
@@ -2826,10 +2827,11 @@ function executeGameAction(
   }
 
   if (msg.type === 'discard_redraw') {
-    // "Instead of Passing the Turn, you can discard up to 5 cards and redraw the same number and it counts as a move."
+    // Backpack owners may redraw their full seven-card hand.
     const toDiscardIds = Array.isArray(msg.cardIds) ? msg.cardIds : [];
-    if (toDiscardIds.length === 0 || toDiscardIds.length > 5) {
-      if (ws) sendToSocket(ws, { type: 'error', message: 'Select at least 1 card to discard and redraw' });
+    const redrawLimit=state.frontier?.bags[currentTurn]?7:5;
+    if (toDiscardIds.length === 0 || toDiscardIds.length > redrawLimit) {
+      if (ws) sendToSocket(ws, { type: 'error', message: `Select between 1 and ${redrawLimit} cards to discard and redraw` });
       return;
     }
 

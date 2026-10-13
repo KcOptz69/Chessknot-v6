@@ -158,3 +158,26 @@ dialog.frontier-drop-dialog small{font-size:11px;margin:6px 0 10px;}
 .opponent-reserve-card:disabled{opacity:1;cursor:default;}
 .frontier-test-rewards label{display:block;margin:12px 0;font-weight:700;}
 .frontier-test-rewards select{display:block;width:100%;padding:8px;margin-top:5px;border:1px solid var(--edge);border-radius:8px;background:var(--surface-raised);color:var(--ink);}
+
+/* Keep the flight and detonation above board pieces and easy to recognize. */
+#chess-board>.board-effects{z-index:90;}
+.frontier-action-fx.wings_flight{z-index:2;overflow:visible;}
+.flight-wing{z-index:1;opacity:.95;}
+.flight-unit>.v5-art,.flight-unit>.frontier-art{position:relative;z-index:2;}
+.arcane-golem-blast{z-index:3;}
+.arcane-blast-golem{position:absolute;left:33.333%;top:33.333%;width:33.333%;height:33.333%;animation:golem-detonate 2.1s ease-out both;}
+.arcane-blast-grid>span,.arcane-blast-core,.arcane-blast-ring{animation-delay:.35s;}
+@keyframes golem-detonate{0%{opacity:1;transform:scale(1);filter:brightness(1)}15%{opacity:1;transform:scale(1.1);filter:brightness(2)}32%{opacity:.9;transform:scale(.75);filter:brightness(3)}48%,100%{opacity:0;transform:scale(.2);filter:brightness(4)}}
+@media(prefers-reduced-motion:reduce){.arcane-blast-golem{animation:none;display:none;}.frontier-action-fx.golem_summon{display:block;}.frontier-action-fx.golem_summon .pawn-summon-beam,.frontier-action-fx.golem_summon .pawn-summon-spark{display:none;}}
+
+.arcane-golem-blast.is-persistent .arcane-blast-grid>span,.arcane-golem-blast.is-persistent .arcane-blast-core,.arcane-golem-blast.is-persistent .arcane-blast-ring,.arcane-golem-blast.is-persistent .arcane-blast-spark{animation-iteration-count:infinite;animation-duration:2.1s;}
+.arcane-blast-victim{position:absolute;width:33.333%;height:33.333%;animation:golem-blast-victim 2.1s ease-out both;}
+@keyframes golem-blast-victim{0%,28%{opacity:1;transform:scale(1)}40%{opacity:1;transform:scale(1.1);filter:brightness(3)}65%,100%{opacity:0;transform:translateY(-20%) scale(.4);filter:blur(5px)}}
+@media(prefers-reduced-motion:reduce){.arcane-blast-victim{display:none;}.arcane-golem-blast.is-persistent .arcane-blast-grid>span{animation:none;background:#44dfff22;}}
+
+/* Two clear health segments, without visible numbers or hit labels. */
+.frontier-boss-hp{display:flex;gap:2px;top:2px;bottom:auto;left:12%;right:12%;height:clamp(6px,1.2vw,10px);padding:2px;border:1px solid #5fcfff;border-radius:4px;background:#10243b;box-sizing:content-box;box-shadow:0 0 4px #08203bcc;}
+.frontier-boss-hp>span{flex:1;min-width:0;height:100%;border-radius:2px;background:#334155;}
+.frontier-boss-hp>span.filled{background:linear-gradient(#80f5ff,#09c7ee);box-shadow:inset 0 1px 1px #d3fdff88;}
+.frontier-boss-hp.weakened>span.spent{background:#334155;box-shadow:none;}
+.frontier-boss-hp.weakened>span.filled{background:linear-gradient(#ffb254,#ff492b);}
