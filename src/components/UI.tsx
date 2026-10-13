@@ -98,7 +98,7 @@ export function PowerUpButton({ icon, name, quantity, active, description, free,
 }) {
   return <div className="powerup-tooltip-wrap"><Button aria-description={description} className={`powerup-control ${active ? 'powerup-control--active' : ''}`} aria-pressed={active ?? false} {...props}>
     <span className="powerup-icon">{icon}</span><span className="powerup-copy"><strong className="leading-tight">{name}</strong><small className="leading-none">{free ? 'Free action' : 'Move action'}{active ? ' · Active' : ''}</small></span>
-    <Badge className="reserve-charge">{quantity > 0 ? `×${quantity}` : 'Used'}</Badge>
+    <Badge className="reserve-charge">{`×${Math.max(0, quantity)}`}</Badge>
   </Button></div>;
 }
 
