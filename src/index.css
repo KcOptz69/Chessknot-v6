@@ -1710,3 +1710,24 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
  padding-top:calc(3px + env(safe-area-inset-top) + var(--compact-header-extra,0px)/2)!important;
  padding-bottom:calc(3px + var(--compact-header-extra,0px)/2)!important;
 }
+
+/* Refresh uses the same board-centered activation layer as Joker and Clock. */
+.refresh-activation-art{position:absolute;left:50%;top:50%;width:32%;aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 0 16px #38bdf899);animation:refresh-reveal 1.8s ease-in-out both;}
+.refresh-surge-ring{position:absolute;inset:-18%;border:3px solid #7dd3fc;border-radius:50%;box-shadow:0 0 18px #38bdf888,inset 0 0 18px #38bdf855;animation:refresh-ring 1.8s ease-out both;}
+.refresh-sweep-card{position:absolute;left:39%;top:39%;width:22%;height:22%;animation:refresh-sweep 1.5s ease-out both;animation-delay:var(--refresh-delay);}
+@keyframes refresh-reveal{0%{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(-25deg)}20%,70%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.15)}}
+@keyframes refresh-ring{0%{opacity:0;transform:scale(.5)}25%{opacity:.9}100%{opacity:0;transform:scale(1.55)}}
+@keyframes refresh-sweep{0%{opacity:0;transform:rotate(var(--refresh-angle)) translateY(0) scale(.4)}25%{opacity:.9}70%{opacity:.8;transform:rotate(calc(var(--refresh-angle) + 65deg)) translateY(-210%) scale(.85)}100%{opacity:0;transform:rotate(calc(var(--refresh-angle) + 100deg)) translateY(-270%) scale(.55)}}
+@media(prefers-reduced-motion:reduce){.refresh-activation-art{animation:none;filter:none;}.refresh-surge-ring,.refresh-sweep-card{display:none;}}
+
+/* Item targeting belongs with hand descriptions, never over board squares. */
+.item-action-guide{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 8px;border:1px solid var(--edge);border-radius:9px;background:var(--surface-raised);color:var(--ink);font-size:11px;line-height:1.3;min-width:0;box-sizing:border-box;}
+.item-action-guide>span{flex:1;min-width:0;overflow-wrap:anywhere;}
+.item-action-buttons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;flex-shrink:0;}
+.item-action-buttons>button{margin:0;padding:3px 7px;min-height:24px;font-size:11px;line-height:1.2;border:1px solid var(--edge);border-radius:6px;background:var(--surface);color:var(--ink);cursor:pointer;}
+.item-action-buttons>button:disabled{opacity:.45;cursor:not-allowed;}
+.desktop-description-host>.item-action-guide{height:100%;align-items:center;}
+:is(.desktop-description-host,.landscape-description-host):has(>.item-action-guide)>.card-description-panel{display:none!important;}
+.compact-match:not(.phone-landscape) .item-action-guide{margin-bottom:4px;padding:4px 6px;font-size:10px;}
+.compact-match:not(.phone-landscape) .item-action-buttons>button{font-size:10px;min-height:24px;padding:3px 6px;}
+.phone-landscape .landscape-description-host>.item-action-guide{display:flex;flex-wrap:wrap;align-content:start;gap:6px;}
