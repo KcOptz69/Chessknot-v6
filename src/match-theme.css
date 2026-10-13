@@ -177,3 +177,7 @@ body>.ground-popup{z-index:9000!important;position:fixed!important;inset:0!impor
 .match-summon-effect--revive .summon-arrival-ring{border-color:#8cefff;box-shadow:0 0 12px #2abaffaa,inset 0 0 8px #7be9ff66}
 .match-summon-effect--revive .summon-arrival-wisp{background:#b9f5ff;box-shadow:0 0 7px #38bfff}
 .summon-arrival-rune{position:absolute;left:45%;top:43%;width:10%;height:10%;font-size:clamp(8px,1.3vw,14px);line-height:1;color:#a0f5ff;text-align:center;text-shadow:0 0 5px #1ebdff;transform:rotate(var(--rune-angle)) translateY(-270%) rotate(calc(-1 * var(--rune-angle)))}
+
+/* Light mode keeps the same slabs with a softer, brighter blue palette. */
+html:not(.dark) .game-app #chess-board>[data-tone="light"]:not(.frontier-field-square)::before{background-image:url('/art/board/stone-slabs-day-light.svg')!important}
+html:not(.dark) .game-app #chess-board>[data-tone="dark"]:not(.frontier-field-square)::before{background-image:url('/art/board/stone-slabs-day-dark.svg')!important}
