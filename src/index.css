@@ -1763,3 +1763,14 @@ body:has(.compact-match) .golem-floating-controls{right:8px;bottom:calc(var(--co
 @media(prefers-reduced-motion:reduce){.ck-push-travel{display:none}}
 
 .match-switch-trail svg{width:100%;height:100%;overflow:visible}.match-switch-trail path{fill:none;stroke:#c27aff;stroke-width:4;stroke-linecap:round;stroke-dasharray:12 7;filter:drop-shadow(0 0 5px #982bff)}
+
+/* Spin a dedicated portal layer; its rim stays visible around an upright piece. */
+.ck-ground-art{display:contents}
+.ck-portal-rotor{position:absolute;inset:5%;display:flex;align-items:center;justify-content:center;transform:perspective(180px) rotateX(12deg) scaleY(.94)}
+.ground-tile[data-ground-type="portal"] .ck-portal-rotor>.v5-art{width:100%;height:100%;transform:none;transform-box:fill-box;transform-origin:50% 50%;animation:none}
+.ground-tile[data-ground-type="portal"]:is(.occupied,.portal-linked-active) .ck-portal-rotor>.v5-art{animation:ck-portal-spin 2s linear infinite;opacity:1}
+.ck-portal-spin-rim{position:absolute;inset:4%;z-index:24;pointer-events:none;border-radius:50%;border:2px solid #ffad4544;box-shadow:0 0 7px #ff982966,inset 0 0 5px #ffb34244}
+.ck-portal-spin-rim i{position:absolute;inset:-2px;border-radius:50%;border:3px solid transparent;border-top-color:#ffb34d;border-right-color:#ffe3a1;animation:ck-portal-spin 1.8s linear infinite;filter:drop-shadow(0 0 3px #ff8b24)}
+.ck-portal-spin-rim i+i{inset:4px;border-width:2px;animation-direction:reverse;animation-duration:2.4s;border-top-color:#ffc360;border-right-color:transparent}
+@keyframes ck-portal-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.ground-tile[data-ground-type="portal"] .ck-portal-rotor>.v5-art,.ck-portal-spin-rim i{animation:none!important}}
