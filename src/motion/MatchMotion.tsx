@@ -192,6 +192,7 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
     effect.inert=true;effect.setAttribute('aria-hidden','true');
     Object.assign(effect.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});
     const ring=document.createElement('span');ring.className='summon-arrival-ring';effect.append(ring);
+    if(kind==='revive')for(let i=0;i<8;i++){const rune=document.createElement('span');rune.className='summon-arrival-rune';rune.textContent=['✧','ᚨ','ᛉ','ᚱ'][i%4];rune.style.setProperty('--rune-angle',`${i*45}deg`);effect.append(rune);}
     for(let i=0;i<8;i++){const spark=document.createElement('span');spark.className='summon-arrival-wisp';spark.style.setProperty('--wisp-x',`${12+i*10}%`);spark.style.setProperty('--wisp-y',`${15+(i*19)%60}%`);effect.append(spark);}
     document.body.append(effect);
     this.batch.animate(effect,[{opacity:0,transform:'scale(.65)'},{opacity:1,transform:'scale(1)',offset:.3},{opacity:0,transform:'scale(1.12)'}],1000,0,()=>effect.remove());

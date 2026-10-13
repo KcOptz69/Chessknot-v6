@@ -181,3 +181,21 @@ dialog.frontier-drop-dialog small{font-size:11px;margin:6px 0 10px;}
 .frontier-boss-hp>span.filled{background:linear-gradient(#80f5ff,#09c7ee);box-shadow:inset 0 1px 1px #d3fdff88;}
 .frontier-boss-hp.weakened>span.spent{background:#334155;box-shadow:none;}
 .frontier-boss-hp.weakened>span.filled{background:linear-gradient(#ffb254,#ff492b);}
+
+/* Bishop summoning seal: compact, blue, and readable on both stone tones. */
+.summoning-circle.ck-bishop-seal{inset:6%;z-index:8;border:0;background:radial-gradient(circle,#36b8ff1c,transparent 65%);box-shadow:none;animation:none;color:#75e7ff;text-shadow:none;font-size:initial;display:block}
+.ck-bishop-seal>svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 3px #069eff)}
+.bishop-seal-outer,.bishop-seal-inner{fill:none;stroke:currentColor;stroke-width:1.5}.bishop-seal-outer{stroke-dasharray:58 3;transform-origin:50% 50%;animation:bishop-seal-turn 9s linear infinite}.bishop-seal-inner{opacity:.85}
+.bishop-seal-runes{transform-origin:50% 50%;animation:bishop-seal-turn 12s linear infinite reverse}.bishop-seal-runes text{fill:currentColor;font-size:9px;font-weight:700;dominant-baseline:middle}
+.bishop-seal-mote{fill:#d7fbff;animation:bishop-seal-light 1.8s ease-in-out infinite}.bishop-seal-mote:nth-last-child(even){animation-delay:.8s}
+.summoning-circle.ck-bishop-seal>b{bottom:-1%;left:50%;right:auto;transform:translateX(-50%);width:25%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid #77e9ff;border-radius:50%;background:#102c4a;color:#f0fcff;font-size:clamp(8px,1.4vw,15px);line-height:1;font-weight:900;box-shadow:0 0 5px #1cafff88;z-index:2}
+.ck-bishop-seal.circle-black>b{background:#071728}
+.summoning-circle.ck-bishop-seal.is-interrupted{color:#54799d;background:none;opacity:.8}.ck-bishop-seal.is-interrupted>svg{filter:none}.ck-bishop-seal.is-interrupted .bishop-seal-outer{stroke:#eab16b;stroke-dasharray:16 12;opacity:.65}.ck-bishop-seal.is-interrupted .bishop-seal-outer,.ck-bishop-seal.is-interrupted .bishop-seal-runes{animation:none}.ck-bishop-seal.is-interrupted .bishop-seal-mote{display:none}.summoning-circle.ck-bishop-seal.is-interrupted>b{border-color:#c99b65;color:#ffd49b;box-shadow:none}
+.summoning-circle.ck-bishop-seal.is-ready>svg{filter:drop-shadow(0 0 5px #21bcff)}
+@keyframes bishop-seal-turn{to{transform:rotate(360deg)}}
+@keyframes bishop-seal-light{0%,100%{opacity:.35}50%{opacity:1}}
+/* Health is below the boss silhouette and scales with its tile-sized art. */
+.frontier-boss-unit>.golem-idle-art{width:92%;height:89%;margin:0 auto}
+.frontier-boss-unit>.frontier-boss-hp{top:auto;bottom:1.5%;left:18%;right:18%;height:6.5%;min-height:3px;max-height:9px;gap:3%;padding:.7%;border-radius:3px;box-sizing:border-box;z-index:30}
+.frontier-boss-unit>.frontier-boss-hp>span{border-radius:1px}
+@media(prefers-reduced-motion:reduce){.bishop-seal-outer,.bishop-seal-runes,.bishop-seal-mote{animation:none!important}}
