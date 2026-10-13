@@ -1429,7 +1429,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
 
       <DiscardModal
         hand={currentHand}
-        isOpen={isDiscardModalOpen}
+        isOpen={isDiscardModalOpen || Boolean(gameState.pendingSwapDiscard?.player === activeColor)}
         newCardIds={gameState.pendingSwapDiscard?.player === activeColor ? gameState.pendingSwapDiscard.newCardIds : []}
         onConfirmDiscard={handleConfirmDiscard}
         onCancel={() => {setIsDiscardModalOpen(false);if(tutorialMode)tutorialDispatch({type:'close-panel'});}}

@@ -85,7 +85,6 @@ export const DiscardModal: React.FC<DiscardModalProps> = ({
   isOpen,
   newCardIds = [],
   onConfirmDiscard,
-  onCancel,
 }) => {
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 
@@ -113,9 +112,7 @@ export const DiscardModal: React.FC<DiscardModalProps> = ({
             </div>
             <h3 className="text-base font-bold text-stone-900 dark:text-stone-100 font-sans">Exchange: Choose 2 Cards to Discard</h3>
           </div>
-          <button onClick={onCancel} className="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer" aria-label="Close dialog">
-            <X className="w-5 h-5" />
-          </button>
+
         </div>
 
         <p className="text-xs text-stone-600 dark:text-stone-400 mb-3">
