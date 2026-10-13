@@ -1578,6 +1578,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
               lastMoveDetails?.actionType === 'monolith' && lastMoveDetails.monolithFrom === square;
 
             // Push Card Wind Highlighting:
+            const latestTraverse = frontier?.events?.[0]?.kind === 'traverse' ? frontier.events[0] : null;
+            const isTraverseArrival = Boolean(latestTraverse && lastMoveDetails?.to === square);
             const isPushMove = lastMoveDetails?.actionType === 'push';
             const isPushMovedFrom = isPushMove && lastMoveDetails?.from === square;
             const isPushMovedTo = isPushMove && lastMoveDetails?.to === square;
@@ -1752,11 +1754,17 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 )}
 
                 {piece&&summoningCircles.some(c=>c.bishopId===pieceIds[square]&&!c.finished&&!c.interrupted)&&<div className={`bishop-channeling ${piece.color==='b'?'channel-black':''}`} aria-label="Bishop channeling ritual"><span/><span/>{[0,1,2].map(i=><i key={i} style={{animationDelay:`${i*.35}s`}}/>)}</div>}
+                {isTraverseArrival && (
+                  <div key={`traverse-${latestTraverse?.id}-${square}`} className="ck-traverse-effect" aria-label="Traverse teleportation effect">
+                    <span className="ck-traverse-ring"/><span className="ck-traverse-ring ck-traverse-ring-delayed"/>
+                    <span className="ck-traverse-flash"/>
+                  </div>
+                )}
                 {/* Wind Highlights for piece moved by push card */}
                 {isPushMovedTo && (
                   <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-sm flex items-center justify-center z-25">
                     <div className="absolute inset-0 bg-gradient-to-tr from-teal-500/25 via-cyan-400/35 to-emerald-400/25 animate-pulse" />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-80 animate-wind-gust">
+                    <div key={`push-wind-${lastMoveDetails?.from}-${lastMoveDetails?.to}-${historyLog?.[0]?.id ?? ""}`} className="absolute inset-0 flex items-center justify-center opacity-80 animate-wind-gust">
                       <Wind className="w-10 h-10 text-teal-200 filter drop-shadow-[0_0_8px_rgba(45,212,191,0.9)]" />
                     </div>
                   </div>
