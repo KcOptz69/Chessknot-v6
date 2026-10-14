@@ -1,5 +1,6 @@
 export const MOVE_MS = 240;
 export const PIECE_MOVE_MS = 1500;
+export const DOUBLE_JUMP_MS = 3200;
 export const HANDOFF_MS = 1600;
 export const MOTION_EASE = 'cubic-bezier(.22,.7,.25,1)';
 export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -72,7 +73,7 @@ export function snapshot(node: HTMLElement): Visual {
   return { node: clone, rect: node.getBoundingClientRect() };
 }
 
-export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HTMLElement, delay = 0, card = false, kind: 'move'|'switch'|'portal'|'push' = 'move', onSettled: () => void = () => {}) {
+export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HTMLElement, delay = 0, card = false, kind: 'move'|'switch'|'portal'|'push' = 'move', onSettled: () => void = () => {}, via?: DOMRect) {
   const from = visual.rect;
   if (!visibleRect(from) || !visibleRect(to) || reducedMotion() || document.hidden) { onSettled(); return; }
   // Hand cards can be partly clipped by a mobile rail. Never let their copy
@@ -85,7 +86,7 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
   Object.assign(ghost.style, { position:'fixed', pointerEvents:'none', zIndex:'45', transformOrigin:'top left', left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px` });
   // Destination artwork makes the last moving frame match the real piece.
   // Keep the old geometry for the starting position.
-  if (!card && target && (kind === 'move' || kind === 'push')) {
+  if (!card && !via && target && (kind === 'move' || kind === 'push')) {
     visual.node = snapshot(target).node;
   }
   ghost.append(visual.node);
@@ -147,6 +148,26 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
       transformOrigin: '50% 50%',
     });
     document.body.append(shadow);
+    if (via) {
+      const mx = via.left - to.left, my = via.top - to.top;
+      const transform = (x:number,y:number,lifted=false) => `translate(${x}px,${y-(lifted?lift:0)}px) scale(${lifted?1.035:1})`;
+      const duration = DOUBLE_JUMP_MS;
+      const frames: Keyframe[] = [
+        {transform:transform(dx,dy),offset:0,easing:'ease-out'},
+        {transform:transform(dx,dy,true),offset:375/duration,easing:'ease-in-out'},
+        {transform:transform(mx,my,true),offset:1125/duration,easing:'ease-in'},
+        {transform:transform(mx,my),offset:1500/duration,easing:'linear'},
+        {transform:transform(mx,my),offset:1700/duration,easing:'ease-out'},
+        {transform:transform(mx,my,true),offset:2075/duration,easing:'ease-in-out'},
+        {transform:transform(0,0,true),offset:2825/duration,easing:'ease-in'},
+        {transform:transform(0,0),offset:1},
+      ];
+      batch.animate(shadow, frames.map(frame=>({...frame,transform:String(frame.transform).replace(/scale\([^)]*\)/,'scale(.85)')})), duration, delay, ()=>shadow.remove(), 'linear');
+      batch.animate(ghost, frames, duration, delay, ()=>{
+        revealTarget();ghost.remove();shadow.remove();
+      }, 'linear');
+      return;
+    }
     batch.animate(shadow, [
       { transform: `translate(${dx}px,${dy}px) scale(1)`, opacity: .6, offset: 0, easing: 'ease-out' },
       { transform: `translate(${dx}px,${dy}px) scale(.8)`, opacity: .3, offset: .25, easing: 'ease-in-out' },

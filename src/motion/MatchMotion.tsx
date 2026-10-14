@@ -1,7 +1,7 @@
 import React from 'react';
 import type { GameState, PlayerColor } from '../types';
 import { isNewAction, matchIdentity, planBoardMotion, planSummonMotion } from './plan';
-import { fly, HANDOFF_MS, PIECE_MOVE_MS, MotionBatch, reducedMotion, snapshot, visibleRect, type Visual } from './runtime';
+import { fly, HANDOFF_MS, DOUBLE_JUMP_MS, PIECE_MOVE_MS, MotionBatch, reducedMotion, snapshot, visibleRect, type Visual } from './runtime';
 
 /** Only the pass-and-play viewing side waits. Server turn and clock stay live. */
 export function useVisualTurn(state: GameState, session: string, connected: boolean) {
@@ -11,7 +11,8 @@ export function useVisualTurn(state: GameState, session: string, connected: bool
   React.useLayoutEffect(() => {
     const settle = () => setView({ identity, turn: state.turn });
     if (turn === state.turn || document.hidden || reducedMotion()) { settle(); return; }
-    const timer = setTimeout(settle, HANDOFF_MS);
+    const move = state.lastMoveDetails as (typeof state.lastMoveDetails & {firstTo?:string});
+    const timer = setTimeout(settle, move?.intermediateSquare || move?.firstTo ? DOUBLE_JUMP_MS + 100 : HANDOFF_MS);
     const onVisibility = () => { if (document.hidden) settle(); };
     const media = matchMedia('(prefers-reduced-motion: reduce)');
     window.addEventListener('resize', settle);
@@ -119,17 +120,28 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
     if (!old || (!changed && previous.viewColor === this.props.viewColor)) return;
     this.nextBatch();
     if (reducedMotion() || document.hidden) { this.clearMask(); return; }
-    if (this.destinationMask) this.maskTimer = setTimeout(this.clearMask, PIECE_MOVE_MS + 100);
+    const details = this.props.game.lastMoveDetails as (typeof this.props.game.lastMoveDetails & {firstTo?:string});
+    const intermediate = details?.intermediateSquare || details?.firstTo;
+    if (this.destinationMask) this.maskTimer = setTimeout(this.clearMask, intermediate ? DOUBLE_JUMP_MS + 100 : PIECE_MOVE_MS + 100);
     if (changed) {
       const plan = planBoardMotion(previous.game, this.props.game);
       let captureDelay = 0;
+      const captureTimes = new Map<string,number>();
       for (const { from, to } of plan.moves) {
         const visual = old.pieces.get(from), target = this.find(`#square-${to} [data-motion-piece]`);
         if (visual && target && this.props.game.lastMoveDetails?.actionType!=='monolith') {
           const action=this.props.game.lastMoveDetails?.actionType;
           const portal=this.props.game.grounds?.events.some(e=>e.type==='portal'&&!previous.game.grounds?.events.some(old=>old.id===e.id)) || this.props.game.frontier?.events.some(e=>e.kind==='move'&&e.detail.startsWith('Portal:')&&!previous.game.frontier?.events.some(old=>old.id===e.id));
           captureDelay = Math.max(captureDelay, action==='switch'||portal ? 525 : PIECE_MOVE_MS * .75);
-          fly(this.batch, visual, target.getBoundingClientRect(), target,0,false, action==='switch'?'switch':portal?'portal':action==='push'?'push':'move', () => this.revealDestination(to));
+          const middleTile = intermediate && from === details?.from ? this.find(`#square-${intermediate}`) : undefined;
+          const middleRect = middleTile?.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const via = middleRect ? new DOMRect(
+            middleRect.left+(middleRect.width-targetRect.width)/2,
+            middleRect.top+(middleRect.height-targetRect.height)/2,
+            targetRect.width,targetRect.height) : undefined;
+          if (via && intermediate) { captureTimes.set(intermediate,1125);captureTimes.set(to,2825); }
+          fly(this.batch, visual, targetRect, target,0,false, action==='switch'?'switch':portal?'portal':action==='push'?'push':'move', () => this.revealDestination(to), via);
         } else { this.revealDestination(to); }
       }
       for (const square of plan.captures) {
@@ -143,8 +155,8 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
           { opacity: 1, transform: 'rotate(0deg)', transformOrigin:'50% 85%' },
           { opacity: 1, transform: 'rotate(78deg) translateX(12%)', offset:.65, transformOrigin:'50% 85%' },
           { opacity: 0, transform: 'rotate(90deg) translateX(16%)', transformOrigin:'50% 85%' },
-        ], 650, captureDelay, () => ghost.remove());
-        this.impact(square, 'capture', captureDelay);
+        ], 650, captureTimes.get(square) ?? captureDelay, () => ghost.remove());
+        this.impact(square, 'capture', captureTimes.get(square) ?? captureDelay);
       }
       const removed = new Set([...this.props.game.discard, ...(this.props.game.exhausted || [])].map(card => card.id));
       const discard = this.find('#btn-inspect-discard-pile > div');
