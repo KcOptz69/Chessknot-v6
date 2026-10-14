@@ -1,3 +1,4 @@
+import {BoardViewerColor,usePieceView} from '../context/PieceView.tsx';
 import {bishopCircleTargets} from '../utils/summoning.ts';
 import {frontierMoves,frontierKingSafe,executeLandingMove,occupant,frontierUltimateTargets,emptyFrontierSquare,monolithPlacementSquare} from '../utils/frontier.ts';
 import {FrontierArt,GolemIdleArt} from './FrontierUI.tsx';
@@ -277,6 +278,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     return monolithSurroundingSquares;
   }, [beaconEffect?.active, monolithSquare, monolithSurroundingSquares]);
 
+  const {view:pieceView}=usePieceView();
   const isKingInCheck = React.useMemo(() => {
     if(frontierGame?.frontier?.expanded)return !frontierKingSafe(frontierGame,turn);return isKingChecked(chess, turn, monolithSquare, champions, beaconProtectedSquares, grounds);
   }, [chess, turn, monolithSquare, champions, beaconProtectedSquares, grounds,frontierGame]);
@@ -606,6 +608,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         for (const f of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
           const sq = `${f}${r}`;
           if (
+            grounds?.tiles[sq] !== 'portal' &&
             !chess.get(sq as Square) &&
             !frontierGame?.frontier?.golems.some(g=>g.square===sq) &&
             !frontierGame?.frontier?.pois[sq] &&
@@ -734,6 +737,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     champions,
     myChampion,
     validChampionDeploySquares,
+    grounds?.tiles,
     frontierGame,
     fen,
     championUltimateTargets,
@@ -791,7 +795,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       const champOnSquare =
         (whiteChampion && whiteChampion.square === square) ||
         (blackChampion && blackChampion.square === square);
-      if (restrictedSquares.includes(square) || pieceOnSquare || champOnSquare || frontierGame && !monolithPlacementSquare(frontierGame,square)) {
+      if (grounds?.tiles[square] === 'portal' || restrictedSquares.includes(square) || pieceOnSquare || champOnSquare || frontierGame && !monolithPlacementSquare(frontierGame,square)) {
         return; // Cannot place on occupied or restricted square
       }
       onPlaceMonolith(square);
@@ -1513,9 +1517,11 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       {/* Board Shell Container */}
       <div className="relative w-full max-w-[560px]">
         {/* 8x8 Chessboard */}
+        <BoardViewerColor.Provider value={flipBoard?'b':'w'}>
         <div
           id="chess-board"
           style={isExtendedFen(fen)?{aspectRatio:'8 / 12',gridTemplateRows:'repeat(12,minmax(0,1fr))'}:undefined}
+          data-piece-view={pieceView}
           data-orientation={flipBoard ? 'black' : 'white'}
           className="relative w-full max-w-[560px] aspect-square grid grid-cols-8 grid-rows-8 border-[3px] sm:border-[6px] border-[#263449] dark:border-[#263449] rounded-xl shadow-xl overflow-hidden bg-[#263449] dark:bg-[#263449] ring-1 ring-stone-900/10 dark:ring-stone-700/50 touch-manipulation"
         >
@@ -1972,6 +1978,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         )}
         <BoardEffects pushTrail={frontierGame?.pushTrail} awards={frontierGame?.powerUpAwards} frontier={frontier} jokerEventId={historyLog.find(e=>e.actionType==='joker')?.id} refreshEventId={historyLog.find(e=>e.actionType==='refresh')?.id} fen={fen} pieceIds={pieceIds} champions={champions} grounds={grounds} clockAlert={clockAlert} flipped={flipBoard}/>
         </div>
+        </BoardViewerColor.Provider>
         {/* End of 8x8 Chessboard */}
       </div>
       {/* End Board Shell Container */}
