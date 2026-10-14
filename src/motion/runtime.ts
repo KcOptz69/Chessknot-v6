@@ -1,6 +1,6 @@
 export const MOVE_MS = 240;
-export const PIECE_MOVE_MS = 640;
-export const HANDOFF_MS = 700;
+export const PIECE_MOVE_MS = 1000;
+export const HANDOFF_MS = 1100;
 export const MOTION_EASE = 'cubic-bezier(.22,.7,.25,1)';
 export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -108,15 +108,15 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
     document.body.append(shadow);
     batch.animate(shadow, [
       { transform: `translate(${dx}px,${dy}px) scale(1)`, opacity: .6, offset: 0 },
-      { transform: `translate(${dx}px,${dy}px) scale(.8)`, opacity: .3, offset: .2 },
-      { transform: 'translate(0,0) scale(.8)', opacity: .3, offset: .78 },
+      { transform: `translate(${dx}px,${dy}px) scale(.8)`, opacity: .3, offset: .25 },
+      { transform: 'translate(0,0) scale(.8)', opacity: .3, offset: .75 },
       { transform: 'translate(0,0) scale(1)', opacity: .6, offset: 1 },
     ], PIECE_MOVE_MS, delay, () => shadow.remove());
     batch.animate(ghost, [
       { transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`, offset: 0 },
-      { transform: `translate(${dx}px,${dy - lift}px) scale(${sx * 1.035},${sy * 1.035})`, offset: .2 },
-      { transform: `translate(0,${-lift}px) scale(1.035)`, offset: .78 },
-      { transform: 'translate(0,1px) scale(1)', offset: .95 },
+      { transform: `translate(${dx}px,${dy - lift}px) scale(${sx * 1.035},${sy * 1.035})`, offset: .25 },
+      { transform: `translate(0,${-lift}px) scale(1.035)`, offset: .75 },
+      { transform: 'translate(0,1px) scale(1)', offset: .94 },
       { transform: 'translate(0,0) scale(1)', offset: 1 },
     ], PIECE_MOVE_MS, delay, () => {
       ghost.remove();
