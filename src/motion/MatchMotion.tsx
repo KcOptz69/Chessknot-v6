@@ -1,3 +1,4 @@
+import { playSuperKnightDoubleSound } from '../utils/superKnightAudio.ts';
 import React from 'react';
 import type { GameState, PlayerColor } from '../types';
 import { isNewAction, matchIdentity, planBoardMotion, planSummonMotion } from './plan';
@@ -126,6 +127,7 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
     if (changed) {
       const plan = planBoardMotion(previous.game, this.props.game);
       let captureDelay = 0;
+      let doubleSoundPlayed = false;
       const captureTimes = new Map<string,number>();
       for (const { from, to } of plan.moves) {
         const visual = old.pieces.get(from), target = this.find(`#square-${to} [data-motion-piece]`);
@@ -140,7 +142,10 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
             middleRect.left+(middleRect.width-targetRect.width)/2,
             middleRect.top+(middleRect.height-targetRect.height)/2,
             targetRect.width,targetRect.height) : undefined;
-          if (via && intermediate) { captureTimes.set(intermediate,1125);captureTimes.set(to,2825); }
+          if (via && intermediate) {
+            captureTimes.set(intermediate,1125);captureTimes.set(to,2825);
+            if (!doubleSoundPlayed) { playSuperKnightDoubleSound();doubleSoundPlayed = true; }
+          }
           fly(this.batch, visual, targetRect, target,0,false, action==='switch'?'switch':portal?'portal':action==='push'?'push':'move', () => this.revealDestination(to), via);
         } else { this.revealDestination(to); }
       }
