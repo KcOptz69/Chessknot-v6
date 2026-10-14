@@ -1,7 +1,7 @@
 import React from 'react';
 import type { GameState, PlayerColor } from '../types';
 import { isNewAction, matchIdentity, planBoardMotion, planSummonMotion } from './plan';
-import { fly, HANDOFF_MS, MotionBatch, reducedMotion, snapshot, visibleRect, type Visual } from './runtime';
+import { fly, HANDOFF_MS, PIECE_MOVE_MS, MotionBatch, reducedMotion, snapshot, visibleRect, type Visual } from './runtime';
 
 /** Only the pass-and-play viewing side waits. Server turn and clock stay live. */
 export function useVisualTurn(state: GameState, session: string, connected: boolean) {
@@ -37,7 +37,14 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
   private media?: MediaQueryList;
   private orientationObserver?: MutationObserver;
   private awaitingSnapshot = false;
-  private cancel = () => this.batch.cancel();
+  private destinationMask?: HTMLStyleElement;
+  private maskTimer?: ReturnType<typeof setTimeout>;
+  private clearMask = () => {
+    clearTimeout(this.maskTimer);
+    this.destinationMask?.remove();
+    this.destinationMask = undefined;
+  };
+  private cancel = () => { this.batch.cancel(); this.clearMask(); };
   componentDidMount() {
     this.nextBatch();
     this.media = matchMedia('(prefers-reduced-motion: reduce)');
@@ -72,29 +79,46 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
       pieces.set(node.closest('[id^="square-"]')!.id.slice(7), snapshot(node));
     });
     for (const node of this.cards()) cards.set(node.dataset.cardId!, snapshot(node));
+    // Runs before React commits the new board: hide destination artwork before
+    // it can paint, and keep it hidden across clock updates or DOM remounts.
+    this.clearMask();
+    if (!reducedMotion() && !document.hidden && isNewAction(previous.game, this.props.game)) {
+      const destinations = planBoardMotion(previous.game, this.props.game).moves.map(move => move.to);
+      if (destinations.length) {
+        const mask = document.createElement('style');
+        mask.textContent = destinations.map(square =>
+          `#chess-board #square-${square} [data-motion-piece]{opacity:0!important;visibility:hidden!important;}`
+        ).join('\n');
+        document.head.append(mask);
+        this.destinationMask = mask;
+      }
+    }
     return { pieces, cards };
   }
   componentDidUpdate(previous: Props, _: {}, old: Snapshot | null) {
-    if (!this.props.connected) { this.awaitingSnapshot = true; this.nextBatch(); return; }
+    if (!this.props.connected) { this.awaitingSnapshot = true; this.clearMask(); this.nextBatch(); return; }
     if (this.awaitingSnapshot) {
       // Reconnection can restore several missed events at once. Its first
       // authoritative snapshot must settle immediately, not replay history.
       if (previous.game !== this.props.game) this.awaitingSnapshot = false;
-      this.nextBatch(); return;
+      this.clearMask(); this.nextBatch(); return;
     }
     if (previous.session !== this.props.session || !this.props.connected
       || matchIdentity(previous.game) !== matchIdentity(this.props.game)) { this.nextBatch(); return; }
     const changed = isNewAction(previous.game, this.props.game);
     if (!old || (!changed && previous.viewColor === this.props.viewColor)) return;
     this.nextBatch();
-    if (reducedMotion() || document.hidden) return;
+    if (reducedMotion() || document.hidden) { this.clearMask(); return; }
+    if (this.destinationMask) this.maskTimer = setTimeout(this.clearMask, PIECE_MOVE_MS + 100);
     if (changed) {
       const plan = planBoardMotion(previous.game, this.props.game);
+      let captureDelay = 0;
       for (const { from, to } of plan.moves) {
         const visual = old.pieces.get(from), target = this.find(`#square-${to} [data-motion-piece]`);
         if (visual && target && this.props.game.lastMoveDetails?.actionType!=='monolith') {
           const action=this.props.game.lastMoveDetails?.actionType;
           const portal=this.props.game.grounds?.events.some(e=>e.type==='portal'&&!previous.game.grounds?.events.some(old=>old.id===e.id)) || this.props.game.frontier?.events.some(e=>e.kind==='move'&&e.detail.startsWith('Portal:')&&!previous.game.frontier?.events.some(old=>old.id===e.id));
+          captureDelay = Math.max(captureDelay, action==='switch'||portal ? 525 : PIECE_MOVE_MS * .75);
           fly(this.batch, visual, target.getBoundingClientRect(), target,0,false, action==='switch'?'switch':portal?'portal':action==='push'?'push':'move');
         }
       }
@@ -105,8 +129,12 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
         ghost.className = 'match-flight match-capture'; ghost.inert = true; ghost.setAttribute('aria-hidden', 'true');
         Object.assign(ghost.style, { left: `${visual.rect.left}px`, top: `${visual.rect.top}px`, width: `${visual.rect.width}px`, height: `${visual.rect.height}px` });
         ghost.append(visual.node); document.body.append(ghost);
-        this.batch.animate(ghost, [{ opacity: 1, transform: 'rotate(0deg)',transformOrigin:'50% 85%' }, {opacity:1,transform:'rotate(78deg) translateX(12%)',offset:.65,transformOrigin:'50% 85%'},{ opacity: 0, transform: 'rotate(90deg) translateX(16%)',transformOrigin:'50% 85%' }], 650, 0, () => ghost.remove());
-        this.impact(square);
+        this.batch.animate(ghost, [
+          { opacity: 1, transform: 'rotate(0deg)', transformOrigin:'50% 85%' },
+          { opacity: 1, transform: 'rotate(78deg) translateX(12%)', offset:.65, transformOrigin:'50% 85%' },
+          { opacity: 0, transform: 'rotate(90deg) translateX(16%)', transformOrigin:'50% 85%' },
+        ], 650, captureDelay, () => ghost.remove());
+        this.impact(square, 'capture', captureDelay);
       }
       const removed = new Set([...this.props.game.discard, ...(this.props.game.exhausted || [])].map(card => card.id));
       const discard = this.find('#btn-inspect-discard-pile > div');
@@ -166,8 +194,11 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
     const game = this.props.game, move = game.lastMoveDetails;
     if (!move) return;
     if (move.actionType === 'monolith' && game.monolithSquare) {
-      const piece = this.find(`#square-${game.monolithSquare} [data-motion-piece]`);
-      if (piece) this.batch.animate(piece, [{ translate: '0 -220%',opacity:0 }, {translate:'0 -180%',opacity:1,offset:.15},{ translate: '0 0',opacity:1 }],650);
+      if (!previous.monolithSquare) {
+        const piece = this.find(`#square-${game.monolithSquare} [data-motion-piece]`);
+        if (piece) this.batch.animate(piece, [{ opacity: 0, translate: '0 14px' }, { opacity: 1, translate: '0 0' }]);
+      }
+      this.impact(game.monolithSquare, 'stone', 80);
     } else if (move.actionType === 'restrict' && move.restrictedSquare) {
       this.impact(move.restrictedSquare, 'restrict', 0);
     } else if ((move.actionType === 'beacon' || move.actionType === 'static') && game.monolithSquare) {
@@ -192,7 +223,6 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
     effect.inert=true;effect.setAttribute('aria-hidden','true');
     Object.assign(effect.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});
     const ring=document.createElement('span');ring.className='summon-arrival-ring';effect.append(ring);
-    if(kind==='revive')for(let i=0;i<8;i++){const rune=document.createElement('span');rune.className='summon-arrival-rune';rune.textContent=['✧','ᚨ','ᛉ','ᚱ'][i%4];rune.style.setProperty('--rune-angle',`${i*45}deg`);effect.append(rune);}
     for(let i=0;i<8;i++){const spark=document.createElement('span');spark.className='summon-arrival-wisp';spark.style.setProperty('--wisp-x',`${12+i*10}%`);spark.style.setProperty('--wisp-y',`${15+(i*19)%60}%`);effect.append(spark);}
     document.body.append(effect);
     this.batch.animate(effect,[{opacity:0,transform:'scale(.65)'},{opacity:1,transform:'scale(1)',offset:.3},{opacity:0,transform:'scale(1.12)'}],1000,0,()=>effect.remove());
