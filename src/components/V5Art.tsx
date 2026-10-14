@@ -1,4 +1,3 @@
-import {useBoardSprite} from '../context/PieceView.tsx';
 import React from 'react';
 import type {PlayerColor} from '../types.ts';
 const normal=['p','n','b','r','q','k'];const special=['berserker','musketeer','summoner','ninja','sp','sn'];
@@ -12,8 +11,6 @@ const pieceBounds = [
  [[45,945,189,1129],[262,949,420,1129]],
 ];
 export function V5Piece({type,color='w',className='w-full h-full',awakened=false}:{type:string;color?:PlayerColor;className?:string;awakened?:boolean}) {
- const sprite=useBoardSprite(type,color,awakened);
- if(sprite)return <img className={`piece-3d-art ${className}`} src={sprite} alt={`${color==='w'?'White':'Black'} ${type}`} draggable={false}/>;
  const awakenedType=type==='sp'?'p':type==='sn'?'n':type;
  if((awakened||type==='sp'||type==='sn')&&normal.includes(awakenedType))return <svg role="img" aria-label={`${color==='w'?'White':'Black'} awakened ${awakenedType}`} data-awakened-art={awakenedType} className={`v5-art ${className}`} viewBox="0 0 240 240"><svg viewBox={`${normal.indexOf(awakenedType)*240} ${color==='w'?0:240} 240 240`} width="240" height="240" overflow="hidden"><image href={['p','b','q','k'].includes(awakenedType)?'/art/awakened-approved-v5.webp?v=approved-2':'/art/awakened-v5.png?v=red-forms-1'} width="1440" height="480"/></svg></svg>;
  let row:number,col:number;

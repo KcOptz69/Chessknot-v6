@@ -1,4 +1,3 @@
-import {BoardViewerColor,usePieceView} from '../context/PieceView.tsx';
 import {bishopCircleTargets} from '../utils/summoning.ts';
 import {frontierMoves,frontierKingSafe,executeLandingMove,occupant,frontierUltimateTargets,emptyFrontierSquare,monolithPlacementSquare} from '../utils/frontier.ts';
 import {FrontierArt,GolemIdleArt} from './FrontierUI.tsx';
@@ -278,7 +277,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     return monolithSurroundingSquares;
   }, [beaconEffect?.active, monolithSquare, monolithSurroundingSquares]);
 
-  const {view:pieceView}=usePieceView();
   const isKingInCheck = React.useMemo(() => {
     if(frontierGame?.frontier?.expanded)return !frontierKingSafe(frontierGame,turn);return isKingChecked(chess, turn, monolithSquare, champions, beaconProtectedSquares, grounds);
   }, [chess, turn, monolithSquare, champions, beaconProtectedSquares, grounds,frontierGame]);
@@ -1517,11 +1515,9 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
       {/* Board Shell Container */}
       <div className="relative w-full max-w-[560px]">
         {/* 8x8 Chessboard */}
-        <BoardViewerColor.Provider value={flipBoard?'b':'w'}>
         <div
           id="chess-board"
           style={isExtendedFen(fen)?{aspectRatio:'8 / 12',gridTemplateRows:'repeat(12,minmax(0,1fr))'}:undefined}
-          data-piece-view={pieceView}
           data-orientation={flipBoard ? 'black' : 'white'}
           className="relative w-full max-w-[560px] aspect-square grid grid-cols-8 grid-rows-8 border-[3px] sm:border-[6px] border-[#263449] dark:border-[#263449] rounded-xl shadow-xl overflow-hidden bg-[#263449] dark:bg-[#263449] ring-1 ring-stone-900/10 dark:ring-stone-700/50 touch-manipulation"
         >
@@ -1683,7 +1679,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 key={square}
                 data-tone={isLight?'light':'dark'} id={`square-${square}`}
                 data-stone-highlighted={squareBg!==baseSquareBg?'true':undefined}
-                style={{'--piece-depth':100+(flipBoard?['1','2','3','4','W','X','Y','Z','5','6','7','8']:['8','7','6','5','Z','Y','X','W','4','3','2','1']).indexOf(rank),'--stone-x':`${(square.charCodeAt(0)-97)*100/7}%`,'--stone-y':`${['1','2','3','4','W','X','Y','Z','5','6','7','8'].indexOf(rank)*100/11}%`} as React.CSSProperties}
+                style={{'--stone-x':`${(square.charCodeAt(0)-97)*100/7}%`,'--stone-y':`${['1','2','3','4','W','X','Y','Z','5','6','7','8'].indexOf(rank)*100/11}%`} as React.CSSProperties}
                 data-last-move={isMoveTo?'to':isMoveFrom?'from':isIntermediateMove?'via':undefined}
                 role="button" tabIndex={0} aria-label={`${square}${piece ? ` ${piece.color === 'w' ? 'White' : 'Black'} ${PIECE_NAMES[piece.type as StandardPieceType] || piece.type}` : ''}`}
                 aria-pressed={isSelected}
@@ -1978,7 +1974,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
         )}
         <BoardEffects pushTrail={frontierGame?.pushTrail} awards={frontierGame?.powerUpAwards} frontier={frontier} jokerEventId={historyLog.find(e=>e.actionType==='joker')?.id} refreshEventId={historyLog.find(e=>e.actionType==='refresh')?.id} fen={fen} pieceIds={pieceIds} champions={champions} grounds={grounds} clockAlert={clockAlert} flipped={flipBoard}/>
         </div>
-        </BoardViewerColor.Provider>
         {/* End of 8x8 Chessboard */}
       </div>
       {/* End Board Shell Container */}

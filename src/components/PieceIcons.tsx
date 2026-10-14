@@ -1,4 +1,3 @@
-import {useBoardSprite} from '../context/PieceView.tsx';
 import {V5Piece,V5Power} from './V5Art.tsx';
 import React from 'react';
 import { ExpansionPieceIcon } from './ExpansionPieceIcon.tsx';
@@ -13,8 +12,6 @@ interface PieceIconProps {
 }
 
 export const PieceIcon: React.FC<PieceIconProps> = ({ type, color = 'w', className = 'w-full h-full', awakened = false }) => {
-  const sprite=useBoardSprite(type,color,awakened);
-  if(sprite)return <img src={sprite} className={`piece-3d-art ${className}`} alt={`${color==='w'?'White':'Black'} ${type}`} draggable={false}/>;
   return <V5Piece type={type} color={color} className={className} awakened={awakened}/>;
 };
 

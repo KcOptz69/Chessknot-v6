@@ -368,6 +368,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
             <BookOpen size={17} />
             <span>Rules</span>
           </button>
+          
           <button
             id="lobby-music-toggle"
             aria-label={musicEnabled ? "Turn menu music off" : "Turn menu music on"}

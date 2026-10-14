@@ -1,6 +1,5 @@
-import {usePieceView} from '../context/PieceView.tsx';
 import { Modal } from './UI';
-import { Layers, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import {GroundReminder} from './GroundsUI.tsx';
 import type {Grounds} from '../utils/grounds.ts';
 import React from 'react';
@@ -63,7 +62,6 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 }) => {
   const { isDark, toggleTheme } = useTheme();
   const [optionsOpen, setOptionsOpen] = React.useState(false);
-  const {view:pieceView,setView:setPieceView}=usePieceView();
   const [copied, setCopied] = React.useState(false);
   const [soundOn, setSoundOn] = React.useState(() => isSoundEnabled());
 
@@ -290,8 +288,6 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           >
             {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
-
-          <button id="btn-toggle-piece-view" type="button" aria-label={`Piece view: ${pieceView.toUpperCase()}`} aria-pressed={pieceView==='3d'} onClick={()=>setPieceView(pieceView==='3d'?'2d':'3d')} className="p-2 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 rounded-lg border border-stone-200 dark:border-stone-700 text-xs font-bold">{pieceView.toUpperCase()}</button>
           {/* Rules Button */}
           <button
             id="btn-rules"
@@ -313,7 +309,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           </button>
         </div>
       </div>
-      {optionsOpen && <Modal className="compact-modal-backdrop" onClick={()=>setOptionsOpen(false)}><section className="compact-dialog" onClick={e=>e.stopPropagation()}><div className="compact-dialog-heading"><h2>Options</h2><button aria-label="Close dialog" onClick={()=>setOptionsOpen(false)}><X size={20}/></button></div><div className="compact-info-list"><button onClick={toggleTheme}><Sun/><span>Light / Dark</span><strong>{isDark?'Dark':'Light'}</strong></button><button onClick={toggleSound}><Volume2/><span>Mute sound</span><strong>{soundOn?'Off':'On'}</strong></button><button id="options-piece-view-toggle" type="button" aria-pressed={pieceView==='3d'} onClick={()=>setPieceView(pieceView==='3d'?'2d':'3d')}><Layers/><span>Piece view</span><strong>{pieceView.toUpperCase()}</strong></button><button onClick={()=>{setOptionsOpen(false);onOpenRules();}}><BookOpen/><span>Rules</span><span>›</span></button><button className="compact-resign" disabled={myColor!=='spectator'&&status!=='playing'} onClick={()=>{setOptionsOpen(false);if(myColor==='spectator')onReturnToLobby?.();else onResign();}}><Flag/><span>{myColor==='spectator'?'Quit viewing':'Resign'}</span></button></div><div className="compact-options-footer"><div><strong>Online 2-player</strong><small>Room: {roomId}</small></div><button onClick={()=>{if(myColor==='spectator'||status!=='playing'||window.confirm('Exit this match and return to the lobby?')){setOptionsOpen(false);onReturnToLobby?.();}}}>Exit</button></div></section></Modal>}
+      {optionsOpen && <Modal className="compact-modal-backdrop" onClick={()=>setOptionsOpen(false)}><section className="compact-dialog" onClick={e=>e.stopPropagation()}><div className="compact-dialog-heading"><h2>Options</h2><button aria-label="Close dialog" onClick={()=>setOptionsOpen(false)}><X size={20}/></button></div><div className="compact-info-list"><button onClick={toggleTheme}><Sun/><span>Light / Dark</span><strong>{isDark?'Dark':'Light'}</strong></button><button onClick={toggleSound}><Volume2/><span>Mute sound</span><strong>{soundOn?'Off':'On'}</strong></button><button onClick={()=>{setOptionsOpen(false);onOpenRules();}}><BookOpen/><span>Rules</span><span>›</span></button><button className="compact-resign" disabled={myColor!=='spectator'&&status!=='playing'} onClick={()=>{setOptionsOpen(false);if(myColor==='spectator')onReturnToLobby?.();else onResign();}}><Flag/><span>{myColor==='spectator'?'Quit viewing':'Resign'}</span></button></div><div className="compact-options-footer"><div><strong>Online 2-player</strong><small>Room: {roomId}</small></div><button onClick={()=>{if(myColor==='spectator'||status!=='playing'||window.confirm('Exit this match and return to the lobby?')){setOptionsOpen(false);onReturnToLobby?.();}}}>Exit</button></div></section></Modal>}
     </header>
   );
 };

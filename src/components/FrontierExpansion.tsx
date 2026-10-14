@@ -15,8 +15,7 @@ export function FrontierExpansion({id,onDone}:{id:string;onDone:()=>void}) {
   for(let index=0;index<squares.length;index++){
    const source=squares[index],copy=snapshot(source).node;
    copy.className='ck-field-square';copy.removeAttribute('role');copy.removeAttribute('tabindex');
-   copy.querySelectorAll<HTMLElement>('[data-motion-piece],.frontier-boss-unit').forEach((node,index)=>{if(board.dataset.pieceView==='3d'){const original=source.querySelectorAll<HTMLElement>('[data-motion-piece],.frontier-boss-unit')[index];if(original){const paint=getComputedStyle(original);for(const property of ['position','inset','left','right','top','bottom','width','height','z-index'])node.style.setProperty(property,paint.getPropertyValue(property));}}node.removeAttribute('data-motion-piece');});
-   if(board.dataset.pieceView==='3d'){copy.style.overflow='visible';copy.style.zIndex='auto';}
+   copy.querySelectorAll<HTMLElement>('[data-motion-piece]').forEach(node=>node.removeAttribute('data-motion-piece'));
    const texture=document.createElement('span'),paint=getComputedStyle(source,'::before');texture.className='ck-field-stone';
    Object.assign(texture.style,{backgroundImage:paint.backgroundImage,backgroundSize:paint.backgroundSize,backgroundPosition:paint.backgroundPosition,backgroundRepeat:'no-repeat',opacity:paint.opacity});
    copy.prepend(texture);groups[Math.floor(index/32)].append(copy);
