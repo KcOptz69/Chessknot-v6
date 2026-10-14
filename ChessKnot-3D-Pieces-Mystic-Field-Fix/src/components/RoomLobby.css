@@ -1,0 +1,1305 @@
+/* Main-menu styles are deliberately scoped; match layouts keep their existing rules. */
+.game-app:has(.ck-menu) {
+  zoom: 1;
+  background: #edf3fb !important;
+}
+.dark .game-app:has(.ck-menu) {
+  background: #091426 !important;
+}
+.ck-menu {
+  --menu-bg: #f9fcff;
+  --menu-panel: #fff;
+  --menu-soft: #edf5ff;
+  --menu-edge: #c5d8ef;
+  --menu-text: #14243c;
+  --menu-muted: #58708e;
+  --menu-accent: #2469eb;
+  width: 100%;
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 8px 0 18px;
+  color: var(--menu-text);
+}
+.dark .ck-menu,
+.dark .ck-menu-modal {
+  --menu-bg: #0c1526;
+  --menu-panel: #121f34;
+  --menu-soft: #172941;
+  --menu-edge: #294363;
+  --menu-text: #eff6ff;
+  --menu-muted: #a2b7d3;
+  --menu-accent: #4b96ff;
+}
+.ck-menu button,
+.ck-menu select,
+.ck-menu input,
+.ck-menu-modal button,
+.ck-menu-modal input {
+  font: inherit;
+}
+.ck-menu button,
+.ck-menu-modal button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.ck-menu button:disabled,
+.ck-menu select:disabled,
+.ck-menu-modal button:disabled,
+.ck-menu-modal input:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.ck-menu button:focus-visible,
+.ck-menu select:focus-visible,
+.ck-menu-modal button:focus-visible,
+.ck-menu-modal input:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+.ck-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.ck-menu-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ck-menu-brand img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+.ck-menu-brand h1 {
+  font-size: 28px;
+  font-weight: 850;
+  line-height: 1.05;
+  letter-spacing: -1px;
+}
+.ck-menu-brand p {
+  font-size: 12px;
+  color: var(--menu-accent);
+  font-weight: 700;
+}
+.ck-menu-tools {
+  display: flex;
+  gap: 6px;
+}
+.ck-menu-tools button,
+.ck-menu-room-actions button,
+.ck-menu-side button,
+.ck-menu-exit,
+.ck-menu-modal section > button:not(.ck-menu-primary),
+.ck-menu-modal form > button:not(.ck-menu-primary) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--menu-soft);
+  border: 1px solid var(--menu-edge);
+  border-radius: 9px;
+  padding: 8px 10px;
+  color: var(--menu-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ck-menu-hero {
+  height: clamp(125px, 16vw, 185px);
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--menu-edge);
+  border-radius: 14px;
+  background: #e0efff url("/art/menu/hero-light.webp") center/cover no-repeat;
+  overflow: hidden;
+  padding: 20px;
+  margin-bottom: 10px;
+}
+.dark .ck-menu-hero {
+  background-image: url("/art/menu/hero-dark.webp");
+  background-color: #071128;
+}
+.ck-menu-hero h2 {
+  font-size: clamp(19px, 2.6vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.7px;
+  font-weight: 850;
+  max-width: 45%;
+  color: #112648;
+  text-shadow: 0 1px 10px #ffffffc9;
+}
+.dark .ck-menu-hero h2 {
+  color: #fff;
+  text-shadow: 0 2px 12px #061328;
+}
+.ck-menu-modes {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 12px;
+  max-width: 440px;
+  background: var(--menu-soft);
+  border: 1px solid var(--menu-edge);
+  border-radius: 10px;
+  padding: 4px;
+}
+.ck-menu-modes button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 7px;
+  padding: 8px;
+  color: var(--menu-muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+.ck-menu-modes button[aria-pressed="true"] {
+  background: #2469eb;
+  color: #fff;
+  box-shadow: 0 2px 6px #2469eb25;
+}
+.ck-menu-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 12px;
+  align-items: start;
+}
+.ck-menu-packs {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  border: 1px solid var(--menu-edge);
+  border-radius: 13px;
+  background: var(--menu-panel);
+  padding: 12px;
+  min-width: 0;
+}
+.ck-menu-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+.ck-menu-section-title h2 {
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+.ck-menu-section-title > span {
+  font-size: 11px;
+  color: var(--menu-muted);
+}
+.ck-menu-pack-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.ck-menu-pack {
+  background: var(--menu-soft);
+  border: 1px solid var(--menu-edge);
+  border-radius: 10px;
+  overflow: hidden;
+  min-width: 0;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s;
+}
+.ck-menu-pack.is-enabled {
+  border-color: var(--menu-accent);
+  box-shadow: 0 0 0 1px #4285ee1f;
+}
+.ck-menu-pack-art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3;
+  overflow: hidden;
+  background: #102746;
+}
+.ck-menu-pack-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s;
+}
+@media (hover: hover) {
+  .ck-menu-pack-art:hover img {
+    transform: scale(1.045);
+  }
+}
+.ck-menu-pack h3 {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+  padding: 7px 7px 0;
+  min-height: 34px;
+  overflow-wrap: anywhere;
+}
+.ck-menu-pack-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 5px 5px;
+}
+.ck-menu-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 7px;
+  color: var(--menu-accent);
+}
+.ck-menu-icon-button:hover:not(:disabled) {
+  background: #4285ee18;
+}
+.ck-menu-switch {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  width: 35px;
+  height: 20px;
+  flex: 0 0 35px;
+  padding: 2px;
+  border-radius: 20px;
+  border: 1px solid var(--menu-edge);
+  background: #a7b8ce;
+}
+.ck-menu-switch span {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px #0003;
+  transition: transform 0.18s;
+}
+.ck-menu-switch[aria-checked="true"] {
+  background: #2469eb;
+  border-color: #2469eb;
+}
+.ck-menu-switch[aria-checked="true"] span {
+  transform: translateX(14px);
+}
+.ck-menu-coming {
+  font-size: 9px;
+  line-height: 1.1;
+  color: var(--menu-muted);
+  background: var(--menu-panel);
+  border-radius: 20px;
+  padding: 4px 5px;
+}
+.ck-menu-setup {
+  grid-column: 2;
+  grid-row: 1;
+  border: 1px solid var(--menu-edge);
+  border-radius: 13px;
+  background: var(--menu-panel);
+  padding: 12px;
+  min-width: 0;
+}
+.ck-menu label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--menu-muted);
+  display: block;
+  margin-bottom: 4px;
+}
+.ck-menu-code-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+.ck-menu-code-row strong {
+  letter-spacing: 1.7px;
+  font-size: 16px;
+  background: var(--menu-soft);
+  border: 1px solid var(--menu-edge);
+  border-radius: 7px;
+  padding: 4px 10px;
+  line-height: 22px;
+}
+.ck-menu-code-row > button {
+  border: 1px solid var(--menu-edge);
+  height: 32px;
+  width: 32px;
+}
+.ck-menu-room-actions {
+  display: flex;
+  gap: 5px;
+}
+.ck-menu-room-actions button {
+  flex: 1;
+  padding: 6px 5px;
+  font-size: 11px;
+}
+.ck-menu-players {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+}
+.ck-menu-players > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  background: var(--menu-soft);
+  border-radius: 7px;
+  padding: 3px 6px;
+  min-height: 31px;
+}
+.ck-menu-players strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-size: 12px;
+  flex: 1;
+}
+.ck-menu-players > div > svg {
+  color: var(--menu-accent);
+  flex-shrink: 0;
+}
+.ck-menu-players span {
+  font-size: 10px;
+  color: var(--menu-muted);
+  white-space: nowrap;
+}
+.ck-menu-players .ck-menu-icon-button {
+  width: 24px;
+  flex-basis: 24px;
+  height: 24px;
+}
+.ck-menu-players i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+}
+.ck-menu-players i.is-ready {
+  background: #10b981;
+}
+.ck-menu-setting-rows {
+  display: grid;
+  gap: 9px;
+}
+.ck-menu-side > div {
+  display: flex;
+  gap: 4px;
+}
+.ck-menu-side button {
+  flex: 1;
+  padding: 6px 3px;
+  font-size: 11px;
+}
+.ck-menu-side button[aria-pressed="true"] {
+  background: #dbeaff;
+  color: #1551ba;
+  border-color: #6c9ff0;
+}
+.dark .ck-menu-side button[aria-pressed="true"] {
+  background: #193c6b;
+  color: #b8d9ff;
+}
+.ck-menu-side-dot {
+  width: 9px;
+  height: 9px;
+  display: inline-block;
+  border-radius: 50%;
+  border: 1px solid #6b7b91;
+  background: #fff;
+}
+.ck-menu-side-dot.b {
+  background: #1d2739;
+}
+.ck-menu-timer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.ck-menu-timer label {
+  flex: 0 0 100%;
+  margin: 0;
+}
+.ck-menu select {
+  background: var(--menu-soft);
+  border: 1px solid var(--menu-edge);
+  border-radius: 8px;
+  color: var(--menu-text);
+  padding: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 0;
+  flex: 1;
+}
+.ck-menu-caption {
+  font-size: 10px;
+  color: var(--menu-muted);
+  line-height: 1.4;
+  margin-top: 8px;
+}
+.ck-menu-launch {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+}
+.ck-menu-primary,
+.ck-menu-modal .ck-menu-primary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(110deg, #1677fb, #2f61e6);
+  color: #fff;
+  border: 1px solid #347df4;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 4px 12px #2469eb25;
+}
+.ck-menu-primary:disabled {
+  box-shadow: none;
+}
+.ck-menu-launch .ck-menu-caption {
+  text-align: center;
+}
+.ck-menu-exit {
+  margin-top: 6px;
+  width: 100%;
+}
+.ck-menu-modal {
+  --menu-bg: #f9fcff;
+  --menu-panel: #fff;
+  --menu-soft: #edf5ff;
+  --menu-edge: #c5d8ef;
+  --menu-text: #14243c;
+  --menu-muted: #58708e;
+  --menu-accent: #2469eb;
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #07152899;
+  color: var(--menu-text);
+}
+.ck-menu-modal > section {
+  background: var(--menu-panel);
+  width: min(460px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  border: 1px solid var(--menu-edge);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 20px 65px #0005;
+}
+.ck-menu-modal label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 8px 0;
+}
+.ck-menu-modal input:not([type="checkbox"]) {
+  width: 100%;
+  border: 1px solid var(--menu-edge);
+  border-radius: 8px;
+  background: var(--menu-soft);
+  color: var(--menu-text);
+  padding: 10px;
+  margin: 4px 0 8px;
+}
+.ck-menu-modal .ck-menu-primary {
+  margin-top: 10px;
+}
+.ck-menu-modal form > button:not(.ck-menu-primary) {
+  width: 100%;
+  margin-top: 8px;
+}
+.ck-menu-custom-timer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.ck-menu-modal .ck-menu-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ck-menu-future-art {
+  width: 100%;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+@media (max-width: 1099px) {
+  .ck-menu-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ck-menu-content > * {
+    width: 100%;
+  }
+  .ck-menu-setup {
+    order: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+  }
+  .ck-menu-setup > .ck-menu-section-title {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  .ck-menu-room {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .ck-menu-players {
+    grid-column: 1;
+    grid-row: 3;
+    margin: 3px 0;
+  }
+  .ck-menu-setting-rows {
+    grid-column: 2;
+    grid-row: 2 / 4;
+    align-content: start;
+  }
+  .ck-menu-setup > .ck-menu-caption {
+    grid-column: 1 / -1;
+    margin-top: 2px;
+  }
+  .ck-menu-packs {
+    order: 1;
+  }
+  .ck-menu-pack-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .ck-menu-pack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ck-menu-pack-art {
+    grid-column: 1 / -1;
+  }
+  .ck-menu-pack h3 {
+    font-size: 12px;
+    min-height: 0;
+    align-self: center;
+    padding: 6px;
+  }
+  .ck-menu-pack-controls {
+    padding: 3px;
+  }
+  .ck-menu-coming {
+    display: none;
+  }
+  .ck-menu-pack.is-future h3::after {
+    content: "Coming Soon";
+    display: block;
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--menu-muted);
+    margin-top: 2px;
+  }
+  .ck-menu-launch {
+    order: 2;
+  }
+  .ck-menu-hero {
+    height: 145px;
+  }
+  .ck-menu-modes {
+    max-width: none;
+  }
+}
+@media (max-width: 599px) {
+  .ck-menu {
+    padding: 0 0 8px;
+  }
+  .ck-menu-header {
+    margin-bottom: 6px;
+    gap: 6px;
+  }
+  .ck-menu-brand {
+    gap: 6px;
+  }
+  .ck-menu-brand img {
+    width: 38px;
+    height: 38px;
+  }
+  .ck-menu-brand h1 {
+    font-size: 22px;
+  }
+  .ck-menu-brand p {
+    font-size: 10px;
+  }
+  .ck-menu-tools button {
+    padding: 8px;
+    min-width: 34px;
+  }
+  .ck-menu-tools button span {
+    display: none;
+  }
+  .ck-menu-hero {
+    height: 100px;
+    padding: 10px;
+    border-radius: 10px;
+    background-position: center;
+  }
+  .ck-menu-hero h2 {
+    font-size: 17px;
+    max-width: 47%;
+  }
+  .ck-menu-modes {
+    margin-bottom: 8px;
+  }
+  .ck-menu-modes button {
+    padding: 5px;
+    font-size: 12px;
+  }
+  .ck-menu-setup {
+    display: block;
+    padding: 9px;
+  }
+  .ck-menu-section-title {
+    margin-bottom: 6px;
+  }
+  .ck-menu-section-title h2 {
+    font-size: 13px;
+  }
+  .ck-menu-room > label {
+    display: none;
+  }
+  .ck-menu-room {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .ck-menu-code-row {
+    margin: 0;
+  }
+  .ck-menu-code-row strong {
+    font-size: 13px;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+  }
+  .ck-menu-room-actions {
+    margin-left: auto;
+  }
+  .ck-menu-room-actions button {
+    font-size: 10px;
+    padding: 5px;
+    min-height: 30px;
+  }
+  .ck-menu-room-actions button:first-child {
+    font-size: 0;
+    gap: 0;
+    width: 30px;
+    flex: 0 0 30px;
+  }
+  .ck-menu-players {
+    margin: 6px 0;
+  }
+  .ck-menu-players > div {
+    min-height: 27px;
+  }
+  .ck-menu-setting-rows {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 7px;
+  }
+  .ck-menu label {
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+  .ck-menu-side button {
+    font-size: 10px;
+    padding: 6px 2px;
+    gap: 3px;
+  }
+  .ck-menu-timer {
+    gap: 2px;
+  }
+  .ck-menu-timer select {
+    font-size: 11px;
+    padding: 6px 3px;
+  }
+  .ck-menu-timer > .ck-menu-icon-button {
+    display: none;
+  }
+  .ck-menu-setup > .ck-menu-caption {
+    font-size: 9px;
+    margin-top: 5px;
+  }
+  .ck-menu-packs {
+    padding: 8px;
+  }
+  .ck-menu-pack {
+    display: block;
+  }
+  .ck-menu-pack-grid {
+    gap: 6px;
+  }
+  .ck-menu-pack h3 {
+    font-size: 11px;
+    padding: 5px 5px 0;
+    min-height: 30px;
+  }
+  .ck-menu-pack-controls {
+    padding: 0 4px 3px;
+    min-height: 29px;
+  }
+  .ck-menu-coming {
+    display: inline;
+    font-size: 8px;
+    padding: 3px;
+  }
+  .ck-menu-pack.is-future h3::after {
+    display: none;
+  }
+  .ck-menu-icon-button {
+    height: 28px;
+    width: 28px;
+    flex-basis: 28px;
+  }
+  .ck-menu-primary {
+    padding: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ck-menu * {
+    transition: none !important;
+  }
+}
+
+/* Compact lobby spacing without affecting the in-game interface. */
+.ck-menu {
+  padding-top: 4px;
+  padding-bottom: 12px;
+}
+.ck-menu-header {
+  margin-bottom: 7px;
+}
+.ck-menu-brand img {
+  width: 44px;
+  height: 44px;
+}
+.ck-menu-brand h1 {
+  font-size: 26px;
+}
+.ck-menu-hero {
+  height: 125px;
+  padding: 16px;
+  margin-bottom: 7px;
+}
+.ck-menu-hero h2 {
+  font-size: clamp(19px, 2.2vw, 28px);
+}
+.ck-menu-modes {
+  margin-bottom: 8px;
+  padding: 3px;
+}
+.ck-menu-modes button {
+  padding: 6px;
+  font-size: 12px;
+}
+.ck-menu-content {
+  gap: 10px;
+}
+.ck-menu-packs,
+.ck-menu-setup {
+  padding: 10px;
+}
+.ck-menu-section-title {
+  margin-bottom: 6px;
+}
+.ck-menu-pack-grid {
+  gap: 7px;
+}
+.ck-menu-pack h3 {
+  padding: 5px 6px 0;
+  min-height: 30px;
+}
+.ck-menu-pack-controls {
+  padding: 1px 4px 3px;
+}
+.ck-menu-pack-controls .ck-menu-icon-button {
+  width: 26px;
+  height: 26px;
+  flex-basis: 26px;
+}
+.ck-menu-players {
+  margin: 7px 0;
+}
+.ck-menu-setting-rows {
+  gap: 6px;
+}
+.ck-menu-primary {
+  padding: 10px;
+}
+@media (max-width: 1099px) {
+  .ck-menu-hero {
+    height: 105px;
+  }
+  .ck-menu-setup {
+    gap: 3px 12px;
+  }
+  .ck-menu-pack h3 {
+    min-height: 0;
+    padding: 5px;
+  }
+  .ck-menu-players {
+    margin: 3px 0;
+  }
+}
+@media (max-width: 599px) {
+  .ck-menu {
+    padding-top: 0;
+    padding-bottom: 6px;
+  }
+  .ck-menu-brand img {
+    width: 34px;
+    height: 34px;
+  }
+  .ck-menu-brand h1 {
+    font-size: 21px;
+  }
+  .ck-menu-hero {
+    height: 80px;
+    padding: 9px;
+  }
+  .ck-menu-hero h2 {
+    font-size: 15px;
+    max-width: 49%;
+  }
+  .ck-menu-packs,
+  .ck-menu-setup {
+    padding: 7px;
+  }
+  .ck-menu-pack-grid {
+    gap: 5px;
+  }
+  .ck-menu-pack h3 {
+    min-height: 29px;
+    padding: 4px 4px 0;
+  }
+  .ck-menu-pack-controls {
+    min-height: 25px;
+    padding-bottom: 2px;
+  }
+  .ck-menu-pack-controls .ck-menu-icon-button {
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+  }
+  .ck-menu-players > div {
+    min-height: 25px;
+  }
+  .ck-menu-setup > .ck-menu-caption {
+    margin-top: 3px;
+  }
+  .ck-menu-launch .ck-menu-caption {
+    margin-top: 4px;
+  }
+}
+
+/* Full cover image and a unified desktop panel height. */
+.ck-menu-hero {
+  position: relative;
+  display: block;
+  height: auto;
+  padding: 0;
+  aspect-ratio: auto;
+  background: none;
+  isolation: isolate;
+  margin-bottom: 10px;
+}
+.dark .ck-menu-hero {
+  background: none;
+}
+.ck-menu-cover {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.ck-menu-hero h2 {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 43%;
+  margin: 0;
+  color: #fff;
+  text-shadow:
+    0 2px 5px #04152e,
+    0 0 16px #04152e;
+  line-height: 1.2;
+  font-size: clamp(20px, 2vw, 29px);
+}
+.ck-menu-hero h2 span {
+  display: block;
+  color: #69b9ff;
+  font-weight: 900;
+  margin-bottom: 5px;
+}
+.ck-menu-hero h2 strong {
+  display: block;
+  color: #fff;
+  font-weight: 850;
+}
+.ck-menu-timer > .ck-menu-icon-button {
+  display: inline-flex;
+}
+@media (min-width: 1100px) {
+  .ck-menu-content {
+    align-items: stretch;
+    grid-template-rows: auto auto;
+  }
+  .ck-menu-packs {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+  }
+  .ck-menu-pack-grid {
+    flex: 1;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  .ck-menu-pack {
+    display: flex;
+    flex-direction: column;
+  }
+  .ck-menu-pack-art {
+    flex: 0 0 auto;
+  }
+  .ck-menu-pack-controls {
+    margin-top: auto;
+  }
+}
+/* Descriptions fill desktop cards without adding height on small screens. */
+.ck-menu-pack-description {
+  display: none;
+}
+@media (min-width: 1100px) {
+  .ck-menu-pack-description {
+    display: block;
+    padding: 7px 8px 10px;
+    color: var(--menu-muted);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .ck-menu-packs,
+  .ck-menu-setup {
+    background: linear-gradient(145deg, #fff, #eaf5ff);
+    border-color: #99c5f8;
+    box-shadow: 0 3px 15px #237fed12;
+  }
+  .ck-menu-pack {
+    background: linear-gradient(160deg, #f5fbff, #dfeeff);
+  }
+  .ck-menu-pack.is-enabled {
+    box-shadow:
+      0 0 0 1px #4285ee35,
+      0 3px 10px #287fec19;
+  }
+  .dark .ck-menu-packs,
+  .dark .ck-menu-setup {
+    background: linear-gradient(145deg, #102441, #091a32);
+    border-color: #235e9e;
+    box-shadow: 0 3px 18px #008cff18;
+  }
+  .dark .ck-menu-pack {
+    background: linear-gradient(160deg, #18385c, #0b213d);
+  }
+  .ck-menu-modes button[aria-pressed="true"],
+  .ck-menu-primary {
+    background: linear-gradient(180deg, #168cff, #0860ed);
+    box-shadow: 0 3px 9px #147dfb35;
+  }
+}
+@media (max-width: 599px) {
+  .ck-menu-hero h2 {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    max-width: 48%;
+    padding: 0;
+    font-size: clamp(11px, 3.2vw, 15px);
+    background: none;
+    text-shadow:
+      0 1px 3px #04152e,
+      0 0 7px #04152e;
+  }
+  .ck-menu-hero h2 span {
+    margin-bottom: 2px;
+  }
+  .ck-menu-pack h3 {
+    min-height: 0;
+    padding: 3px 4px 0;
+    font-size: 10px;
+    line-height: 1.15;
+  }
+  .ck-menu-pack-controls {
+    min-height: 24px;
+    padding: 0 3px 2px;
+  }
+  .ck-menu-pack-grid {
+    gap: 4px;
+  }
+  .ck-menu-timer > .ck-menu-icon-button {
+    display: inline-flex;
+    width: 26px;
+    height: 28px;
+    flex-basis: 26px;
+  }
+}
+
+/* Desktop setup and pack grid share a compact height in either game mode. */
+@media (min-width: 1100px) {
+  .ck-menu-content {
+    grid-template-rows: 290px auto;
+  }
+  .ck-menu-setup {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 9px;
+  }
+  .ck-menu-setup > .ck-menu-section-title {
+    min-height: 30px;
+    margin-bottom: 5px;
+    padding-right: 130px;
+  }
+  .ck-menu-room {
+    height: 29px;
+    flex: 0 0 29px;
+  }
+  .ck-menu-room > label {
+    display: none;
+  }
+  .ck-menu-code-row {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    margin: 0;
+  }
+  .ck-menu-code-row strong {
+    font-size: 12px;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    line-height: 22px;
+  }
+  .ck-menu-code-row > button {
+    width: 27px;
+    height: 27px;
+  }
+  .ck-menu-room-actions button {
+    padding: 5px;
+  }
+  .ck-menu-room > .ck-menu-caption {
+    margin: 0;
+    line-height: 29px;
+  }
+  .ck-menu-players {
+    margin: 6px 0;
+    gap: 3px;
+  }
+  .ck-menu-players > div {
+    min-height: 28px;
+    padding: 3px 5px;
+  }
+  .ck-menu-setting-rows {
+    gap: 5px;
+  }
+  .ck-menu-side button {
+    padding: 5px 3px;
+  }
+  .ck-menu select {
+    padding: 6px;
+  }
+  .ck-menu-setup > .ck-menu-caption {
+    margin-top: 6px;
+  }
+  .ck-menu-pack h3 {
+    min-height: 22px;
+    padding-top: 4px;
+  }
+  .ck-menu-pack-description {
+    padding: 4px 7px 5px;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  .ck-menu-pack-grid {
+    gap: 6px;
+  }
+}
+
+/* Mode buttons sit on the desktop cover, and below it on smaller devices. */
+@media (min-width: 1100px) {
+  .ck-menu-hero .ck-menu-modes {
+    position: absolute;
+    left: 16px;
+    bottom: 9px;
+    width: 420px;
+    margin: 0;
+    background: #edf6fff0;
+    border-color: #8ebff4;
+    box-shadow: 0 2px 10px #09336b25;
+  }
+  .dark .ck-menu-hero .ck-menu-modes {
+    background: #102441ee;
+    border-color: #397ec5;
+  }
+  .ck-menu-hero h2 {
+    top: 43%;
+  }
+}
+@media (max-width: 1099px) {
+  .ck-menu-hero {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+  .ck-menu-cover {
+    border: 1px solid var(--menu-edge);
+    border-radius: 14px;
+  }
+  .ck-menu-hero h2 {
+    top: 0;
+    transform: none;
+    height: calc(100% - 46px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .ck-menu-hero .ck-menu-modes {
+    margin-top: 8px;
+    margin-bottom: 0;
+  }
+}
+
+/* Match Setup: content determines the panel height, never a fixed card height.
+   Keep launch actions in their own grid row and prevent overlap at any zoom. */
+@media (min-width: 1100px) {
+  .ck-menu-content {
+    grid-template-rows: minmax(min-content, auto) auto;
+    align-items: stretch;
+  }
+  .ck-menu-setup {
+    height: auto;
+    min-height: min-content;
+    overflow: visible;
+  }
+  .ck-menu-launch {
+    position: relative;
+    align-self: start;
+    margin-top: 8px;
+  }
+}
+@media (min-width: 600px) and (max-width: 1099px) {
+  .ck-menu-setup > .arbiter-lobby-option,
+  .ck-menu-setup > .ck-menu-arbiter-seat {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+  .ck-menu-setup {
+    height: auto;
+    min-height: min-content;
+  }
+}
+@media (max-width: 599px) {
+  .ck-menu-setup { height: auto; min-height: min-content; }
+  .ck-menu-launch { position: static; margin-top: 0; }
+}
+
+/* Consolidated Arbiter identity and control row: flexible on narrow screens. */
+.ck-menu-arbiter-combined{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 8px;border:1px solid rgba(110,165,240,.25);border-radius:9px;min-width:0}
+.ck-menu-arbiter-identity{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 110px}
+.ck-menu-arbiter-identity strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ck-menu-arbiter-identity span{font-size:11px;opacity:.8}
+.ck-menu-arbiter-combined .arbiter-lobby-option{margin:0;white-space:nowrap}
+.ck-menu-arbiter-combined>button{padding:5px 8px;border-radius:6px;border:1px solid rgba(110,165,240,.4)}
+@media(max-width:450px){.ck-menu-arbiter-combined{gap:5px}.ck-menu-arbiter-identity{flex-basis:100%}}
+
+/* Compact, consistent Arbiter controls across desktop and mobile */
+.ck-menu-arbiter-combined {gap:7px; padding:8px; align-items:center;}
+.ck-menu-arbiter-identity {font-size:12px; line-height:1.35;}
+.ck-menu-arbiter-identity strong {font-size:12px;}
+.ck-menu-arbiter-identity span {font-size:11px;}
+.ck-menu-arbiter-combined .ck-arbiter-toggle {display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:11px;font-weight:600;line-height:1.3;white-space:nowrap;}
+.ck-arbiter-toggle input {position:absolute;width:1px;height:1px;opacity:0;}
+.ck-arbiter-toggle-track {position:relative;display:inline-block;width:30px;height:17px;flex:0 0 30px;border-radius:99px;background:#43536b;border:1px solid #65758d;transition:background .15s ease;}
+.ck-arbiter-toggle-track::after {content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#f1f5ff;transition:transform .15s ease;}
+.ck-arbiter-toggle input:checked + .ck-arbiter-toggle-track {background:#2563eb;border-color:#60a5fa;}
+.ck-arbiter-toggle input:checked + .ck-arbiter-toggle-track::after {transform:translateX(13px);}
+.ck-arbiter-toggle input:focus-visible + .ck-arbiter-toggle-track {outline:2px solid #93c5fd;outline-offset:3px;}
+.ck-arbiter-toggle input:disabled + .ck-arbiter-toggle-track {opacity:.55;cursor:not-allowed;}
+.ck-menu-arbiter-combined > .ck-arbiter-role-button {font:inherit;font-size:11px;font-weight:600;line-height:1.25;padding:6px 9px;border-radius:6px;background:rgba(37,99,235,.13);color:inherit;min-height:27px;}
+@media(max-width:450px) {.ck-menu-arbiter-combined {gap:6px;} .ck-menu-arbiter-identity {flex-basis:auto;flex-grow:1;} .ck-menu-arbiter-combined > .ck-arbiter-role-button {flex:0 0 auto;}}
+@media(max-width:330px) {.ck-menu-arbiter-identity {flex-basis:100%;} .ck-menu-arbiter-combined > .ck-arbiter-role-button {flex-grow:1;}}
+
+/* Compact three-seat Match Setup: Arbiter only appears when allowed. */
+.ck-menu-seats{display:flex;flex-direction:column;gap:5px}
+.ck-menu-seats > div{min-width:0;display:flex;align-items:center;gap:7px}
+.ck-menu-seats > div > strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ck-menu-seats .ck-seat-claim{flex:0 0 auto;font:inherit;font-size:10px;font-weight:700;line-height:1;padding:5px 6px;min-height:22px;border:1px solid #3b82f6;border-radius:4px;background:#2563eb;color:white}
+.ck-menu-seats .ck-seat-claim:hover{background:#1d4ed8}
+.ck-menu-seats .ck-seat-claim:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
+.ck-menu-timer .ck-arbiter-timer-toggle{display:inline-flex;flex:0 0 auto;align-items:center;gap:8px;margin-left:auto;margin-bottom:0;font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer}
+.ck-arbiter-timer-toggle input{position:absolute;width:1px;height:1px;opacity:0}
+.ck-arbiter-timer-toggle .ck-arbiter-toggle-track{position:relative;display:inline-block;width:32px;height:18px;flex:0 0 32px;border-radius:99px;background:#43536b;border:1px solid #65758d;transition:background .15s}
+.ck-arbiter-timer-toggle .ck-arbiter-toggle-track::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#f1f5ff;transition:transform .15s}
+.ck-arbiter-timer-toggle input:checked+.ck-arbiter-toggle-track{background:#2563eb;border-color:#60a5fa}
+.ck-arbiter-timer-toggle input:checked+.ck-arbiter-toggle-track::after{transform:translateX(14px)}
+.ck-arbiter-timer-toggle input:focus-visible+.ck-arbiter-toggle-track{outline:2px solid #93c5fd;outline-offset:2px}
+.ck-arbiter-timer-toggle input:disabled+.ck-arbiter-toggle-track{opacity:.55;cursor:not-allowed}
+@media(max-width:350px){.ck-menu-timer .ck-arbiter-timer-toggle{gap:5px;font-size:10px}.ck-menu-seats .ck-seat-claim{font-size:9px}}
+
+/* Mobile banner text: center vertically within the cover image. */
+@media (max-width: 1099px) {
+  .ck-menu-hero h2 {
+    top: 50%;
+    transform: translateY(-50%);
+    height: auto;
+    display: block;
+  }
+}
+/* Caption and Arbiter switch share a single compact baseline. */
+.ck-menu-setup-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 6px;
+}
+.ck-menu-setup-foot > .ck-menu-caption {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.35;
+}
+.ck-menu-setup-foot > .ck-arbiter-timer-toggle {
+  flex: 0 0 auto;
+  margin: 0;
+}
+@media (max-width: 380px) {
+  .ck-menu-setup-foot { gap: 5px; }
+  .ck-menu-setup-foot > .ck-menu-caption { font-size: 9px; }
+  .ck-menu-setup-foot > .ck-arbiter-timer-toggle { gap: 5px; font-size: 10px; }
+}
+
+/* 2026-10: keep caption and Arbiter toggle aligned on a single mobile row. */
+.ck-menu-setup .ck-menu-setup-foot {display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;justify-content:initial!important;column-gap:8px!important;row-gap:0!important;width:100%;margin-top:8px!important;padding:0!important;}
+.ck-menu-setup .ck-menu-setup-foot .ck-menu-caption {grid-column:1;grid-row:1;min-width:0;max-width:none;margin:0!important;padding:0!important;align-self:center!important;line-height:1.25!important;white-space:normal;}
+.ck-menu-setup .ck-menu-setup-foot .ck-arbiter-timer-toggle {grid-column:2;grid-row:1;display:inline-flex!important;position:static!important;float:none!important;align-items:center!important;align-self:center!important;justify-self:end!important;min-width:0;margin:0!important;padding:0!important;line-height:1.25!important;white-space:nowrap;}
+@media(max-width:420px){.ck-menu-setup .ck-menu-setup-foot{column-gap:5px!important}.ck-menu-setup .ck-menu-setup-foot .ck-menu-caption{font-size:9px!important}.ck-menu-setup .ck-menu-setup-foot .ck-arbiter-timer-toggle{font-size:10px!important;gap:5px!important}}
+
+.ck-menu-music-view{display:flex;flex-direction:column;align-items:stretch;gap:5px}.ck-menu-music-view>button{justify-content:center}.ck-menu-tools #lobby-piece-view-toggle{font-size:11px;font-weight:800;min-height:30px;padding:4px 8px}
