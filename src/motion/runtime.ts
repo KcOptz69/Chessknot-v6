@@ -72,9 +72,9 @@ export function snapshot(node: HTMLElement): Visual {
   return { node: clone, rect: node.getBoundingClientRect() };
 }
 
-export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HTMLElement, delay = 0, card = false, kind: 'move'|'switch'|'portal'|'push' = 'move') {
+export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HTMLElement, delay = 0, card = false, kind: 'move'|'switch'|'portal'|'push' = 'move', onSettled: () => void = () => {}) {
   const from = visual.rect;
-  if (!visibleRect(from) || !visibleRect(to) || reducedMotion() || document.hidden) return;
+  if (!visibleRect(from) || !visibleRect(to) || reducedMotion() || document.hidden) { onSettled(); return; }
   // Hand cards can be partly clipped by a mobile rail. Never let their copy
   // escape the viewport and introduce horizontal scrolling during a flight.
   if (card && (from.left < 0 || from.right > innerWidth || to.left < 0 || to.right > innerWidth)) return;
@@ -88,6 +88,7 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
   const previousOpacity = target?.style.getPropertyValue('opacity') || '';
   const previousOpacityPriority = target?.style.getPropertyPriority('opacity') || '';
   const revealTarget = () => {
+    onSettled();
     if (!target) return;
     delete target.dataset.inFlight;
     if (previousOpacity) target.style.setProperty('opacity', previousOpacity, previousOpacityPriority);
@@ -115,7 +116,7 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
   const start = { transform: `translate(${dx}px,${dy}px) scale(${from.width / to.width},${from.height / to.height})`, opacity: 1 };
   const end = { transform: 'translate(0,0) scale(1)', opacity: card && !target ? .15 : 1 };
   const frames:Keyframe[]=kind==='switch'?[start,{transform:`translate(${dx/2-dy*.18}px,${dy/2+dx*.18}px) scale(1.06)`,filter:'drop-shadow(0 0 10px #bb70ff)',offset:.5},end]:kind==='portal'?[{...start,opacity:1},{transform:`translate(${dx}px,${dy}px) scale(.08)`,opacity:0,offset:.35},{transform:'translate(0,0) scale(.08)',opacity:0,offset:.55},end]:[start,end];
-  batch.animate(ghost, frames, kind==='move'?MOVE_MS:700, delay, () => { ghost.remove(); revealTarget(); });
+  batch.animate(ghost, frames, kind==='move'?MOVE_MS:700, delay, () => { revealTarget(); ghost.remove(); });
     return;
   }
   if (!card) {
@@ -154,14 +155,14 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
       { transform: 'translate(0,1px) scale(1)', offset: .94 },
       { transform: 'translate(0,0) scale(1)', offset: 1 },
     ], PIECE_MOVE_MS, delay, () => {
+      revealTarget();
       ghost.remove();
       shadow.remove();
-      revealTarget();
     });
     return;
   }
   batch.animate(ghost, [
     { transform: `translate(${dx}px,${dy}px) scale(${from.width / to.width},${from.height / to.height})`, opacity: 1 },
     { transform: 'translate(0,0) scale(1)', opacity: card && !target ? .15 : 1 },
-  ], MOVE_MS, delay, () => { ghost.remove(); revealTarget(); });
+  ], MOVE_MS, delay, () => { revealTarget(); ghost.remove(); });
 }

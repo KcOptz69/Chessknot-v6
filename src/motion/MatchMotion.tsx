@@ -37,12 +37,21 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
   private media?: MediaQueryList;
   private orientationObserver?: MutationObserver;
   private awaitingSnapshot = false;
+  private maskedDestinations = new Set<string>();
   private destinationMask?: HTMLStyleElement;
   private maskTimer?: ReturnType<typeof setTimeout>;
   private clearMask = () => {
     clearTimeout(this.maskTimer);
     this.destinationMask?.remove();
     this.destinationMask = undefined;
+    this.maskedDestinations.clear();
+  };
+  private revealDestination = (square: string) => {
+    this.maskedDestinations.delete(square);
+    if (!this.maskedDestinations.size) { this.clearMask(); return; }
+    if (this.destinationMask) this.destinationMask.textContent = [...this.maskedDestinations].map(destination =>
+      `#chess-board #square-${destination} [data-motion-piece]{opacity:0!important;visibility:hidden!important;}`
+    ).join('\n');
   };
   private cancel = () => { this.batch.cancel(); this.clearMask(); };
   componentDidMount() {
@@ -85,6 +94,7 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
     if (!reducedMotion() && !document.hidden && isNewAction(previous.game, this.props.game)) {
       const destinations = planBoardMotion(previous.game, this.props.game).moves.map(move => move.to);
       if (destinations.length) {
+        this.maskedDestinations = new Set(destinations);
         const mask = document.createElement('style');
         mask.textContent = destinations.map(square =>
           `#chess-board #square-${square} [data-motion-piece]{opacity:0!important;visibility:hidden!important;}`
@@ -119,8 +129,8 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
           const action=this.props.game.lastMoveDetails?.actionType;
           const portal=this.props.game.grounds?.events.some(e=>e.type==='portal'&&!previous.game.grounds?.events.some(old=>old.id===e.id)) || this.props.game.frontier?.events.some(e=>e.kind==='move'&&e.detail.startsWith('Portal:')&&!previous.game.frontier?.events.some(old=>old.id===e.id));
           captureDelay = Math.max(captureDelay, action==='switch'||portal ? 525 : PIECE_MOVE_MS * .75);
-          fly(this.batch, visual, target.getBoundingClientRect(), target,0,false, action==='switch'?'switch':portal?'portal':action==='push'?'push':'move');
-        }
+          fly(this.batch, visual, target.getBoundingClientRect(), target,0,false, action==='switch'?'switch':portal?'portal':action==='push'?'push':'move', () => this.revealDestination(to));
+        } else { this.revealDestination(to); }
       }
       for (const square of plan.captures) {
         const visual = old.pieces.get(square);
