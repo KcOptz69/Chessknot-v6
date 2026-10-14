@@ -325,6 +325,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     }
   }, [myColor, autoFlip]);
 
+  const [selectedGolemVisual, setSelectedGolemVisual] = React.useState<string | null>(null);
+  React.useEffect(() => { setSelectedGolemVisual(null); }, [fen, turn, selectedCard, isMyTurn]);
   const [hoveredCard, setHoveredCard] = React.useState<Card | null>(null);
   React.useEffect(() => {
     setHoveredCard(null);
@@ -778,7 +780,15 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
   const handleSquareClick = (square: string) => {
     if(tutorialGuide&&!tutorialGuide.guard(square))return;
-    if(onGroundSquare?.(square))return;
+    if(onGroundSquare?.(square)){
+      const golem = frontier?.golems.find(g=>g.square===square&&g.owner===turn);
+      if(isMyTurn && golem && !groundTargets.length &&
+        (!selectedCard || ['pawn','knight','bishop','rook','queen','wild','traverse'].includes(selectedCard.type)))
+        setSelectedGolemVisual(current=>current===square?null:square);
+      else setSelectedGolemVisual(null);
+      return;
+    }
+    setSelectedGolemVisual(null);
     if(bishopCirclePlacement){if(bishopCircleSquares.includes(square)){onPlayAwakeningBishop?.(bishopCirclePlacement.from,bishopCirclePlacement.to,'p',square);setBishopCirclePlacement(null);setSelectedSquare(null);}return;}
     if(!bishopMoveAllowed.current&&selectedSquare&&validDestinations.includes(square)&&summoningCircles.some(c=>c.bishopId===pieceIds[selectedSquare]&&!c.finished&&!c.interrupted)){setBishopMoveWarning(square);return;}
     // Check if clicked a champion square (White or Black)
@@ -1636,11 +1646,16 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
               (['pawn','knight','bishop','rook','queen','wild','previous'].includes(hoveredCard.type) ||
                 hoveredCard.type.startsWith('awakening_')) &&
               isCardPermittedForPiece(hoveredCard, piece.type as StandardPieceType, lastMovedPiece));
-            const matchingHighlight = isMyTurn && !hasPopup &&
-              Boolean(selectedCard || isWildPowerUp) &&
+            const standardMatch = Boolean(selectedCard || isWildPowerUp) &&
               Boolean(piece && piece.color === turn && square !== monolithSquare) &&
               !['soul_release','monolith','restrict','champion'].includes(selectedCard?.type || '') &&
               (isSelected || (!selectedSquare && isCardTarget));
+            const championMatch = Boolean(championPiece && championPiece.color===turn &&
+              (isSelected || selectedCard?.type==='champion' || selectedCard?.type==='push'&&isCardTarget));
+            const golemMatch = Boolean(frontierGolem && frontierGolem.owner===turn &&
+              (selectedGolemVisual===square || selectedCard &&
+                ['pawn','knight','bishop','rook','queen','wild','traverse'].includes(selectedCard.type)));
+            const matchingHighlight = isMyTurn && !hasPopup && (standardMatch || championMatch || golemMatch);
 
 
             // Awakening piece classifications
@@ -1833,7 +1848,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                   <div className="ck-check-alert absolute inset-0 bg-red-600/40 animate-pulse rounded-sm pointer-events-none"><span>!</span></div>
                 )}
 
-                {(frontierGolem||frontierPOI)&&<div data-motion-piece={frontierGolem?'golem':undefined} className={`absolute inset-0 z-10 pointer-events-none ${frontierPOI==='boss'?'frontier-boss-unit':''} ${!frontier?.ready&&!frontierGolem?'frontier-silhouette':''} ${['bag','key','chest'].includes(frontierPOI||'')?`frontier-board-item ${frontierPOI==='chest'?'frontier-chest':''} ${piece||championPiece||frontierGolem||isMonolith?'with-piece':''}`:''}`} data-frontier-item={['bag','key','chest'].includes(frontierPOI||'')?frontierPOI:undefined} title={frontierGolem?'Controlled Golem · 10 points':frontierPOI==='boss'?'Arcane Golem':frontierPOI}>
+                {(frontierGolem||frontierPOI)&&<div data-motion-piece={frontierGolem?'golem':undefined} data-card-match={golemMatch&&isMyTurn&&!hasPopup||undefined} className={`absolute inset-0 z-10 pointer-events-none ${frontierPOI==='boss'?'frontier-boss-unit':''} ${!frontier?.ready&&!frontierGolem?'frontier-silhouette':''} ${['bag','key','chest'].includes(frontierPOI||'')?`frontier-board-item ${frontierPOI==='chest'?'frontier-chest':''} ${piece||championPiece||frontierGolem||isMonolith?'with-piece':''}`:''}`} data-frontier-item={['bag','key','chest'].includes(frontierPOI||'')?frontierPOI:undefined} title={frontierGolem?'Controlled Golem · 10 points':frontierPOI==='boss'?'Arcane Golem':frontierPOI}>
                   {frontierGolem||frontierPOI==='boss'?<GolemIdleArt type={frontierGolem?(frontierGolem.owner==='w'?'golem':'black_golem'):frontier?.boss?.health===1?'weakened':'boss'} weakened={frontierPOI==='boss'&&frontier?.boss?.health===1}/>:<FrontierArt type={frontierPOI!}/>}
                   {frontierPOI==='boss'&&frontier?.ready&&<div className={`frontier-boss-hp ${frontier.boss?.health===1?'weakened':''}`} role="progressbar" aria-label="Arcane Golem health" aria-valuenow={frontier.boss?.health===1?1:2} aria-valuemin={0} aria-valuemax={2} aria-valuetext={`${frontier.boss?.health===1?1:2} captures remaining`}><span className={frontier.boss?.health===1?'spent':'filled'}/><span className="filled"/></div>}
                 </div>}
@@ -1851,6 +1866,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 {championPiece && (
                   <div
                     data-motion-piece="champion"
+                    data-card-match={championMatch&&isMyTurn&&!hasPopup||undefined}
                     data-poisoned={grounds?.poison.some(d => d.square === square) || undefined}
                     className={`relative w-[88%] h-[88%] z-12 flex items-center justify-center transition-all duration-200 hover:scale-105 cursor-pointer ${
                       isMyChampionSquare
