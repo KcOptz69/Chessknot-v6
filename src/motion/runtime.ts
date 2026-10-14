@@ -13,7 +13,7 @@ export class MotionBatch {
     for (const cleanup of [...this.cleanups]) cleanup();
     this.cleanups.clear();
   };
-  animate(node: HTMLElement, frames: Keyframe[], duration = MOVE_MS, delay = 0, done = () => {}) {
+  animate(node: HTMLElement, frames: Keyframe[], duration = MOVE_MS, delay = 0, done = () => {}, easing = MOTION_EASE) {
     if (this.closed || document.hidden || reducedMotion() || typeof node.animate !== 'function') { done(); return; }
     let animation: Animation | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -28,7 +28,7 @@ export class MotionBatch {
     };
     this.cleanups.add(finish);
     try {
-      animation = node.animate(frames, { duration, delay, easing: MOTION_EASE, fill: 'both' });
+      animation = node.animate(frames, { duration, delay, easing, fill: 'both' });
       animation.finished.then(finish, finish);
       timer = setTimeout(finish, duration + delay + 100);
     } catch { finish(); }
@@ -83,6 +83,11 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
   ghost.setAttribute('aria-hidden', 'true');
   ghost.inert = true;
   Object.assign(ghost.style, { position:'fixed', pointerEvents:'none', zIndex:'45', transformOrigin:'top left', left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px` });
+  // Destination artwork makes the last moving frame match the real piece.
+  // Keep the old geometry for the starting position.
+  if (!card && target && (kind === 'move' || kind === 'push')) {
+    visual.node = snapshot(target).node;
+  }
   ghost.append(visual.node);
   document.body.append(ghost);
   const previousOpacity = target?.style.getPropertyValue('opacity') || '';
@@ -143,22 +148,22 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
     });
     document.body.append(shadow);
     batch.animate(shadow, [
-      { transform: `translate(${dx}px,${dy}px) scale(1)`, opacity: .6, offset: 0 },
-      { transform: `translate(${dx}px,${dy}px) scale(.8)`, opacity: .3, offset: .25 },
-      { transform: 'translate(0,0) scale(.8)', opacity: .3, offset: .75 },
+      { transform: `translate(${dx}px,${dy}px) scale(1)`, opacity: .6, offset: 0, easing: 'ease-out' },
+      { transform: `translate(${dx}px,${dy}px) scale(.8)`, opacity: .3, offset: .25, easing: 'ease-in-out' },
+      { transform: 'translate(0,0) scale(.8)', opacity: .3, offset: .75, easing: 'ease-in' },
       { transform: 'translate(0,0) scale(1)', opacity: .6, offset: 1 },
-    ], PIECE_MOVE_MS, delay, () => shadow.remove());
+    ], PIECE_MOVE_MS, delay, () => shadow.remove(), 'linear');
     batch.animate(ghost, [
-      { transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`, offset: 0 },
-      { transform: `translate(${dx}px,${dy - lift}px) scale(${sx * 1.035},${sy * 1.035})`, offset: .25 },
-      { transform: `translate(0,${-lift}px) scale(1.035)`, offset: .75 },
-      { transform: 'translate(0,1px) scale(1)', offset: .94 },
+      { transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`, offset: 0, easing: 'ease-out' },
+      { transform: `translate(${dx}px,${dy - lift}px) scale(${sx * 1.035},${sy * 1.035})`, offset: .25, easing: 'ease-in-out' },
+      { transform: `translate(0,${-lift}px) scale(1.035)`, offset: .75, easing: 'ease-in' },
+      { transform: 'translate(0,1px) scale(1)', offset: .94, easing: 'ease-out' },
       { transform: 'translate(0,0) scale(1)', offset: 1 },
     ], PIECE_MOVE_MS, delay, () => {
       revealTarget();
       ghost.remove();
       shadow.remove();
-    });
+    }, 'linear');
     return;
   }
   batch.animate(ghost, [
