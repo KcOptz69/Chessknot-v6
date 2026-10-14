@@ -1,7 +1,8 @@
 export const MOVE_MS = 240;
-export const PIECE_MOVE_MS = 1500;
-export const DOUBLE_JUMP_MS = 3200;
-export const HANDOFF_MS = 1600;
+export const PIECE_MOVE_MS = 1250;
+export const PUSH_MOVE_MS = 320;
+export const DOUBLE_JUMP_MS = 2700;
+export const HANDOFF_MS = 1350;
 export const MOTION_EASE = 'cubic-bezier(.22,.7,.25,1)';
 export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -106,6 +107,26 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
     target.style.setProperty('opacity', '0', 'important');
   }
   const dx = from.left - to.left, dy = from.top - to.top;
+  if (!card && kind === 'push') {
+    // Push stays on the ground: a swift straight slide with a trailing gust.
+    const streak = document.createElement('div');
+    const distance = Math.hypot(dx,dy), angle = Math.atan2(-dy,-dx)*180/Math.PI;
+    streak.inert = true;streak.setAttribute('aria-hidden','true');
+    Object.assign(streak.style,{position:'fixed',pointerEvents:'none',zIndex:'44',
+      left:`${from.left+from.width/2}px`,top:`${from.top+from.height*.7}px`,
+      width:`${Math.max(16,distance)}px`,height:`${Math.max(8,from.height*.18)}px`,
+      transformOrigin:'0 50%',transform:`rotate(${angle}deg) scaleX(0)`,borderRadius:'50%',
+      background:'linear-gradient(90deg,transparent,rgba(156,233,255,.65),rgba(224,251,255,.95))',filter:'blur(1px)'});
+    document.body.append(streak);
+    batch.animate(streak,[{opacity:0,transform:`rotate(${angle}deg) scaleX(0)`,offset:0},
+      {opacity:.85,transform:`rotate(${angle}deg) scaleX(.85)`,offset:.55},
+      {opacity:0,transform:`rotate(${angle}deg) scaleX(1)`,offset:1}],PUSH_MOVE_MS,delay,()=>streak.remove(),'linear');
+    batch.animate(ghost,[
+      {transform:`translate(${dx}px,${dy}px) scale(${from.width/to.width},${from.height/to.height})`},
+      {transform:'translate(0,0) scale(1)'}
+    ],PUSH_MOVE_MS,delay,()=>{revealTarget();ghost.remove();streak.remove();},'cubic-bezier(.12,.65,.25,1)');
+    return;
+  }
   if (!card && kind !== 'move' && kind !== 'push') {
   if(kind==='switch'){
     const trail=document.createElement('div');trail.className='match-flight match-switch-trail';trail.inert=true;trail.setAttribute('aria-hidden','true');
@@ -122,7 +143,7 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
   const start = { transform: `translate(${dx}px,${dy}px) scale(${from.width / to.width},${from.height / to.height})`, opacity: 1 };
   const end = { transform: 'translate(0,0) scale(1)', opacity: card && !target ? .15 : 1 };
   const frames:Keyframe[]=kind==='switch'?[start,{transform:`translate(${dx/2-dy*.18}px,${dy/2+dx*.18}px) scale(1.06)`,filter:'drop-shadow(0 0 10px #bb70ff)',offset:.5},end]:kind==='portal'?[{...start,opacity:1},{transform:`translate(${dx}px,${dy}px) scale(.08)`,opacity:0,offset:.35},{transform:'translate(0,0) scale(.08)',opacity:0,offset:.55},end]:[start,end];
-  batch.animate(ghost, frames, kind==='move'?MOVE_MS:700, delay, () => { revealTarget(); ghost.remove(); });
+  batch.animate(ghost, frames, 700, delay, () => { revealTarget(); ghost.remove(); });
     return;
   }
   if (!card) {
@@ -154,12 +175,12 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
       const duration = DOUBLE_JUMP_MS;
       const frames: Keyframe[] = [
         {transform:transform(dx,dy),offset:0,easing:'ease-out'},
-        {transform:transform(dx,dy,true),offset:375/duration,easing:'ease-in-out'},
-        {transform:transform(mx,my,true),offset:1125/duration,easing:'ease-in'},
-        {transform:transform(mx,my),offset:1500/duration,easing:'linear'},
-        {transform:transform(mx,my),offset:1700/duration,easing:'ease-out'},
-        {transform:transform(mx,my,true),offset:2075/duration,easing:'ease-in-out'},
-        {transform:transform(0,0,true),offset:2825/duration,easing:'ease-in'},
+        {transform:transform(dx,dy,true),offset:(PIECE_MOVE_MS*.25)/duration,easing:'ease-in-out'},
+        {transform:transform(mx,my,true),offset:(PIECE_MOVE_MS*.75)/duration,easing:'ease-in'},
+        {transform:transform(mx,my),offset:PIECE_MOVE_MS/duration,easing:'linear'},
+        {transform:transform(mx,my),offset:(PIECE_MOVE_MS+200)/duration,easing:'ease-out'},
+        {transform:transform(mx,my,true),offset:(PIECE_MOVE_MS*1.25+200)/duration,easing:'ease-in-out'},
+        {transform:transform(0,0,true),offset:(PIECE_MOVE_MS*1.75+200)/duration,easing:'ease-in'},
         {transform:transform(0,0),offset:1},
       ];
       batch.animate(shadow, frames.map(frame=>({...frame,transform:String(frame.transform).replace(/scale\([^)]*\)/,'scale(.85)')})), duration, delay, ()=>shadow.remove(), 'linear');

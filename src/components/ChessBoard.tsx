@@ -724,7 +724,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
           const allowed =
             isWildPowerUp ||
             (selectedCard &&
-              (awakeningMode === 'wild' ||
+              ((selectedCard.type.startsWith('awakening_') && awakeningMode === 'wild') ||
                 (selectedCard.type === 'awakening_king' && !isKingInCheck) ||
                 isCardPermittedForPiece(selectedCard, p.type as StandardPieceType, lastMovedPiece)));
           if (allowed) {
@@ -1647,7 +1647,8 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 hoveredCard.type.startsWith('awakening_')) &&
               isCardPermittedForPiece(hoveredCard, piece.type as StandardPieceType, lastMovedPiece));
             const standardMatch = Boolean(selectedCard || isWildPowerUp) &&
-              Boolean(piece && piece.color === turn && square !== monolithSquare) &&
+              Boolean(piece && piece.color === turn && square !== monolithSquare &&
+                (isWildPowerUp || selectedCard && isCardPermittedForPiece(selectedCard,piece.type as StandardPieceType,lastMovedPiece,selectedCard.type.startsWith('awakening_')&&awakeningMode==='wild'))) &&
               !['soul_release','monolith','restrict','champion'].includes(selectedCard?.type || '') &&
               (isSelected || (!selectedSquare && isCardTarget));
             const championMatch = Boolean(championPiece && championPiece.color===turn &&

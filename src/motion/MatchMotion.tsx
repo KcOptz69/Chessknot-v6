@@ -1,8 +1,9 @@
+import { setMotionBusy } from './status.ts';
 import { playSuperKnightDoubleSound } from '../utils/superKnightAudio.ts';
 import React from 'react';
 import type { GameState, PlayerColor } from '../types';
 import { isNewAction, matchIdentity, planBoardMotion, planSummonMotion } from './plan';
-import { fly, HANDOFF_MS, DOUBLE_JUMP_MS, PIECE_MOVE_MS, MotionBatch, reducedMotion, snapshot, visibleRect, type Visual } from './runtime';
+import { fly, HANDOFF_MS, DOUBLE_JUMP_MS, PUSH_MOVE_MS, PIECE_MOVE_MS, MotionBatch, reducedMotion, snapshot, visibleRect, type Visual } from './runtime';
 
 /** Only the pass-and-play viewing side waits. Server turn and clock stay live. */
 export function useVisualTurn(state: GameState, session: string, connected: boolean) {
@@ -39,6 +40,7 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
   private media?: MediaQueryList;
   private orientationObserver?: MutationObserver;
   private awaitingSnapshot = false;
+  private motionTimer?: ReturnType<typeof setTimeout>;
   private maskedDestinations = new Set<string>();
   private destinationMask?: HTMLStyleElement;
   private maskTimer?: ReturnType<typeof setTimeout>;
@@ -55,7 +57,7 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
       `#chess-board #square-${destination} [data-motion-piece]{opacity:0!important;visibility:hidden!important;}`
     ).join('\n');
   };
-  private cancel = () => { this.batch.cancel(); this.clearMask(); };
+  private cancel = () => { this.batch.cancel(); this.clearMask(); clearTimeout(this.motionTimer);setMotionBusy(false); };
   componentDidMount() {
     this.nextBatch();
     this.media = matchMedia('(prefers-reduced-motion: reduce)');
@@ -127,6 +129,7 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
     if (changed) {
       const plan = planBoardMotion(previous.game, this.props.game);
       let captureDelay = 0;
+      let movementDelay = 0;
       let doubleSoundPlayed = false;
       const captureTimes = new Map<string,number>();
       for (const { from, to } of plan.moves) {
@@ -134,7 +137,9 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
         if (visual && target && this.props.game.lastMoveDetails?.actionType!=='monolith') {
           const action=this.props.game.lastMoveDetails?.actionType;
           const portal=this.props.game.grounds?.events.some(e=>e.type==='portal'&&!previous.game.grounds?.events.some(old=>old.id===e.id)) || this.props.game.frontier?.events.some(e=>e.kind==='move'&&e.detail.startsWith('Portal:')&&!previous.game.frontier?.events.some(old=>old.id===e.id));
-          captureDelay = Math.max(captureDelay, action==='switch'||portal ? 525 : PIECE_MOVE_MS * .75);
+          const arrival = action==='switch'||portal ? 525 : action==='push' ? PUSH_MOVE_MS*.85 : PIECE_MOVE_MS*.75;
+          captureDelay = movementDelay+arrival;
+          captureTimes.set(to,captureDelay);
           const middleTile = intermediate && from === details?.from ? this.find(`#square-${intermediate}`) : undefined;
           const middleRect = middleTile?.getBoundingClientRect();
           const targetRect = target.getBoundingClientRect();
@@ -143,11 +148,20 @@ export class MatchMotion extends React.Component<Props, {}, Snapshot | null> {
             middleRect.top+(middleRect.height-targetRect.height)/2,
             targetRect.width,targetRect.height) : undefined;
           if (via && intermediate) {
-            captureTimes.set(intermediate,1125);captureTimes.set(to,2825);
+            captureTimes.set(intermediate,movementDelay+PIECE_MOVE_MS*.75);captureTimes.set(to,movementDelay+PIECE_MOVE_MS*1.75+200);
             if (!doubleSoundPlayed) { playSuperKnightDoubleSound();doubleSoundPlayed = true; }
           }
-          fly(this.batch, visual, targetRect, target,0,false, action==='switch'?'switch':portal?'portal':action==='push'?'push':'move', () => this.revealDestination(to), via);
+          fly(this.batch, visual, targetRect, target,movementDelay,false, action==='switch'?'switch':portal?'portal':action==='push'?'push':'move', () => this.revealDestination(to), via);
+          movementDelay += via ? DOUBLE_JUMP_MS : action==='push' ? PUSH_MOVE_MS : action==='switch'||portal ? 700 : PIECE_MOVE_MS;
         } else { this.revealDestination(to); }
+      }
+      const captureEnd = plan.captures.length ? Math.max(captureDelay,...captureTimes.values())+650 : 0;
+      const presentationDuration = Math.max(movementDelay,captureEnd);
+      if (presentationDuration>0) {
+        clearTimeout(this.motionTimer);setMotionBusy(true);
+        this.motionTimer=setTimeout(()=>setMotionBusy(false),presentationDuration);
+        // Every destination must remain hidden until its own delayed flight lands.
+        if(this.destinationMask){clearTimeout(this.maskTimer);this.maskTimer=setTimeout(this.clearMask,presentationDuration+100);}
       }
       for (const square of plan.captures) {
         const visual = old.pieces.get(square);

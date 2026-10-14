@@ -262,3 +262,13 @@ test('base-board Push trail clears after the opponent completes a turn',()=>{
  const card=createCard('push',989);r.gameState.hands.w=[card];assert.equal(action(r,{type:'play_push',cardId:card.id,from:'a2',to:'a3'}).length,0);assert.ok(r.gameState.pushTrail);
  const rook=createCard('rook',990);r.gameState.hands.b=[rook];assert.equal(action(r,{type:'play_card_move',cardId:rook.id,from:'h7',to:'h6'},'b').length,0);assert.equal(r.gameState.pushTrail,undefined);
 });
+
+test('expanded-board ultimate keeps the sound event and Champion identity',()=>{
+ const r=setup();r.gameState.champions.w={type:'musketeer',color:'w',square:'bX'};
+ r.gameState.frontier.pois.bY='boss';r.gameState.frontier.boss={square:'bY',health:2,drop:'feather'};
+ const card=createCard('champion',177);r.gameState.hands.w=[card];
+ action(r,{type:'play_champion_ultimate',cardId:card.id,targetSquare:'bY'});
+ assert.equal(r.gameState.lastMoveDetails.actionType,'champion_ultimate');
+ assert.equal(r.gameState.lastMoveDetails.championType,'musketeer');
+ assert.ok(r.gameState.historyLog.some((entry:any)=>entry.actionType==='champion_ultimate'));
+});

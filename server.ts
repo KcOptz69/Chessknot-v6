@@ -1417,7 +1417,7 @@ function handleGameAction(room: RoomState, msg: ClientMessage, actorColor: Playe
   if(after.grounds)after.grounds.poison=after.grounds.poison.filter(d=>!groundImmune(after,d.square));
   groundBefore.delete(before);groundRequests.delete(before);
   interruptCircles(after);
-  expireInvalidSoulCards(after);
+  if(after!==before || after.fen!==snapshot.fen || after.turnNumber!==turnNumber)expireInvalidSoulCards(after);
   if (after !== before || (after.fen === snapshot.fen && after.turnNumber === turnNumber)) return;
   if (msg.type !== 'play_clock') {
     let lost = capturedInAction(snapshot, after, actorColor);
@@ -1445,7 +1445,7 @@ function expireInvalidSoulCards(s:GameState){
   for(const card of [...s.hands[color]])if(card.type==='soul_release'&&card.soul){
    const alive=Object.entries(s.pieceIds||{}).some(([q,id])=>id===card.soul!.queenId&&b.get(q as Square)?.type==='q'&&b.get(q as Square)?.color===color);
    const banished=s.grounds?.banished.some(e=>e.pieceId===card.soul!.queenId&&e.piece.color===color);
-   if(!alive&&!banished){s.hands[color]=s.hands[color].filter(c=>c.id!==card.id);s.exhausted||=[];s.exhausted.push(card);const replacement=drawCard(s);s.deck=replacement.newDeck;s.discard=replacement.newDiscard;if(replacement.reshuffled)s.powerUps=replacement.powerUps;if(replacement.drawnCard)s.hands[color].push(replacement.drawnCard);summonNotice(s,'Soul Release exhausted: its Queen is gone. A replacement card was drawn.');}
+   if(!alive&&!banished){s.hands[color]=s.hands[color].filter(c=>c.id!==card.id);s.discard.push(card);summonNotice(s,'Soul Release discarded: its Queen is gone.');}
   }
  }
 }

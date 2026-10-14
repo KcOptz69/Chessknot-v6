@@ -442,7 +442,7 @@ export type ClientMessage =
   | { type: 'resign' }
   | { type: 'restart_game' }
   | { type: 'respond_rematch'; requestId: string; accept: boolean }
-  | { type: 'ping' };
+  | { type: 'ping'; sync?: boolean };
 
 export type ServerMessage =
   | {type:'recovery_required';roomId:string}

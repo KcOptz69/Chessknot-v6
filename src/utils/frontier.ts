@@ -67,7 +67,7 @@ export function frontierNotice(s:GameState,kind:string,detail:string,square?:str
  const f=s.frontier;if(!f)return;const id=uid('frontier'),event={id,kind,detail,...(square?{square}:{}),...loot};f.events.unshift(event);f.events=f.events.slice(0,24);
  const names:Record<string,string>={expand:'Expand Board',ready:'Mystic Field',bag:'Backpack',key:'Chest Key',chest:'Treasure Chest',mimic:'Mimic Chest',boss_hit:'Arcane Golem',boss_defeat:'Arcane Golem',clock:'Activate the Clock'};
  const cardName=label||(loot?ITEM_NAMES[loot.item]:names[kind])||'Frontier event';
- s.historyLog.unshift({id,turn:actor||loot?.recipient||s.turn,turnNumber:s.turnNumber,actionType:kind==='move'?'move':'powerup',cardName,detail,timestamp:Date.now(),whitePoints:s.whitePoints,blackPoints:s.blackPoints,frontierEvent:{kind,...(square?{square}:{}),...loot}});
+ s.historyLog.unshift({id,turn:actor||loot?.recipient||s.turn,turnNumber:s.turnNumber,actionType:kind==='champion_ultimate'?'champion_ultimate':kind==='move'?'move':'powerup',cardName,detail,timestamp:Date.now(),whitePoints:s.whitePoints,blackPoints:s.blackPoints,frontierEvent:{kind,...(square?{square}:{}),...loot}});
 }
 export function trimBagHands(s:GameState,random=Math.random) {
     for(const c of ['w','b'] as const) {
@@ -705,7 +705,7 @@ export function executeFrontier(s: GameState, msg: ClientMessage, c: PlayerColor
         if(m.type==='frontier_item'&&m.item==='banner') {
             const id=uid('pawn_summon');fd.events.unshift({id,kind:'pawn_summon',detail:'Footsoldier’s Banner summoned a Pawn.',square:m.to,piece:{type:'p',color:c}});
         }
-        frontierNotice(d, m.type === 'frontier_self_destruct' ? 'golem_explosion' : card?.type === 'traverse' ? 'traverse' : m.type === 'frontier_item' && m.item === 'core' ? 'summon' : m.type === 'frontier_item' || m.type === 'frontier_bind' ? 'item' : 'move', detail, m.type === 'frontier_self_destruct' ? m.from : undefined,undefined,(card?.type.startsWith('awakening_')&&(m.asWild||m.type==='play_awakening_as_wild')?card.name+' (Played as Wild)':card?.name)||(m.type==='frontier_item'?ITEM_NAMES[m.item as FrontierItem]:({play_king_move:'King Move',use_powerup_wild_move:'Wild Move',play_champion_move:'Champion Move',play_champion_ultimate:'Champion Ultimate',frontier_self_destruct:'Golem Self-destruct',frontier_bind:'Bind',portal_move:'Portal'} as Record<string,string>)[m.type]),c);
+        frontierNotice(d, m.type === 'play_champion_ultimate' ? 'champion_ultimate' : m.type === 'frontier_self_destruct' ? 'golem_explosion' : card?.type === 'traverse' ? 'traverse' : m.type === 'frontier_item' && m.item === 'core' ? 'summon' : m.type === 'frontier_item' || m.type === 'frontier_bind' ? 'item' : 'move', detail, m.type === 'frontier_self_destruct' ? m.from : undefined,undefined,(card?.type.startsWith('awakening_')&&(m.asWild||m.type==='play_awakening_as_wild')?card.name+' (Played as Wild)':card?.name)||(m.type==='frontier_item'?ITEM_NAMES[m.item as FrontierItem]:({play_king_move:'King Move',use_powerup_wild_move:'Wild Move',play_champion_move:'Champion Move',play_champion_ultimate:'Champion Ultimate',frontier_self_destruct:'Golem Self-destruct',frontier_bind:'Bind',portal_move:'Portal'} as Record<string,string>)[m.type]),c);
         if (!free) {
             if (!d.lastMoveDetails || d.lastMoveDetails.player !== c)
                 d.lastMoveDetails = { player: c, actionType: 'move' };
@@ -800,7 +800,7 @@ export function frontierUltimate(s: GameState, m: any, c: PlayerColor) {
         throw Error('The ultimate leaves your King unsafe.');
     if (s.frontier)
         s.frontier.clockLocked = true;
-    s.lastMoveDetails = { player: c, actionType: 'champion_ultimate', from, to: m.targetSquare || from };
+    s.lastMoveDetails = { player: c, actionType: 'champion_ultimate', championType: ch.type, from, to: m.targetSquare || from };
 }
 /** Legal defensive summons count as escapes before checkmate is declared. */
 export function canSummonToEscapeCheck(s:GameState,c:PlayerColor):boolean {

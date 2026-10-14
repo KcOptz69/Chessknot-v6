@@ -28,7 +28,7 @@ test('online events cannot duplicate a connecting socket or a scheduled reconnec
 test('stale close callbacks cannot disconnect a newer socket',()=>{const x=setup();x.connection.start();const old=x.sockets[0],close=old.onclose;old.disconnect();x.connection.wake();const fresh=x.sockets[1];fresh.open();fresh.message({type:'room_state',state:{roomId:'ROOM'}});close({code:4000});assert.equal(x.states.at(-1),true);assert.deepEqual(x.terminal,[]);x.connection.stop();});
 test('missing heartbeat replies reconnect; healthy replies keep the same socket',()=>{
  const x=setup();x.connection.start();const first=x.sockets[0];first.open();first.message({type:'room_state',state:{roomId:'ROOM'}});x.clock.tick(65000);assert.equal(x.states.at(-1),false);x.clock.tick(750);assert.equal(x.sockets.length,2);x.connection.stop();
- const healthy=setup();healthy.connection.start();healthy.sockets[0].open();for(let i=0;i<12;i++){healthy.clock.tick(10000);healthy.sockets[0].message({type:'pong'});}assert.equal(healthy.sockets.length,1);healthy.connection.stop();
+ const healthy=setup();healthy.connection.start();healthy.sockets[0].open();healthy.sockets[0].message({type:'room_state',state:{roomId:'ROOM'}});for(let i=0;i<12;i++){healthy.clock.tick(10000);healthy.sockets[0].message({type:'pong'});}assert.equal(healthy.sockets.length,1);healthy.connection.stop();
 });
 test('connection status waits for the correct room acknowledgement',()=>{const x=setup();x.connection.start();x.sockets[0].open();assert.equal(x.states.at(-1),false);x.sockets[0].message({type:'room_state',state:{roomId:'OTHER'}});assert.equal(x.states.at(-1),false);x.sockets[0].message({type:'room_state',state:{roomId:'ROOM'}});assert.equal(x.states.at(-1),true);x.connection.stop();});
 test('renaming changes the next join without restarting an open socket',()=>{const x=setup();x.connection.start();x.sockets[0].open();x.rename('Renamed');x.connection.wake();assert.equal(x.sockets.length,1);x.sockets[0].disconnect();x.clock.tick(750);x.sockets[1].open();assert.equal(x.sockets[1].sent[0].playerName,'Renamed');x.connection.stop();});
@@ -38,3 +38,40 @@ test('offline retries do not create sockets and waking cancels the pending timer
 test('failed gameplay sends reconnect but never replay the action',()=>{const x=setup();x.connection.start();x.sockets[0].open();x.sockets[0].throwSend=true;assert.equal(x.connection.send({type:'play_card_move'}),false);x.clock.tick(750);x.sockets[1].open();assert.ok(!x.sockets[1].sent.some(m=>m.type==='play_card_move'));x.connection.stop();});
 
 test('waking a sleeping tab probes a healthy socket instead of disconnecting it',()=>{const x=setup();x.connection.start();x.sockets[0].open();x.sockets[0].message({type:'room_state',state:{roomId:'ROOM'}});x.clock.time=60000;x.connection.wake();x.sockets[0].message({type:'pong'});x.clock.tick(15000);assert.equal(x.sockets.length,1);assert.equal(x.states.at(-1),true);x.connection.stop();});
+
+
+test('open socket with pong replies still retries a missing room confirmation',()=>{
+ const x=setup();x.connection.start();const first=x.sockets[0];first.open();
+ first.message({type:'pong'});x.clock.tick(3000);first.message({type:'pong'});
+ x.clock.tick(3000);assert.equal(first.readyState,3);assert.equal(x.states.at(-1),false);
+ x.clock.tick(750);assert.equal(x.sockets.length,2);x.sockets[1].open();
+ x.sockets[1].message({type:'room_state',state:{roomId:'ROOM',gameState:{status:'lobby'}}});
+ assert.equal(x.states.at(-1),true);x.connection.stop();assert.equal(x.clock.timers.size,0);
+});
+test('wrong room confirmation cannot cancel the join watchdog',()=>{
+ const x=setup();x.connection.start();x.sockets[0].open();
+ x.sockets[0].message({type:'room_state',state:{roomId:'OTHER'}});x.clock.tick(6000);
+ assert.equal(x.sockets[0].readyState,3);x.connection.stop();
+});
+test('lobby heartbeat refreshes snapshots and waking refreshes immediately without rejoining',()=>{
+ const x=setup();x.connection.start();const socket=x.sockets[0];socket.open();
+ socket.message({type:'room_state',state:{roomId:'ROOM',gameState:{status:'lobby'}}});
+ x.clock.tick(2000);assert.deepEqual(socket.sent.at(-1),{type:'ping',sync:true});
+ socket.message({type:'pong'});x.connection.wake();assert.deepEqual(socket.sent.at(-1),{type:'ping',sync:true});
+ assert.equal(socket.sent.filter(m=>m.type==='join_room').length,1);
+ assert.equal(x.sockets.length,1);x.connection.stop();assert.equal(x.clock.timers.size,0);
+});
+test('starting a match switches heartbeat back to normal and wake still refreshes',()=>{
+ const x=setup();x.connection.start();const socket=x.sockets[0];socket.open();
+ socket.message({type:'room_state',state:{roomId:'ROOM',gameState:{status:'lobby'}}});
+ socket.message({type:'room_state',state:{roomId:'ROOM',gameState:{status:'playing'}}});
+ x.clock.tick(2000);assert.equal(socket.sent.length,1);x.clock.tick(8000);
+ assert.deepEqual(socket.sent.at(-1),{type:'ping'});x.connection.wake();
+ assert.deepEqual(socket.sent.at(-1),{type:'ping',sync:true});x.connection.stop();
+});
+test('seat recovery prompt stops join timeout without claiming a successful connection',()=>{
+ const x=setup();x.connection.start();x.sockets[0].open();
+ x.sockets[0].message({type:'recovery_required',roomId:'ROOM'});x.clock.tick(7000);
+ assert.equal(x.sockets.length,1);assert.equal(x.sockets[0].readyState,1);
+ assert.equal(x.states.at(-1),false);x.connection.stop();
+});

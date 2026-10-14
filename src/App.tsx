@@ -1,3 +1,4 @@
+import { isMotionBusy, useMotionBusy } from './motion/status.ts';
 import {trapOnOwnSide} from './utils/grounds.ts';
 import {readMatchNotice,writeMatchNotice} from './utils/matchNotices.ts';
 import {createRoomConnection} from './utils/roomConnection.ts';
@@ -401,6 +402,7 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
       if(msg.type==='send_chat'){setChatMessages(old=>[...old,{id:'practice-chat-'+old.length,senderId:playerId,senderName:playerName,senderColor:'w',text:msg.text,timestamp:Date.now()}]);return;}
       const action=tutorialClientAction(msg);if(action)tutorialDispatch(action);return;
     }
+    if(isMotionBusy() && !['send_chat','rename_player','resign','dismiss_notification','pause_clock','resume_clock'].includes(msg.type))return;
     if(!connectionRef.current?.send(msg))setUiNotice('Connection interrupted. Please wait to reconnect, then try that action again.');
   }, [tutorialMode,onExitTutorial,playerId,playerName]);
 
@@ -477,10 +479,11 @@ export default function App({tutorialMode=false,onExitTutorial}:{tutorialMode?:b
   // Active color evaluation
   const visualTurn = useVisualTurn(gameState, `${roomId}:${mode}`, connected);
   const handoffPending = false;
+  const motionBusy = useMotionBusy();
   const activeColor: PlayerColor =
     myColor === 'spectator' ? (roomPlayers[playerId]?.role==='arbiter' ? gameState.turn : 'w') : myColor;
   React.useEffect(()=>{setShowArbiterPause(arbiterPaused&&myColor!=='spectator');},[arbiterPaused,myColor,roomId]);
-  const isMyTurn = !arbiterPaused && (!tutorialMode||(tutorialState.phase==='play'&&!tutorialState.pendingBot&&!tutorialState.animating&&tutorialState.step<12)) && connected && !gameState.pendingSummon && !(mode==='online'&&recovery?.length) && !handoffPending && (myColor === gameState.turn);
+  const isMyTurn = !motionBusy && !arbiterPaused && (!tutorialMode||(tutorialState.phase==='play'&&!tutorialState.pendingBot&&!tutorialState.animating&&tutorialState.step<12)) && connected && !gameState.pendingSummon && !(mode==='online'&&recovery?.length) && !handoffPending && (myColor === gameState.turn);
 
   const validGroundTargets = groundMode && isMyTurn?allSquares(gameState.fen).filter(q=>{const g=gameState.grounds;if(!g)return false;if(groundMode==='transport'||(groundMode==='portal'&&!portalFrom))return g.tiles[q]==='portal' && (groundMode!=='transport' || createSafeChess(gameState.fen).get(q as any)?.color===activeColor || Object.values(gameState.champions).some(c=>c?.square===q && c.color===activeColor));if(gameState.frontier?.pois[q]||gameState.frontier?.golems.some(g=>g.square===q)||createSafeChess(gameState.fen).get(q as any)||gameState.monolithSquare===q||Object.values(gameState.champions).some(c=>c?.square===q)||gameState.restrictedSquares.includes(q)||activeCircle(gameState,q))return false;if(['mine','poison','banish','disarm'].includes(groundMode))return trapOnOwnSide(q,activeColor)&&!['portal','defense'].includes(g.tiles[q])&&!g.traps.some(t=>t.owner===activeColor&&t.square===q&&t.type===groundMode);return !g.tiles[q];}):[];
 
