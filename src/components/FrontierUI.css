@@ -228,3 +228,23 @@ dialog.frontier-drop-dialog small{font-size:11px;margin:6px 0 10px;}
 
 
 .mystic-unveil-button>img{width:100%;height:auto;display:block;pointer-events:none}
+
+/* Scale visually without changing card sizes or the hand's layout. */
+#player-hand-container .hand-grid > .compact-hand-card{
+  scale:1!important;transform-origin:50% 70%;
+  transition:scale 160ms ease-out,box-shadow 160ms ease-out!important;
+}
+@media(hover:hover) and (pointer:fine){
+  #player-hand-container .hand-grid > .compact-hand-card:not([data-unavailable="true"]):hover{
+    scale:1.035!important;z-index:4;
+  }
+}
+#player-hand-container .hand-grid > .compact-hand-card[data-selected="true"]:not([data-unavailable="true"]){
+  scale:1.05!important;z-index:5;
+}
+#player-hand-container .hand-grid > .compact-hand-card:not([data-unavailable="true"]):focus-visible{
+  scale:1.035!important;z-index:4;
+}
+@media(prefers-reduced-motion:reduce){
+  #player-hand-container .hand-grid > .compact-hand-card{transition:none!important;scale:1!important;}
+}
