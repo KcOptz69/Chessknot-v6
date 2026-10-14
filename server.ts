@@ -248,6 +248,12 @@ wss.on('connection', (ws: WebSocket) => {
 
       if (msg.type === 'ping') {
         sendToSocket(ws, { type: 'pong' });
+        // Refresh only the authenticated socket's own room. This is read-only;
+        // it does not rejoin seats, reset readiness, or replay gameplay.
+        const meta = socketMeta.get(ws);
+        if (msg.sync && meta && rooms.get(meta.roomId)?.players[meta.playerId]) {
+          broadcastRoom(meta.roomId);
+        }
         return;
       }
 
