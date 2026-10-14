@@ -325,6 +325,32 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
     }
   }, [myColor, autoFlip]);
 
+  const [hoveredCard, setHoveredCard] = React.useState<Card | null>(null);
+  React.useEffect(() => {
+    setHoveredCard(null);
+    if (!isMyTurn) return;
+    const hovered = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') return;
+      const element = event.target instanceof Element ? event.target.closest('[data-card-id]') : null;
+      const inHand = element?.closest('#player-hand-container');
+      const next = inHand ? hand.find(card => card.id === element?.getAttribute('data-card-id')) : null;
+      setHoveredCard(next && element?.getAttribute('data-unavailable') !== 'true' ? next : null);
+    };
+    const leave = (event: PointerEvent) => {
+      const next = event.relatedTarget instanceof Element ? event.relatedTarget.closest('#player-hand-container [data-card-id]') : null;
+      if (!next) setHoveredCard(null);
+    };
+    const clear = () => setHoveredCard(null);
+    document.addEventListener('pointerover', hovered);
+    document.addEventListener('pointerout', leave);
+    window.addEventListener('blur', clear);
+    return () => {
+      document.removeEventListener('pointerover', hovered);
+      document.removeEventListener('pointerout', leave);
+      window.removeEventListener('blur', clear);
+    };
+  }, [hand, isMyTurn]);
+
   const preserveSelectionRef = React.useRef(false);
 
   // Clear selections when card or turn changes
@@ -688,7 +714,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
     // Standard piece cards (and wild / awakening in wild mode):
     // ONLY include pieces that ACTUALLY have at least 1 legal move!
-    for (let r = 1; r <= 8; r++) {
+    for (const r of ranksFor(fen)) {
       for (const f of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
         const sq = `${f}${r}`;
         const p = chess.get(sq as Square);
@@ -700,7 +726,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 (selectedCard.type === 'awakening_king' && !isKingInCheck) ||
                 isCardPermittedForPiece(selectedCard, p.type as StandardPieceType, lastMovedPiece)));
           if (allowed) {
-            const moves = getLegalMovesForPiece(
+            const moves = frontierGame?.frontier?.expanded ? frontierMoves(frontierGame,sq) : getLegalMovesForPiece(
               sq as Square,
               chess,
               restrictedSquares,
@@ -1124,6 +1150,23 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
           setSelectedSquare(square === selectedSquare ? null : square);
           return;
         }
+      }
+
+      // Joker creates temporary Wild Move cards. Auto-select one without sending
+      // a gameplay action; only the existing successful move handler consumes it.
+      const jokerWildCard = hand.find(c => c.type === 'wild' && c.isJokerWild);
+      if (jokerWildCard && onSelectCard && !selectedCard) {
+        const legalMoves = frontierGame?.frontier?.expanded
+          ? frontierMoves(frontierGame, square)
+          : getLegalMovesForPiece(square as Square, chess, restrictedSquares,
+              monolithSquare, staticStunnedSquares, beaconProtectedSquares,
+              myChampion?.square || null, enemyChampion, champions,
+              awakenedRooks, superPawns, superKnights, awakenedPieces, grounds);
+        if (!legalMoves.length) return;
+        preserveSelectionRef.current = true;
+        setSelectedSquare(square);
+        onSelectCard(jokerWildCard);
+        return;
       }
 
       // Only a matching standard piece card can be selected by tapping its piece.
@@ -1588,6 +1631,17 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
 
             // Card target check: Only squares that match validCardTargets (or validDestinations when selected)
             const isCardTarget = validCardTargets.includes(square);
+            const hoverHighlight = isMyTurn && !hasPopup && Boolean(hoveredCard &&
+              piece && piece.color === turn && square !== monolithSquare &&
+              (['pawn','knight','bishop','rook','queen','wild','previous'].includes(hoveredCard.type) ||
+                hoveredCard.type.startsWith('awakening_')) &&
+              isCardPermittedForPiece(hoveredCard, piece.type as StandardPieceType, lastMovedPiece));
+            const matchingHighlight = isMyTurn && !hasPopup &&
+              Boolean(selectedCard || isWildPowerUp) &&
+              Boolean(piece && piece.color === turn && square !== monolithSquare) &&
+              !['soul_release','monolith','restrict','champion'].includes(selectedCard?.type || '') &&
+              (isSelected || (!selectedSquare && isCardTarget));
+
 
             // Awakening piece classifications
             const isSuperPawn = Boolean(piece?.type === 'p' && superPawns.includes(square));
@@ -1680,6 +1734,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 data-tone={isLight?'light':'dark'} id={`square-${square}`}
                 data-stone-highlighted={squareBg!==baseSquareBg?'true':undefined}
                 style={{'--stone-x':`${(square.charCodeAt(0)-97)*100/7}%`,'--stone-y':`${['1','2','3','4','W','X','Y','Z','5','6','7','8'].indexOf(rank)*100/11}%`} as React.CSSProperties}
+                data-card-match={matchingHighlight || undefined}
                 data-last-move={isMoveTo?'to':isMoveFrom?'from':isIntermediateMove?'via':undefined}
                 role="button" tabIndex={0} aria-label={`${square}${piece ? ` ${piece.color === 'w' ? 'White' : 'Black'} ${PIECE_NAMES[piece.type as StandardPieceType] || piece.type}` : ''}`}
                 aria-pressed={isSelected}
@@ -1704,10 +1759,6 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 } ${
                   isSummonerSelectedAlly ? 'ring-4 ring-indigo-400 bg-indigo-950/60 z-15' : ''
                 } ${
-                  !selectedSquare && isCardTarget && !['soul_release','monolith','restrict','champion'].includes(selectedCard?.type||'')
-                    ? 'ring-2 ring-indigo-400/90 shadow-[0_0_12px_rgba(129,140,248,0.6)] z-10 cursor-pointer animate-pulse'
-                    : ''
-                } ${
                   isPushMovedTo ? 'shadow-[0_0_20px_rgba(45,212,191,0.8)]' : ''
                 } ${isMonolithTarget ? 'cursor-pointer' : ''} ${
                   isRestrictTarget ? 'cursor-pointer' : ''
@@ -1721,6 +1772,7 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                     : 'cursor-pointer'
                 }`}
               >
+                {matchingHighlight && <span className="ck-matching-brackets" aria-hidden="true"/>}
                 {(groundTargets.includes(square)||bishopCircleSquares.includes(square)||isChampionDeployTarget||isMonolithTarget||isRestrictTarget||isBishopReviveTarget||isQueenDeployTarget||(selectedCard?.type==='soul_release'&&isCardTarget)) && <div className="ground-placement-target" data-ground-target={square} aria-label={`Available tile target ${square}`}><span /></div>}
                 {grounds?.tiles[square] && <div className={`ground-tile ${piece || championPiece || frontierGolem || isMonolith ? 'occupied' : ''} ${grounds.tiles[square] === 'portal' && portalOccupied ? 'portal-linked-active' : ''}`} data-ground-type={grounds.tiles[square]} data-square-tone={isLight ? 'light' : 'dark'} aria-label={`${grounds.tiles[square]} tile at ${square}`} style={{'--tile-color':({boost:'#22c55e',gravity:'#a56b3d',defense:'#f5c542',portal:'#ff8b24'} as Record<string,string>)[grounds.tiles[square]]} as React.CSSProperties}><span className={grounds.tiles[square]==='portal'?'ck-portal-rotor':'ck-ground-art'}><V5Power type={grounds.tiles[square]} className="w-full h-full"/></span><span className="powered-tile-aura"/>{[0,1,2].map(i=><span key={i} className="powered-tile-mote" style={{left:`${20+i*30}%`,animationDelay:`${i*.4}s`}}/>)}</div>}
                 {grounds?.tiles[square]==='portal' && portalOccupied && <span className="ck-portal-spin-rim" aria-hidden="true"><i/><i/></span>}
@@ -1815,13 +1867,13 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                 {piece && !isMonolith && (
                   <div
                     data-motion-piece="standard"
+                    data-card-match={matchingHighlight || undefined}
+                    data-card-hover={hoverHighlight || undefined}
+                    style={{'--match-delay':`${((square.charCodeAt(0)-97)%3)*-.65}s`} as React.CSSProperties}
                     data-poisoned={grounds?.poison.some(d => d.square === square) || undefined}
                     data-soul-piece={isSoulPiece||undefined}
                     className={`w-[86%] h-[86%] z-10 flex items-center justify-center transition-all duration-200 hover:scale-105 pointer-events-none ${
-                      !selectedSquare && isCardTarget
-                        ? 'filter drop-shadow-[0_0_4px_rgba(129,140,248,0.9)] drop-shadow-[0_0_1px_rgba(255,255,255,0.7)] animate-pulse'
-
-                        : 'filter drop-shadow-md'
+                      'filter drop-shadow-md'
                     }`}
                   >
                     <PieceIcon

@@ -248,3 +248,22 @@ dialog.frontier-drop-dialog small{font-size:11px;margin:6px 0 10px;}
 @media(prefers-reduced-motion:reduce){
   #player-hand-container .hand-grid > .compact-hand-card{transition:none!important;scale:1!important;}
 }
+
+/* Matching-card feedback stays on the source square; only artwork floats. */
+#chess-board .ck-matching-brackets{position:absolute;inset:7%;pointer-events:none;z-index:22;
+ background:linear-gradient(#ffe58a,#ffe58a) top left/22% 3px no-repeat,linear-gradient(#ffe58a,#ffe58a) top left/3px 22% no-repeat,
+ linear-gradient(#ffe58a,#ffe58a) top right/22% 3px no-repeat,linear-gradient(#ffe58a,#ffe58a) top right/3px 22% no-repeat,
+ linear-gradient(#ffe58a,#ffe58a) bottom left/22% 3px no-repeat,linear-gradient(#ffe58a,#ffe58a) bottom left/3px 22% no-repeat,
+ linear-gradient(#ffe58a,#ffe58a) bottom right/22% 3px no-repeat,linear-gradient(#ffe58a,#ffe58a) bottom right/3px 22% no-repeat;
+ filter:drop-shadow(0 0 4px #ffb300);animation:ck-match-glow 2.7s ease-in-out infinite;}
+#chess-board [data-motion-piece="standard"]>svg{transition:translate 180ms ease,filter 180ms ease;}
+#chess-board [data-motion-piece="standard"][data-card-match="true"]>svg{
+ animation:ck-match-float 2.7s ease-in-out infinite;animation-delay:var(--match-delay,0s);
+ filter:drop-shadow(0 0 2px #fff1b8) drop-shadow(0 0 5px #ffb300);}
+#chess-board [id^="square-"][data-card-match="true"]>.ck-matching-brackets::before{
+ content:'';position:absolute;left:22%;right:22%;bottom:3%;height:10%;border-radius:50%;background:#09264566;filter:blur(3px);z-index:-1;}
+@keyframes ck-match-float{0%,100%{translate:0 -3px;rotate:-.6deg}50%{translate:0 -6px;rotate:.6deg}}
+@keyframes ck-match-glow{0%,100%{opacity:.85;filter:drop-shadow(0 0 3px #ffb300)}50%{opacity:1;filter:drop-shadow(0 0 6px #ffb300)}}
+@media(prefers-reduced-motion:reduce){#chess-board .ck-matching-brackets,#chess-board [data-motion-piece="standard"][data-card-match="true"]>svg{animation:none;}}
+
+#chess-board [data-motion-piece="standard"][data-card-hover="true"]>svg{filter:drop-shadow(0 0 2px #fff1b8) drop-shadow(0 0 6px #ffb300);}
