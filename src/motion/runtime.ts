@@ -1,6 +1,6 @@
 export const MOVE_MS = 240;
-export const PIECE_MOVE_MS = 1000;
-export const HANDOFF_MS = 1100;
+export const PIECE_MOVE_MS = 2500;
+export const HANDOFF_MS = 2600;
 export const MOTION_EASE = 'cubic-bezier(.22,.7,.25,1)';
 export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -53,6 +53,10 @@ export function snapshot(node: HTMLElement): Visual {
       svgIds.set(element.id, `${prefix}${element.id}`);
       element.id = `${prefix}${element.id}`;
     } else element.removeAttribute('id');
+    if (element.hasAttribute('data-in-flight')) {
+      element.style.removeProperty('opacity');
+      element.style.removeProperty('visibility');
+    }
     element.removeAttribute('data-in-flight');
     element.removeAttribute('tabindex');
     element.removeAttribute('autofocus');
@@ -78,10 +82,22 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
   ghost.className = `match-flight ${card ? 'match-flight--card' : ''}`;
   ghost.setAttribute('aria-hidden', 'true');
   ghost.inert = true;
-  Object.assign(ghost.style, { left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px` });
+  Object.assign(ghost.style, { position:'fixed', pointerEvents:'none', zIndex:'45', transformOrigin:'top left', left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px` });
   ghost.append(visual.node);
   document.body.append(ghost);
-  if (target) target.dataset.inFlight = 'true';
+  const previousOpacity = target?.style.getPropertyValue('opacity') || '';
+  const previousOpacityPriority = target?.style.getPropertyPriority('opacity') || '';
+  const revealTarget = () => {
+    if (!target) return;
+    delete target.dataset.inFlight;
+    if (previousOpacity) target.style.setProperty('opacity', previousOpacity, previousOpacityPriority);
+    else target.style.removeProperty('opacity');
+  };
+  if (target) {
+    target.dataset.inFlight = 'true';
+    // Opacity hides the whole subtree, including children with visible styles.
+    target.style.setProperty('opacity', '0', 'important');
+  }
   const dx = from.left - to.left, dy = from.top - to.top;
   if (!card) {
     // Freeze selection bobbing on the visual copy while the move is in flight.
@@ -121,12 +137,12 @@ export function fly(batch: MotionBatch, visual: Visual, to: DOMRect, target?: HT
     ], PIECE_MOVE_MS, delay, () => {
       ghost.remove();
       shadow.remove();
-      if (target) delete target.dataset.inFlight;
+      revealTarget();
     });
     return;
   }
   batch.animate(ghost, [
     { transform: `translate(${dx}px,${dy}px) scale(${from.width / to.width},${from.height / to.height})`, opacity: 1 },
     { transform: 'translate(0,0) scale(1)', opacity: card && !target ? .15 : 1 },
-  ], MOVE_MS, delay, () => { ghost.remove(); if (target) delete target.dataset.inFlight; });
+  ], MOVE_MS, delay, () => { ghost.remove(); revealTarget(); });
 }

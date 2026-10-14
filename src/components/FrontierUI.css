@@ -270,3 +270,7 @@ dialog.frontier-drop-dialog small{font-size:11px;margin:6px 0 10px;}
 
 #chess-board [data-motion-piece="golem"][data-card-match="true"]>.golem-idle-art{animation:ck-match-float 2.7s ease-in-out infinite;filter:drop-shadow(0 0 2px #fff1b8) drop-shadow(0 0 5px #ffb300)}
 @media(prefers-reduced-motion:reduce){#chess-board [data-motion-piece="golem"][data-card-match="true"]>.golem-idle-art{animation:none;}}
+
+/* Hide the authoritative piece until its animated copy lands. */
+#chess-board [data-motion-piece][data-in-flight="true"]{opacity:0!important;visibility:hidden!important;}
+.match-flight [data-card-match],.match-flight [data-card-hover]{animation:none!important;}
