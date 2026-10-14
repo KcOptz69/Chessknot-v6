@@ -1,0 +1,275 @@
+import {portalTravelTarget,initialGrounds,trapOnOwnSide,landGround} from "../src/utils/grounds.ts";
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {readFileSync,writeFileSync,unlinkSync} from 'node:fs';
+import {createInitialGameState,createSafeChess,createCard,evaluateGameEnd} from '../src/utils/chessLogic.ts';
+import {expandFrontier,initialFrontier,addItem,frontierMoves,frontierKingSafe,finishFrontierTurn,featherReviveChoice,wingsTargets,frontierClockRestore,trimBagHands,traverseTargets,golemSelfDestructError,golemBlastSquares,monolithPlacementSquare,frontierEscape} from '../src/utils/frontier.ts';
+import {extendFen,FrontierBoard} from '../src/utils/frontierBoard.ts';
+import {viewingGameState} from '../src/utils/roomViewing.ts';
+const harness=new URL('../.frontier-handler-test.ts',import.meta.url);
+writeFileSync(harness,readFileSync(new URL('../server.ts',import.meta.url),'utf8').replace(/\nstartServer\(\);\s*$/,'\nexport {handleGameAction};\n'));
+const timer=globalThis.setInterval;globalThis.setInterval=(()=>0) as any;
+let handleGameAction:any;
+try{({handleGameAction}=await import(harness.href));}finally{globalThis.setInterval=timer;unlinkSync(harness);}
+function setup(fen='4k1q1/7r/8/8/8/8/R7/1QR1K3 w - - 0 1'){
+ const s=createInitialGameState({arcaneFrontier:true});s.status='playing';s.grounds=undefined;s.fen=fen;s.frontier=initialFrontier();expandFrontier(s,()=>.2);s.frontier!.ready=true;s.frontier!.pois={};delete s.frontier!.boss;s.hands.w=[];s.hands.b=[];s.captures={w:[],b:[]};s.clock.enabled=false;
+ return {gameState:s,lobbyConfig:{},players:{}} as any;
+}
+function play(r:any,type:string,from:string,to:string,extra:any={}){const card=createCard(type as any,999);r.gameState.hands.w=[card];handleGameAction(r,{type:'play_card_move',cardId:card.id,from,to,...extra},'w');return card;}
+function action(r:any,msg:any,color='w'){const errors:any[]=[];handleGameAction(r,msg,color,{readyState:1,send:(payload:string)=>errors.push(JSON.parse(payload))});return errors;}
+test('expansion keeps original ranks and puts four empty ranks at the center',()=>{const s=createInitialGameState();const b=new FrontierBoard(extendFen(s.fen));assert.equal(b.board().length,12);assert.equal(b.get('e1')?.type,'k');assert.equal(b.get('e8')?.color,'b');assert.equal(b.get('a7')?.type,'p');assert.equal(b.get('aW'),undefined);});
+test('expansion adds exactly two Traverse cards and four unique discoveries',()=>{const s=createInitialGameState({arcaneFrontier:true});s.status='playing';const n=s.deck.length;expandFrontier(s,()=>.2);assert.equal(s.deck.length,n+2);assert.equal(s.deck.filter(c=>c.type==='traverse').length,2);assert.equal(Object.keys(s.frontier!.pois).length,4);assert.equal(expandFrontier(s),false);});
+test('each player completes a preparation turn before discoveries activate',()=>{const s=createInitialGameState({arcaneFrontier:true});s.status='playing';expandFrontier(s);finishFrontierTurn(s,'w');assert.equal(s.frontier!.ready,false);finishFrontierTurn(s,'b');assert.equal(s.frontier!.ready,true);});
+test('Rook crosses the center and preserves its movement card accounting',()=>{const r=setup();play(r,'rook','a2','aY');assert.equal(createSafeChess(r.gameState.fen).get('aY')?.type,'r');assert.equal(r.gameState.turn,'b');assert.equal(r.gameState.discard.filter((c:any)=>c.type==='rook').length,1);});
+test('invalid move is completely atomic',()=>{const r=setup();const card=createCard('rook',1);r.gameState.hands.w=[card];const before=JSON.stringify(r.gameState);action(r,{type:'play_card_move',cardId:card.id,from:'a2',to:'bW'});assert.equal(JSON.stringify(r.gameState),before);});
+test('Traverse teleports and collects Bag; hand refills to seven',()=>{const r=setup();r.gameState.frontier.pois.bX='bag';play(r,'traverse','a2','bX');assert.equal(createSafeChess(r.gameState.fen).get('bX')?.type,'r');assert.equal(r.gameState.frontier.bags.w,true);assert.equal(r.gameState.hands.w.length,7);});
+test('Traverse cannot capture or land on a restricted square',()=>{for(const mode of ['occupied','restricted']){const r=setup();if(mode==='occupied'){const b=createSafeChess(r.gameState.fen);b.put({type:'p',color:'b'},'bX' as any);r.gameState.fen=b.fen();}else r.gameState.restrictedSquares=['bX'];const card=createCard('traverse',1);r.gameState.hands.w=[card];const before=JSON.stringify(r.gameState);action(r,{type:'play_card_move',cardId:card.id,from:'a2',to:'bX'});assert.equal(JSON.stringify(r.gameState),before);}});
+test('Chest allows a keyless landing, remains unopened, and consumes a Key only on opening',()=>{
+ const r=setup();r.gameState.frontier.pois.aW='chest';r.gameState.frontier.chestRoll='lens';play(r,'rook','a2','aW');
+ assert.equal(createSafeChess(r.gameState.fen).get('aW' as any)?.type,'r');assert.equal(r.gameState.frontier.pois.aW,'chest');assert.equal(r.gameState.frontier.keys.w,0);assert.equal(r.gameState.frontier.inventories.w.length,0);assert.ok(r.gameState.frontier.events.some((e:any)=>e.kind==='chest_locked'&&e.recipient==='w'));
+ const opened=setup();opened.gameState.frontier.pois.aW='chest';opened.gameState.frontier.chestRoll='lens';opened.gameState.frontier.keys.w=1;play(opened,'rook','a2','aW');assert.equal(opened.gameState.frontier.keys.w,0);assert.equal(opened.gameState.frontier.inventories.w[0]?.type,'lens');assert.equal(opened.gameState.frontier.pois.aW,undefined);assert.equal(opened.gameState.powerUpProgress.w,0);
+});
+test('Boss needs two captures, first sacrifices melee piece and awards no points',()=>{const r=setup();r.gameState.frontier.pois.aW='boss';r.gameState.frontier.boss={square:'aW',health:2,drop:'core'};play(r,'rook','a2','aW');assert.equal(r.gameState.frontier.boss?.health,1);assert.equal(createSafeChess(r.gameState.fen).get('a2'),undefined);assert.equal(r.gameState.powerUpProgress.w,0);r.gameState.turn='w';r.gameState.status='playing';const b=createSafeChess(r.gameState.fen);b.put({type:'r',color:'w'},'a2');r.gameState.fen=b.fen().replace(' b ',' w ');play(r,'rook','a2','aW');assert.equal(r.gameState.frontier.boss,undefined);assert.ok(r.gameState.frontier.inventories.w.some((i:any)=>i.type==='core'));assert.equal(r.gameState.powerUpProgress.w,0);});
+test('King cannot attack full-health Boss and can finish weakened Boss',()=>{const r=setup('8/7k/8/8/4K3/8/8/8 w - - 0 1');r.gameState.frontier.pois.eW='boss';r.gameState.frontier.boss={square:'eW',health:2,drop:'eye'};const before=JSON.stringify(r.gameState);action(r,{type:'play_king_move',from:'e4',to:'eW'});assert.equal(JSON.stringify(r.gameState),before);r.gameState.frontier.boss.health=1;action(r,{type:'play_king_move',from:'e4',to:'eW'});assert.equal(createSafeChess(r.gameState.fen).get('eW' as any)?.type,'k');});
+test('controlled Golem follows standard card geometry and only Pawn permits captures',()=>{const r=setup();r.gameState.frontier.golems=[{id:'g',owner:'w',square:'cX'}];const b=createSafeChess(r.gameState.fen);b.put({type:'p',color:'b'},'dX' as any);r.gameState.fen=b.fen();let card=createCard('rook',1);r.gameState.hands.w=[card];const before=JSON.stringify(r.gameState);action(r,{type:'frontier_golem_move',cardId:card.id,from:'cX',to:'dX'});assert.equal(JSON.stringify(r.gameState),before);card=createCard('pawn',2);r.gameState.hands.w=[card];action(r,{type:'frontier_golem_move',cardId:card.id,from:'cX',to:'dX'});assert.equal(r.gameState.frontier.golems[0]?.square,'dX');assert.equal(r.gameState.powerUpProgress.w,1);});
+test('Mimic kills a non-King opener and remains worth three capture points',()=>{const r=setup();r.gameState.frontier.pois.aW='chest';r.gameState.frontier.chestRoll='mimic';r.gameState.frontier.keys.w=1;play(r,'rook','a2','aW');assert.equal(r.gameState.frontier.pois.aW,'mimic');assert.equal(createSafeChess(r.gameState.fen).get('aW' as any),undefined);assert.equal(r.gameState.powerUpProgress.w,0);});
+test('Eye retains Vision charges and Bind blocks only the chosen card ID',()=>{const r=setup();addItem(r.gameState,'w','eye');r.gameState.powerUps.w.vision=2;const a=createCard('push',1),b=createCard('push',2);r.gameState.hands.b=[a,b];action(r,{type:'frontier_bind',targetCardId:a.id});assert.equal(r.gameState.powerUps.w.vision,1);assert.equal(r.gameState.frontier.bind.cardId,a.id);assert.equal(r.gameState.turn,'w');r.gameState.turn='b';const before=JSON.stringify(r.gameState);action(r,{type:'play_push',cardId:a.id,from:'h7',to:'h6'},'b');assert.equal(JSON.stringify(r.gameState),before);});
+test('Lens is free, usable only once this turn, with invalid use atomic',()=>{const r=setup();addItem(r.gameState,'w','lens');const card=createCard('pawn',1);r.gameState.hands.w=[card];action(r,{type:'frontier_item',item:'lens',cardId:card.id});assert.equal(r.gameState.turn,'w');assert.equal(r.gameState.hands.w.length,1);const before=JSON.stringify(r.gameState);action(r,{type:'frontier_item',item:'lens',cardId:r.gameState.hands.w[0].id});assert.equal(JSON.stringify(r.gameState),before);});
+test('Boss and Chest random reward rolls are private in live and historical snapshots',()=>{const r=setup();r.gameState.frontier.boss={square:'aW',health:2,drop:'core'};r.gameState.frontier.chestRoll='mimic';r.gameState.boardHistory=[{frontier:structuredClone(r.gameState.frontier)}];const view=viewingGameState(r.gameState,{color:'w'} as any);assert.equal(view.frontier?.boss?.drop,undefined);assert.equal(view.frontier?.chestRoll,undefined);assert.equal(view.boardHistory[0].frontier?.boss?.drop,undefined);assert.equal(r.gameState.frontier.boss.drop,'core');});
+test('Super Knight invalid second jump preserves every resource and piece',()=>{const r=setup();r.gameState.superKnights=['a2'];const b=createSafeChess(r.gameState.fen);b.put({type:'n',color:'w'},'a2');r.gameState.fen=b.fen();const card=createCard('knight',1);r.gameState.hands.w=[card];const before=JSON.stringify(r.gameState);action(r,{type:'play_card_move',cardId:card.id,from:'a2',to:'b4',secondTo:'bW'});assert.equal(JSON.stringify(r.gameState),before);});
+test('original castling moves both King and Rook after expansion',()=>{const r=setup('4k3/7r/8/8/8/8/8/4K2R w K - 0 1');action(r,{type:'play_king_move',from:'e1',to:'g1'});const b=createSafeChess(r.gameState.fen);assert.equal(b.get('g1')?.type,'k');assert.equal(b.get('f1')?.type,'r');assert.equal(b.get('h1'),undefined);});
+test('Core summons a ten-point Golem and prevents Clock rewind of its summon',()=>{const r=setup();addItem(r.gameState,'w','core');action(r,{type:'frontier_item',item:'core',to:'a1'});assert.equal(r.gameState.frontier.golems[0]?.square,'a1');assert.equal(r.gameState.whitePoints,29);assert.equal(r.gameState.frontier.inventories.w[0].remaining,0);assert.equal(r.gameState.boardHistory.at(-1).frontierLocked,true);});
+test('Feather rejects old losses and revives the latest eligible new Champion loss',()=>{const r=setup();addItem(r.gameState,'w','feather');r.gameState.captures.b=[{type:'q',color:'w',capturedTurn:0}];const before=JSON.stringify(r.gameState);action(r,{type:'frontier_item',item:'feather',to:'a1'});assert.equal(JSON.stringify(r.gameState),before);r.gameState.captures.b.push({type:'musketeer',color:'w',capturedTurn:r.gameState.turnNumber});action(r,{type:'frontier_item',item:'feather',to:'a1'});assert.equal(r.gameState.champions.w?.type,'musketeer');assert.equal(r.gameState.champions.w?.square,'a1');assert.equal(r.gameState.captures.b.length,1);});
+test('Wings uses a move action and waits seven subsequent owner turns',()=>{const r=setup();addItem(r.gameState,'w','wings');action(r,{type:'frontier_item',item:'wings',from:'a2',to:'b3'});assert.equal(createSafeChess(r.gameState.fen).get('b3')?.type,'r');assert.equal(r.gameState.turn,'b');const item=r.gameState.frontier.inventories.w[0];assert.equal(item.readyAfter-r.gameState.frontier.ownerTurns.w,7);r.gameState.turn='w';r.gameState.fen=r.gameState.fen.replace(' b ',' w ');const before=JSON.stringify(r.gameState);action(r,{type:'frontier_item',item:'wings',from:'b3',to:'c4'});assert.equal(JSON.stringify(r.gameState),before);});
+test('Star retains its item and waits five owner turns',()=>{const r=setup();addItem(r.gameState,'w','star');action(r,{type:'frontier_item',item:'star',from:'a2',to:'aX'});assert.equal(createSafeChess(r.gameState.fen).get('aX' as any)?.type,'r');const i=r.gameState.frontier.inventories.w[0];assert.equal(i.readyAfter-r.gameState.frontier.ownerTurns.w,5);assert.equal(i.remaining,-1);});
+test('Banner summons a Pawn only on its own second rank',()=>{const r=setup();addItem(r.gameState,'w','banner');const before=JSON.stringify(r.gameState);action(r,{type:'frontier_item',item:'banner',to:'bW'});assert.equal(JSON.stringify(r.gameState),before);action(r,{type:'frontier_item',item:'banner',to:'b2'});assert.equal(createSafeChess(r.gameState.fen).get('b2')?.type,'p');});
+test('Sigil is blocked by disarm without spending the item',()=>{const r=setup();addItem(r.gameState,'w','sigil');r.gameState.champions.w={type:'musketeer',color:'w',square:'cX'};r.gameState.grounds={selected:[],charges:{w:{},b:{}},tiles:{},traps:[],poison:[],disarm:[{square:'cX',color:'w',owner:'b',appliedTurn:1}],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};const before=JSON.stringify(r.gameState);action(r,{type:'frontier_item',item:'sigil',targetSquare:'cY'});assert.equal(JSON.stringify(r.gameState),before);});
+test('ranged Boss hits retain the attacker and leave the final reward on the Boss square',()=>{const r=setup();r.gameState.champions.w={type:'musketeer',color:'w',square:'bX'};r.gameState.frontier.pois.bY='boss';r.gameState.frontier.boss={square:'bY',health:2,drop:'feather'};let card=createCard('champion',1);r.gameState.hands.w=[card];action(r,{type:'play_champion_ultimate',cardId:card.id,targetSquare:'bY'});assert.equal(r.gameState.frontier.boss.health,1);assert.equal(r.gameState.champions.w.square,'bX');r.gameState.status='playing';r.gameState.turn='w';r.gameState.fen=r.gameState.fen.replace(' b ',' w ');card=createCard('champion',2);r.gameState.hands.w=[card];action(r,{type:'play_champion_ultimate',cardId:card.id,targetSquare:'bY'});assert.equal(r.gameState.frontier.pois.bY,'feather');assert.equal(r.gameState.frontier.inventories.w.length,0);assert.equal(r.gameState.powerUpProgress.w,0);});
+test('Golem self-destruct cannot remove its own King',()=>{const r=setup();r.gameState.frontier.golems=[{id:'g',owner:'w',square:'d1'}];const before=JSON.stringify(r.gameState);action(r,{type:'frontier_self_destruct',from:'d1'});assert.equal(JSON.stringify(r.gameState),before);});
+test('Golem is immune to poison but is removed by a Mine with ten capture points',()=>{for(const trap of ['poison','mine']){const r=setup();r.gameState.frontier.golems=[{id:'g',owner:'w',square:'bX'}];r.gameState.grounds={selected:[],charges:{w:{},b:{}},tiles:{},traps:[{id:'trap',owner:'b',type:trap,square:'cX'}],poison:[],disarm:[],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};const card=createCard('pawn',1);r.gameState.hands.w=[card];const oldCharges=Object.values(r.gameState.powerUps.b).reduce((n:number,x:any)=>n+x,0);action(r,{type:'frontier_golem_move',cardId:card.id,from:'bX',to:'cX'});assert.equal(r.gameState.grounds.traps.length,0);assert.equal(r.gameState.grounds.poison.length,0);if(trap==='poison')assert.equal(r.gameState.frontier.golems[0]?.square,'cX');else{assert.equal(r.gameState.frontier.golems.length,0);assert.equal(Object.values(r.gameState.powerUps.b).reduce((n:number,x:any)=>n+x,0),oldCharges+2);}}});
+test('forced expansion triggers after the fiftieth complete turn',()=>{const r=setup();r.gameState.frontier=initialFrontier();r.gameState.fen='4k1q1/7r/8/8/8/8/R7/1QR1K3 w - - 0 1';r.gameState.turnNumber=50;play(r,'rook','a2','a3');assert.equal(r.gameState.frontier.expanded,true);assert.equal(createSafeChess(r.gameState.fen).board().length,12);});
+test('Clock restores Boss health and melee casualty but does not refund the spent move card',()=>{const r=setup();r.gameState.frontier.pois.aW='boss';r.gameState.frontier.boss={square:'aW',health:2,drop:'core'};r.gameState.boardHistory=[{fen:r.gameState.fen,frontier:structuredClone(r.gameState.frontier),monolithSquare:null,restrictedSquares:[],champions:{w:null,b:null},pieceIds:{...r.gameState.pieceIds},captures:{w:[],b:[]},superPawns:[],superKnights:[],awakenedRooks:[],awakenedPieces:[]}];const spent=play(r,'rook','a2','aW');const black=createCard('rook',13);r.gameState.hands.b=[black];action(r,{type:'play_card_move',cardId:black.id,from:'h7',to:'h6'},'b');assert.equal(r.gameState.turn,'w');const clock=createCard('clock',14);r.gameState.hands.w=[clock];action(r,{type:'play_clock',cardId:clock.id});assert.equal(r.gameState.frontier.boss?.health,2);assert.equal(createSafeChess(r.gameState.fen).get('a2')?.type,'r');assert.ok(r.gameState.discard.some((c:any)=>c.id===spent.id));assert.ok(!r.gameState.hands.w.some((c:any)=>c.id===spent.id));});
+test('optional expansion is a free action at 25 army points and is blocked during a pending choice',()=>{const r=setup();r.gameState.fen='4k1q1/7r/8/8/8/8/R7/1QR1K3 w - - 0 1';r.gameState.frontier=initialFrontier();r.gameState.whitePoints=25;r.gameState.pendingSwapDiscard={player:'w',newCardIds:[]};const before=JSON.stringify(r.gameState);action(r,{type:'expand_frontier'});assert.equal(JSON.stringify(r.gameState),before);r.gameState.pendingSwapDiscard=null;const cards=JSON.stringify(r.gameState.hands.w),turn=r.gameState.turnNumber;action(r,{type:'expand_frontier'});assert.equal(r.gameState.turn,'w');assert.equal(r.gameState.turnNumber,turn);assert.equal(JSON.stringify(r.gameState.hands.w),cards);assert.equal(r.gameState.frontier.expanded,true);});
+test('Portal can capture an enemy controlled Golem and consumes its free-use allowance only once',()=>{const r=setup();r.gameState.frontier.golems=[{id:'g',owner:'b',square:'bX'}];r.gameState.grounds={selected:['portal'],charges:{w:{},b:{}},tiles:{a2:'portal',bX:'portal'},traps:[],poison:[],disarm:[],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};const turn=r.gameState.turnNumber;action(r,{type:'portal_move',from:'a2'});assert.equal(createSafeChess(r.gameState.fen).get('bX' as any)?.type,'r');assert.equal(r.gameState.frontier.golems.length,0);assert.equal(r.gameState.turnNumber,turn);assert.equal(r.gameState.grounds.portalUsed.w,1);const before=JSON.stringify(r.gameState);action(r,{type:'portal_move',from:'bX'});assert.equal(JSON.stringify(r.gameState),before);});
+test('en passant remains available after an ordinary Pawn double push on the expanded board',()=>{const r=setup('4k1q1/7r/8/8/1p6/8/P7/1QR1K3 w - - 0 1');play(r,'pawn','a2','a4');assert.equal(r.gameState.fen.split(' ')[3],'a3');const card=createCard('pawn',3);r.gameState.hands.b=[card];action(r,{type:'play_card_move',cardId:card.id,from:'b4',to:'a3'},'b');assert.equal(createSafeChess(r.gameState.fen).get('a3')?.color,'b');assert.equal(createSafeChess(r.gameState.fen).get('a4'),undefined);assert.equal(r.gameState.powerUpProgress.b,1);});
+
+test('temporary test expansion works above 25 points without consuming the move and rejects the wrong turn',()=>{const r=setup();r.gameState.fen='4k1q1/7r/8/8/8/8/R7/1QR1K3 w - - 0 1';r.gameState.frontier=initialFrontier();r.gameState.whitePoints=39;const before=JSON.stringify(r.gameState);action(r,{type:'expand_frontier'});assert.equal(JSON.stringify(r.gameState),before);action(r,{type:'expand_frontier',test:true},'b');assert.equal(JSON.stringify(r.gameState),before);const n=r.gameState.turnNumber;action(r,{type:'expand_frontier',test:true});assert.equal(r.gameState.frontier.expanded,true);assert.equal(r.gameState.turn,'w');assert.equal(r.gameState.turnNumber,n);});
+test('Monolith can deploy in Mystic Field and blocked discoveries do not spend its charge',()=>{const r=setup();r.gameState.powerUps.w.monolith=2;r.gameState.frontier.pois.bX='chest';const before=JSON.stringify(r.gameState);action(r,{type:'play_monolith',cardId:null,isPowerUp:true,targetSquare:'bX'});assert.equal(JSON.stringify(r.gameState),before);action(r,{type:'play_monolith',cardId:null,isPowerUp:true,targetSquare:'cX'});assert.equal(r.gameState.monolithSquare,'cX');assert.equal(r.gameState.powerUps.w.monolith,1);});
+
+test('successful Golem explosion emits its exact square after validation and invalid explosions emit nothing',()=>{const r=setup();r.gameState.frontier.golems=[{id:'blast',owner:'w',square:'dX'}];const b=createSafeChess(r.gameState.fen);b.put({type:'p',color:'b'},'cX' as any);r.gameState.fen=b.fen();action(r,{type:'frontier_self_destruct',from:'dX'});const event=r.gameState.frontier.events.find((e:any)=>e.kind==='golem_explosion');assert.equal(event?.square,'dX');assert.equal(r.gameState.frontier.golems.length,0);assert.equal(createSafeChess(r.gameState.fen).get('cX' as any),undefined);assert.equal(r.gameState.turn,'b');const invalid=setup();invalid.gameState.frontier.golems=[{id:'bad',owner:'w',square:'d1'}];const before=JSON.stringify(invalid.gameState);action(invalid,{type:'frontier_self_destruct',from:'d1'});assert.equal(JSON.stringify(invalid.gameState),before);assert.ok(!invalid.gameState.frontier.events.some((e:any)=>e.kind==='golem_explosion'));});
+
+test('expanded Bishop validates the separate circle, binds its identity and cancels when it moves',()=>{const r=setup('4k1q1/7r/8/8/8/8/1B6/1QR1K3 w - - 0 1');r.gameState.pieceIds.b2='channel-bishop';const card=createCard('awakening_bishop',7);r.gameState.hands.w=[card];const before=JSON.stringify(r.gameState);action(r,{type:'play_awakening_bishop',cardId:card.id,from:'b2',to:'c3',circleSquare:'bX'});assert.equal(JSON.stringify(r.gameState),before);action(r,{type:'play_awakening_bishop',cardId:card.id,from:'b2',to:'c3',circleSquare:'c4'});const circle=r.gameState.summoningCircles[0];assert.equal(circle.square,'c4');assert.equal(circle.bishopSquare,'c3');assert.equal(circle.remaining,3);assert.ok(!circle.interrupted);r.gameState.turn='w';r.gameState.fen=r.gameState.fen.replace(' b ',' w ');play(r,'bishop','c3','d4');assert.equal(r.gameState.summoningCircles[0].interrupted,true);});
+test('Feather preview and server agree, and a stale confirmed capture cannot spend the item',()=>{const r=setup();addItem(r.gameState,'w','feather');r.gameState.captures.b=[{type:'r',color:'w',capturedTurn:1},{type:'n',color:'w',capturedTurn:1}];const choice=featherReviveChoice(r.gameState,'w');assert.equal(choice?.index,1);assert.equal(choice?.piece.type,'n');const before=JSON.stringify(r.gameState);action(r,{type:'frontier_item',item:'feather',to:'a1',captureIndex:0});assert.equal(JSON.stringify(r.gameState),before);action(r,{type:'frontier_item',item:'feather',to:'a1',captureIndex:1});assert.equal(createSafeChess(r.gameState.fen).get('a1')?.type,'n');});
+test('Wings board targets omit occupied, restricted and unsafe squares without mutating the game',()=>{const r=setup();r.gameState.restrictedSquares=['b3'];r.gameState.frontier.pois.aW='boss';r.gameState.frontier.boss={square:'aW',health:2,drop:'core'};const before=JSON.stringify(r.gameState);const targets=wingsTargets(r.gameState,'w','a2');assert.ok(targets.includes('a3'));assert.ok(!targets.includes('b3'));assert.ok(!targets.includes('aW'));assert.ok(!targets.includes('b1'));assert.equal(JSON.stringify(r.gameState),before);});
+test('item acquisition and ground drops carry the reward name for both players',()=>{const r=setup();addItem(r.gameState,'w','eye');const event=r.gameState.frontier.events.find((e:any)=>e.item==='eye');assert.equal(event.recipient,'w');assert.match(event.detail,/Eye of Revelation/);for(const color of ['w','b']){const viewed=viewingGameState(r.gameState,{color,role:'player'} as any);assert.ok(viewed.frontier.events.some((e:any)=>e.id===event.id&&e.item==='eye'));}});
+
+test('Feather does not replace an existing friendly Champion when selecting an eligible loss',()=>{const r=setup();addItem(r.gameState,'w','feather');r.gameState.champions.w={type:'berserker',color:'w',square:'dX'};r.gameState.captures.b=[{type:'n',color:'w',capturedTurn:1},{type:'musketeer',color:'w',capturedTurn:1}];assert.equal(featherReviveChoice(r.gameState,'w')?.piece.type,'n');action(r,{type:'frontier_item',item:'feather',to:'a1',captureIndex:0});assert.equal(r.gameState.champions.w.type,'berserker');assert.equal(r.gameState.champions.w.square,'dX');assert.equal(createSafeChess(r.gameState.fen).get('a1')?.type,'n');});
+
+test('Arcane Frontier defaults on and explicit opt-out disables it',()=>{const s=createInitialGameState();assert.equal(s.expansions.arcaneFrontier,true);assert.ok(s.frontier);assert.equal(createInitialGameState({arcaneFrontier:false}).frontier,undefined);});
+test('Push can land on or pass through a Chest without capturing it',()=>{
+ for(const to of ['aW','aY']){const r=setup();r.gameState.frontier.pois.aW='chest';const card=createCard('push',51);r.gameState.hands.w=[card];assert.equal(action(r,{type:'play_push',cardId:card.id,from:'a2',to}).length,0);assert.equal(createSafeChess(r.gameState.fen).get(to as any)?.type,'r');assert.equal(r.gameState.frontier.pois.aW,'chest');assert.equal(r.gameState.powerUpProgress.w,0);}
+});
+test('Pawn advances onto a Chest as an item instead of capturing diagonally',()=>{const r=setup('4k1q1/7r/8/8/P7/8/8/1QR1K3 w - - 0 1');r.gameState.frontier.pois.aW='chest';assert.ok(frontierMoves(r.gameState,'a4').includes('aW'));play(r,'pawn','a4','aW');assert.equal(createSafeChess(r.gameState.fen).get('aW' as any)?.type,'p');assert.equal(r.gameState.frontier.pois.aW,'chest');});
+test('Soul Release summons pick up Bag and Key and can open a Chest',()=>{
+ for(const kind of ['bag','key','chest']){const r=setup();const q=createSafeChess(r.gameState.fen);q.remove('b1');q.put({type:'q',color:'w'},'dX' as any);r.gameState.fen=q.fen();r.gameState.pieceIds.dX='soul-queen';r.gameState.frontier.pois.cX=kind;r.gameState.frontier.keys.w=kind==='chest'?1:0;r.gameState.frontier.chestRoll='lens';const card={...createCard('soul_release',19),soul:{queenId:'soul-queen',piece:{type:'n',color:'b'}}};r.gameState.hands.w=[card];assert.equal(action(r,{type:'play_soul_release',cardId:card.id,targetSquare:'cX'}).length,0);assert.equal(createSafeChess(r.gameState.fen).get('cX' as any)?.type,'n');assert.equal(r.gameState.frontier.pois.cX,undefined);if(kind==='bag'){assert.equal(r.gameState.frontier.bags.w,true);assert.equal(r.gameState.hands.w.length,7);}if(kind==='key')assert.equal(r.gameState.frontier.keys.w,1);if(kind==='chest')assert.equal(r.gameState.frontier.inventories.w[0]?.type,'lens');assert.ok(r.gameState.exhausted.some((c:any)=>c.id===card.id));}
+});
+test('Clock returns a collected Bag to its square and randomly discards excess to the ordinary pile',()=>{
+ const r=setup(),s=r.gameState;s.frontier.pois.bX='bag';const snapshot={fen:s.fen,frontier:structuredClone(s.frontier)};delete s.frontier.pois.bX;s.frontier.bags.w=true;s.hands.w=Array.from({length:7},(_,i)=>createCard('pawn',i));const ids=new Set(s.hands.w.map((c:any)=>c.id));frontierClockRestore(s,snapshot as any);assert.equal(s.frontier.bags.w,false);assert.equal(s.frontier.pois.bX,'bag');assert.equal(s.hands.w.length,5);assert.equal(s.discard.length,2);assert.ok(s.discard.every((c:any)=>ids.has(c.id)));assert.equal(new Set([...s.hands.w,...s.discard].map((c:any)=>c.id)).size,7);
+});
+test('Bag rewind respects Joker mode, defers trimming, and never discards if the Bag remains owned',()=>{
+ const r=setup(),s=r.gameState;const snap={fen:s.fen,frontier:structuredClone(s.frontier)};s.frontier.bags.w=true;s.jokerLocked.w=true;s.hands.w=Array.from({length:7},(_,i)=>createCard('wild',i));frontierClockRestore(s,snap as any);assert.equal(s.hands.w.length,7);assert.equal(s.discard.length,0);s.jokerLocked.w=false;trimBagHands(s,()=>0);assert.equal(s.hands.w.length,5);assert.equal(s.discard.length,2);
+ const same=setup().gameState;same.frontier.bags.w=true;same.hands.w=Array.from({length:7},(_,i)=>createCard('pawn',i));frontierClockRestore(same,{fen:same.fen,frontier:structuredClone(same.frontier)} as any);assert.equal(same.hands.w.length,7);
+});
+test('Wings waits exactly seven subsequent owner turns and only successful use emits flight metadata',()=>{
+ const r=setup();addItem(r.gameState,'w','wings');const before=JSON.stringify(r.gameState);action(r,{type:'frontier_item',item:'wings',from:'a2',to:'b1'});assert.equal(JSON.stringify(r.gameState),before);action(r,{type:'frontier_item',item:'wings',from:'a2',to:'b3'});const f=r.gameState.frontier,event=f.events.find((e:any)=>e.kind==='wings_flight');assert.equal(event.from,'a2');assert.equal(event.square,'b3');assert.equal(event.piece.type,'r');assert.equal(f.inventories.w[0].readyAfter-f.ownerTurns.w,7);for(let i=0;i<6;i++)finishFrontierTurn(r.gameState,'w');assert.equal(f.inventories.w[0].readyAfter-f.ownerTurns.w,1);finishFrontierTurn(r.gameState,'w');assert.equal(f.inventories.w[0].readyAfter-f.ownerTurns.w,0);
+});
+test('Banner animation identifies its summoned Pawn and invalid placement emits nothing',()=>{const r=setup();addItem(r.gameState,'w','banner');const before=JSON.stringify(r.gameState);action(r,{type:'frontier_item',item:'banner',to:'aW'});assert.equal(JSON.stringify(r.gameState),before);action(r,{type:'frontier_item',item:'banner',to:'b2'});const e=r.gameState.frontier.events.find((e:any)=>e.kind==='pawn_summon');assert.equal(e.square,'b2');assert.deepEqual(e.piece,{type:'p',color:'w'});});
+test('Traverse target highlights exclude occupied and restricted squares without mutating state',()=>{const r=setup();r.gameState.restrictedSquares=['bX'];r.gameState.frontier.pois.cX='chest';const before=JSON.stringify(r.gameState);const targets=traverseTargets(r.gameState,'w','a2');assert.ok(targets.includes('cX'));assert.ok(!targets.includes('bX'));assert.ok(!targets.includes('a2'));assert.equal(JSON.stringify(r.gameState),before);});
+
+test('Golem self-destruct preview is read-only and identifies a legal 3x3 blast',()=>{const r=setup();r.gameState.frontier.golems=[{id:'g',owner:'w',square:'dX'}];const before=JSON.stringify(r.gameState);assert.equal(golemSelfDestructError(r.gameState,'w','dX'),undefined);assert.equal(golemBlastSquares(r.gameState,'dX').length,9);assert.ok(golemBlastSquares(r.gameState,'dX').includes('dX'));assert.equal(JSON.stringify(r.gameState),before);action(r,{type:'frontier_self_destruct',from:'dX'});assert.equal(r.gameState.frontier.golems.length,0);assert.equal(r.gameState.turn,'b');assert.ok(r.gameState.frontier.events.some((e:any)=>e.kind==='golem_explosion'));});
+test('Golem blast previews clip at the board edge and explain unsafe or disarmed explosions',()=>{const r=setup();r.gameState.frontier.golems=[{id:'g',owner:'w',square:'d1'}];assert.match(golemSelfDestructError(r.gameState,'w','d1')!,/King/);assert.equal(golemBlastSquares(r.gameState,'a1').length,4);r.gameState.frontier.golems[0].square='dX';r.gameState.grounds={selected:[],charges:{w:{},b:{}},tiles:{},traps:[],poison:[],disarm:[{square:'dX',color:'w',owner:'b',appliedTurn:1}],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};assert.match(golemSelfDestructError(r.gameState,'w','dX')!,/disarmed/);const before=JSON.stringify(r.gameState);action(r,{type:'frontier_self_destruct',from:'dX'});assert.equal(JSON.stringify(r.gameState),before);});
+test('Monolith placement targets reject Golems, all discoveries, portals and active circles',()=>{const r=setup();r.gameState.frontier.golems=[{id:'g',owner:'w',square:'dX'}];for(const kind of ['bag','key','chest','boss','mimic','lens']){r.gameState.frontier.pois.cX=kind;assert.equal(monolithPlacementSquare(r.gameState,'cX'),false);}assert.equal(monolithPlacementSquare(r.gameState,'dX'),false);r.gameState.summoningCircles=[{id:'c',owner:'w',square:'eX',remaining:2,createdTurn:1,finished:false}];assert.equal(monolithPlacementSquare(r.gameState,'eX'),false);assert.equal(monolithPlacementSquare(r.gameState,'fX'),true);});
+
+
+test('Knight Awakening transforms in place, exhausts once, and leaves its piece on the board',()=>{
+ const r=setup('4k3/8/8/8/8/8/8/1N2K3 w - - 0 1');const card=createCard('awakening_knight',801);r.gameState.hands.w=[card];
+ assert.deepEqual(action(r,{type:'play_awakening_knight',cardId:card.id,from:'b1',to:'b1'}),[]);
+ assert.equal(createSafeChess(r.gameState.fen).get('b1')?.type,'n');assert.ok(r.gameState.superKnights.includes('b1'));assert.equal(r.gameState.turn,'b');assert.equal(r.gameState.exhausted.filter((c:any)=>c.id===card.id).length,1);assert.equal(r.gameState.awakeningAlert.cardType,'awakening_knight');
+});
+test('invalid in-place Awakening keeps its card, rewards and complete state unchanged',()=>{
+ const r=setup('4r2k/8/8/8/8/8/8/1N2K3 w - - 0 1');const card=createCard('awakening_knight',802);r.gameState.hands.w=[card];const before=structuredClone(r.gameState);
+ assert.ok(action(r,{type:'play_awakening_knight',cardId:card.id,from:'b1',to:'b1'}).length);assert.deepEqual(r.gameState,before);
+});
+test('Restrict cannot target either player controlled Golem',()=>{
+ for(const owner of ['w','b']){const r=setup();r.gameState.frontier.golems=[{id:'g',owner,square:'cX'}];const card=createCard('restrict',803);r.gameState.hands.w=[card];const before=structuredClone(r.gameState);action(r,{type:'play_restrict',cardId:card.id,targetSquare:'cX'});assert.deepEqual(r.gameState,before);}
+});
+test('five capture points grant a named reward and Queen captures preserve the remainder',()=>{
+ const r=setup('4k3/8/8/8/q7/8/R7/4K3 w - - 0 1');r.gameState.powerUpProgress.w=1;const before=Object.values(r.gameState.powerUps.w).reduce((a:number,b:any)=>a+b,0);play(r,'rook','a2','a4');
+ assert.equal(r.gameState.powerUpProgress.w,0);assert.equal(Object.values(r.gameState.powerUps.w).reduce((a:number,b:any)=>a+b,0),before+2);assert.equal(r.gameState.powerUpAwards.length,2);assert.ok(r.gameState.powerUpAwards.every((a:any)=>a.player==='w'&&a.name&&a.newCount));assert.equal(new Set(r.gameState.powerUpAwards.map((a:any)=>a.id)).size,2);
+});
+test('ordinary and Champion captures in powered double jumps award exactly once',()=>{
+ for(const champion of [false,true]){const r=setup();const s=r.gameState;s.frontier.expanded=false;s.frontier.ready=false;s.fen='4k3/8/8/8/8/8/8/1N2K3 w - - 0 1';s.superKnights=['b1'];s.grounds={selected:['boost','gravity'],charges:{w:{},b:{}},tiles:{b1:'boost'},traps:[],poison:[],disarm:[],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};
+ if(champion)s.champions.b={type:'musketeer',color:'b',square:'d3'};else{const b=createSafeChess(s.fen);b.put({type:'r',color:'b'},'d3');s.fen=b.fen();}
+ const card=createCard('knight',804);s.hands.w=[card];const old=Object.values(s.powerUps.w).reduce((a:number,b:any)=>a+b,0);
+ assert.deepEqual(action(r,{type:'play_card_move',cardId:card.id,from:'b1',to:'c1',secondTo:'d3'}),[]);assert.equal(createSafeChess(r.gameState.fen).get('d3')?.type,'n');assert.equal(r.gameState.captures.w.length,1);assert.equal(r.gameState.powerUpProgress.w,0);assert.equal(Object.values(r.gameState.powerUps.w).reduce((a:number,b:any)=>a+b,0),old+1);assert.equal(r.gameState.powerUpAwards.length,1);
+ }
+});
+test('invalid powered second jump awards no capture points or reward notification',()=>{
+ const r=setup();const s=r.gameState;s.frontier.expanded=false;s.fen='4k3/8/8/8/8/8/8/1N2K3 w - - 0 1';s.superKnights=['b1'];s.grounds={selected:['boost','gravity'],charges:{w:{},b:{}},tiles:{b1:'boost'},traps:[],poison:[],disarm:[],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};const card=createCard('knight',805);s.hands.w=[card];const before=structuredClone(s);action(r,{type:'play_card_move',cardId:card.id,from:'b1',to:'c1',secondTo:'h8'});assert.deepEqual(r.gameState,before);
+});
+
+
+test('Refresh is a legal free action while checked on the expanded board',()=>{
+ const r=setup('q3r2k/8/8/8/8/8/1B1P1P2/3RKR2 w - - 0 1');const s=r.gameState;s.powerUps.w={draw:0,wild:0,monolith:0,vision:0};s.hands.w=[createCard('refresh',901)];s.deck=Array.from({length:8},(_,i)=>createCard('bishop',910+i));s.discard=[];
+ assert.equal(frontierKingSafe(s,'w'),false);assert.equal(frontierEscape(s,'w'),true);const old={fen:s.fen,turn:s.turn,turnNumber:s.turnNumber,clock:structuredClone(s.clock)};
+ assert.deepEqual(action(r,{type:'play_refresh',cardId:s.hands.w[0].id}),[]);assert.equal(r.gameState.hands.w.length,5);assert.ok(r.gameState.hands.w.every((c:any)=>c.type==='bishop'));for(const key of Object.keys(old))assert.deepEqual(r.gameState[key],(old as any)[key]);assert.equal(r.gameState.status,'playing');
+});
+test('Wild and Wishing Star cannot invent a controlled Golem escape from checkmate',()=>{
+ for(const star of [false,true]){const r=setup('q3r2k/8/8/8/8/8/1P1P1P2/3RKR2 w - - 0 1');const s=r.gameState;s.frontier.golems=[{id:'g',owner:'w',square:'d3'}];s.powerUps.w={draw:0,wild:0,monolith:0,vision:0};s.hands.w=[createCard('wild',930)];if(star)addItem(s,'w','star');
+ assert.equal(frontierKingSafe(s,'w'),false);assert.equal(frontierEscape(s,'w'),false);assert.equal(evaluateGameEnd(createSafeChess(s.fen),s).status,'checkmate');
+ s.hands.w=[createCard('pawn',931)];assert.equal(frontierEscape(s,'w'),true);
+ }
+});
+test('useless Refresh draws do not delay mate and invalid Refresh remains atomic in check',()=>{
+ const r=setup('q3r2k/8/8/8/8/8/1P1P1P2/3RKR2 w - - 0 1');const s=r.gameState;s.powerUps.w={draw:0,wild:0,monolith:0,vision:0};s.hands.w=[createCard('refresh',940)];s.deck=[createCard('pawn',941)];s.discard=[];assert.equal(frontierEscape(s,'w'),false);assert.equal(evaluateGameEnd(createSafeChess(s.fen),s).status,'checkmate');
+ const before=structuredClone(s);action(r,{type:'play_refresh',cardId:'missing'});assert.deepEqual(r.gameState,before);
+});
+
+test('Restrict rejects each point of interest without consuming or changing state',()=>{
+ for(const kind of ['bag','key','chest','boss'] as const){
+  const r=setup();r.gameState.frontier.pois.cX=kind;
+  const card=createCard('restrict',901);r.gameState.hands.w=[card];
+  const before=structuredClone(r.gameState);
+  const errors=action(r,{type:'play_restrict',cardId:card.id,targetSquare:'cX'});
+  assert.deepEqual(r.gameState,before,kind);assert.ok(errors.some((e:any)=>e.type==='error'));
+ }
+});
+
+test('Monolith may occupy a Portal without creating a warp choice',()=>{
+ const r=setup();r.gameState.grounds={selected:['portal'],charges:{w:{},b:{}},tiles:{cX:'portal',fX:'portal'},traps:[],poison:[],disarm:[],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};
+ const card=createCard('monolith',902);r.gameState.hands.w=[card];
+ assert.equal(monolithPlacementSquare(r.gameState,'cX'),true);
+ action(r,{type:'play_monolith',cardId:card.id,targetSquare:'cX'});
+ assert.equal(r.gameState.monolithSquare,'cX');assert.ok(!r.gameState.pendingPortal);
+});
+test('test expansion accepts chosen drops and rejects invalid rewards atomically',()=>{
+ for(const invalid of [false,true]){
+ const r=setup();r.gameState.frontier=initialFrontier();r.gameState.fen=createInitialGameState().fen;
+ const before=structuredClone(r.gameState);
+ action(r,{type:'expand_frontier',test:true,chestDrop:invalid?'core':'wings',bossDrop:'feather'});
+ if(invalid)assert.deepEqual(r.gameState,before);else{assert.equal(r.gameState.frontier.chestRoll,'wings');assert.equal(r.gameState.frontier.boss.drop,'feather');}
+ }
+});
+test('Monolith blocks portal travel to the opposite tile',()=>{
+ const r=setup();r.gameState.grounds={selected:['portal'],charges:{w:{},b:{}},tiles:{a2:'portal',cX:'portal'},traps:[],poison:[],disarm:[],banished:[],portalUsed:{w:0,b:0},completedTurns:0,placementTurns:[],events:[]};
+ r.gameState.monolithSquare='cX';assert.equal(portalTravelTarget(r.gameState,'w','a2'),undefined);
+ const before=structuredClone(r.gameState);action(r,{type:'portal_move',from:'a2'});assert.deepEqual(r.gameState,before);
+});
+test('Traverse marker survives free actions and disappears after the opponent completes a move',()=>{
+ const r=setup();play(r,'traverse','a2','aX');
+ const arrival=structuredClone(r.gameState.frontier.traverseArrival);
+ assert.equal(arrival.owner,'w');assert.equal(arrival.square,'aX');
+ assert.equal(action(r,{type:'use_powerup_vision'},'b').length,0);
+ assert.deepEqual(r.gameState.frontier.traverseArrival,arrival);
+ const card=createCard('rook',881);r.gameState.hands.b=[card];
+ assert.equal(action(r,{type:'play_card_move',cardId:card.id,from:'h7',to:'h6'},'b').length,0);
+ assert.equal(r.gameState.frontier.traverseArrival,undefined);
+});
+test('invalid Traverse cannot create an arrival marker or consume a card',()=>{
+ const r=setup(),card=createCard('traverse',882);r.gameState.hands.w=[card];const before=JSON.stringify(r.gameState);
+ assert.ok(action(r,{type:'play_card_move',cardId:card.id,from:'a2',to:'a8'}).length);
+ assert.equal(JSON.stringify(r.gameState),before);assert.equal(r.gameState.frontier.traverseArrival,undefined);
+});
+test('expanded Push retains wind-effect metadata for Mystic Field and ordinary destinations',()=>{
+ for(const to of ['aW','aX','a3']){
+  const r=setup(),card=createCard('push',883);r.gameState.hands.w=[card];
+  assert.equal(action(r,{type:'play_push',cardId:card.id,from:'a2',to}).length,0);
+  assert.equal(r.gameState.lastMoveDetails.actionType,'push');
+  assert.equal(r.gameState.lastMoveDetails.from,'a2');assert.equal(r.gameState.lastMoveDetails.to,to);
+  assert.equal(createSafeChess(r.gameState.fen).get(to as any)?.type,'r');
+ }
+});
+test('Golem summon and self-destruct carry explicit visual artwork metadata',()=>{
+ const r=setup();addItem(r.gameState,'w','core');
+ assert.equal(action(r,{type:'frontier_item',item:'core',to:'a1'}).length,0);
+ const summon=r.gameState.frontier.events.find((e:any)=>e.kind==='golem_summon');
+ assert.equal(summon.square,'a1');assert.deepEqual(summon.piece,{type:'golem',color:'w'});
+ r.gameState.turn='w';r.gameState.status='playing';r.gameState.fen=r.gameState.fen.replace(' b ',' w ');
+ assert.equal(action(r,{type:'frontier_self_destruct',from:'a1'}).length,0);
+ const blast=r.gameState.frontier.events.find((e:any)=>e.kind==='golem_blast');
+ assert.equal(blast.square,'a1');assert.deepEqual(blast.piece,{type:'golem',color:'w'});
+ assert.equal(r.gameState.frontier.events.filter((e:any)=>e.kind==='golem_explosion').length,1);
+});
+test('Golem blast persists through free actions and invalid moves, then clears on opponent turn completion',()=>{
+ const r=setup();r.gameState.frontier.golems=[{id:'blast',owner:'w',square:'c3'}];
+ const b=createSafeChess(r.gameState.fen);b.put({type:'p',color:'b'},'c4');r.gameState.fen=b.fen();
+ assert.equal(action(r,{type:'frontier_self_destruct',from:'c3'}).length,0);
+ const blast=structuredClone(r.gameState.frontier.activeGolemBlast);
+ assert.equal(blast.owner,'w');assert.ok(blast.affected.some((v:any)=>v.square==='c4'&&v.piece.type==='p'));
+ assert.equal(action(r,{type:'use_powerup_vision'},'b').length,0);assert.deepEqual(r.gameState.frontier.activeGolemBlast,blast);
+ const card=createCard('rook',901);r.gameState.hands.b=[card];
+ assert.ok(action(r,{type:'play_card_move',cardId:card.id,from:'h7',to:'f6'},'b').length);assert.deepEqual(r.gameState.frontier.activeGolemBlast,blast);
+ assert.equal(action(r,{type:'play_card_move',cardId:card.id,from:'h7',to:'h6'},'b').length,0);
+ assert.equal(r.gameState.frontier.activeGolemBlast,undefined);
+});
+
+test('Backpack permits seven-card Redraw; without it seven-card requests are atomic failures',()=>{
+ for(const bag of [false,true]){
+  const r=setup();r.gameState.frontier.bags.w=bag;r.gameState.hands.w=Array.from({length:7},(_,i)=>createCard('pawn',920+i));
+  const ids=r.gameState.hands.w.map((c:any)=>c.id),before=JSON.stringify(r.gameState);
+  const replies=action(r,{type:'discard_redraw',cardIds:ids});
+  if(bag){assert.equal(replies.length,0);assert.equal(r.gameState.hands.w.length,7);assert.equal(r.gameState.turn,'b');}
+  else{assert.ok(replies.length);assert.equal(JSON.stringify(r.gameState),before);}
+ }
+});
+for(const color of ['w','b'] as const)for(const type of ['mine','poison','disarm','banish'] as const)test(`${color} ${type} rejects enemy and Mystic ranks without consuming charges`,()=>{
+ for(const square of [color==='w'?'a6':'a3','aW','aX','aY','aZ']){
+  const r=setup(),s=r.gameState;s.turn=color;s.fen=s.fen.replace(' w ',` ${color} `);s.grounds=initialGrounds(true,()=>.2,[type,'boost']);s.grounds.charges[color][type]=1;
+  assert.equal(trapOnOwnSide(square,color),false);const before=JSON.stringify(s);
+  assert.ok(action(r,{type:'place_ground',groundType:type,square},color).length);assert.equal(JSON.stringify(r.gameState),before);
+ }
+ const r=setup(),s=r.gameState;s.turn=color;s.fen=s.fen.replace(' w ',` ${color} `);s.grounds=initialGrounds(true,()=>.2,[type,'boost']);s.grounds.charges[color][type]=1;
+ const square=color==='w'?'a3':'a6';assert.equal(trapOnOwnSide(square,color),true);
+ assert.equal(action(r,{type:'place_ground',groundType:type,square},color).length,0);assert.ok(r.gameState.grounds.traps.some((t:any)=>t.square===square&&t.owner===color));
+});
+
+test('activated trap log records its original placement turn alongside the activation turn',()=>{
+ const r=setup(),s=r.gameState;s.turnNumber=7;s.grounds=initialGrounds(true,()=>.2,['poison','boost']);s.grounds.charges.w.poison=1;
+ assert.equal(action(r,{type:'place_ground',groundType:'poison',square:'a3'}).length,0);
+ assert.equal(r.gameState.grounds.traps[0].placedTurn,7);
+ const after=r.gameState,b=createSafeChess(after.fen);b.put({type:'p',color:'b'},'a3');after.fen=b.fen();after.turnNumber=12;landGround(after,'a3');
+ const log=after.historyLog.find((e:any)=>e.trapEventType==='poison');assert.equal(log.turnNumber,12);assert.match(log.detail,/Placed on turn 7/);
+});
+
+
+test('Push trail retains source through opponent free actions and clears on completed move',()=>{
+ const r=setup(),card=createCard('push',987);r.gameState.hands.w=[card];
+ assert.equal(action(r,{type:'play_push',cardId:card.id,from:'a2',to:'aX'}).length,0);
+ assert.deepEqual({...r.gameState.pushTrail,id:undefined},{id:undefined,owner:'w',from:'a2',to:'aX'});
+ const id=r.gameState.pushTrail.id;r.gameState.powerUps.b.vision=1;
+ assert.equal(action(r,{type:'use_powerup_vision'},'b').length,0);assert.equal(r.gameState.pushTrail.id,id);
+ const bad=JSON.stringify(r.gameState);action(r,{type:'play_king_move',from:'e8',to:'a1'},'b');assert.equal(JSON.stringify(r.gameState),bad);
+ const rook=createCard('rook',988);r.gameState.hands.b=[rook];
+ assert.equal(action(r,{type:'play_card_move',cardId:rook.id,from:'h7',to:'h6'},'b').length,0);assert.equal(r.gameState.pushTrail,undefined);
+});
+test('Boss effects carry exact coordinates for melee and ranged attacks',()=>{
+ const r=setup();r.gameState.frontier.pois.aW='boss';r.gameState.frontier.boss={square:'aW',health:2,drop:'core'};
+ play(r,'rook','a2','aW');assert.equal(r.gameState.frontier.events.find((e:any)=>e.kind==='boss_hit').square,'aW');
+});
+
+test('base-board Push trail clears after the opponent completes a turn',()=>{
+ const r=setup();r.gameState.fen='4k1q1/7r/8/8/8/8/R7/1QR1K3 w - - 0 1';r.gameState.frontier=undefined;
+ const card=createCard('push',989);r.gameState.hands.w=[card];assert.equal(action(r,{type:'play_push',cardId:card.id,from:'a2',to:'a3'}).length,0);assert.ok(r.gameState.pushTrail);
+ const rook=createCard('rook',990);r.gameState.hands.b=[rook];assert.equal(action(r,{type:'play_card_move',cardId:rook.id,from:'h7',to:'h6'},'b').length,0);assert.equal(r.gameState.pushTrail,undefined);
+});
+
+test('Restrict cannot target an empty Portal, on base or expanded boards',()=>{
+ for(const expanded of [false,true]){
+  const r=setup();if(!expanded){r.gameState.fen='4k1q1/7r/8/8/8/8/R7/1QR1K3 w - - 0 1';r.gameState.frontier=undefined;}
+  const g=initialGrounds({treacherousGrounds:true,groundPowerUps:['portal','defense']} as any)!;
+  r.gameState.grounds=g;g.tiles={a3:'portal',b5:'portal'};
+  const card=createCard('restrict',994);r.gameState.hands.w=[card];const before=JSON.stringify(r.gameState);
+  assert.ok(action(r,{type:'play_restrict',cardId:card.id,targetSquare:'a3'}).length);
+  assert.equal(JSON.stringify(r.gameState),before);
+ }
+});

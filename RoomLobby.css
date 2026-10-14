@@ -1244,3 +1244,62 @@
 .ck-menu-arbiter-combined > .ck-arbiter-role-button {font:inherit;font-size:11px;font-weight:600;line-height:1.25;padding:6px 9px;border-radius:6px;background:rgba(37,99,235,.13);color:inherit;min-height:27px;}
 @media(max-width:450px) {.ck-menu-arbiter-combined {gap:6px;} .ck-menu-arbiter-identity {flex-basis:auto;flex-grow:1;} .ck-menu-arbiter-combined > .ck-arbiter-role-button {flex:0 0 auto;}}
 @media(max-width:330px) {.ck-menu-arbiter-identity {flex-basis:100%;} .ck-menu-arbiter-combined > .ck-arbiter-role-button {flex-grow:1;}}
+
+/* Compact three-seat Match Setup: Arbiter only appears when allowed. */
+.ck-menu-seats{display:flex;flex-direction:column;gap:5px}
+.ck-menu-seats > div{min-width:0;display:flex;align-items:center;gap:7px}
+.ck-menu-seats > div > strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ck-menu-seats .ck-seat-claim{flex:0 0 auto;font:inherit;font-size:10px;font-weight:700;line-height:1;padding:5px 6px;min-height:22px;border:1px solid #3b82f6;border-radius:4px;background:#2563eb;color:white}
+.ck-menu-seats .ck-seat-claim:hover{background:#1d4ed8}
+.ck-menu-seats .ck-seat-claim:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
+.ck-menu-timer .ck-arbiter-timer-toggle{display:inline-flex;flex:0 0 auto;align-items:center;gap:8px;margin-left:auto;margin-bottom:0;font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer}
+.ck-arbiter-timer-toggle input{position:absolute;width:1px;height:1px;opacity:0}
+.ck-arbiter-timer-toggle .ck-arbiter-toggle-track{position:relative;display:inline-block;width:32px;height:18px;flex:0 0 32px;border-radius:99px;background:#43536b;border:1px solid #65758d;transition:background .15s}
+.ck-arbiter-timer-toggle .ck-arbiter-toggle-track::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#f1f5ff;transition:transform .15s}
+.ck-arbiter-timer-toggle input:checked+.ck-arbiter-toggle-track{background:#2563eb;border-color:#60a5fa}
+.ck-arbiter-timer-toggle input:checked+.ck-arbiter-toggle-track::after{transform:translateX(14px)}
+.ck-arbiter-timer-toggle input:focus-visible+.ck-arbiter-toggle-track{outline:2px solid #93c5fd;outline-offset:2px}
+.ck-arbiter-timer-toggle input:disabled+.ck-arbiter-toggle-track{opacity:.55;cursor:not-allowed}
+@media(max-width:350px){.ck-menu-timer .ck-arbiter-timer-toggle{gap:5px;font-size:10px}.ck-menu-seats .ck-seat-claim{font-size:9px}}
+
+/* Mobile banner text: center vertically within the cover image. */
+@media (max-width: 1099px) {
+  .ck-menu-hero h2 {
+    top: 50%;
+    transform: translateY(-50%);
+    height: auto;
+    display: block;
+  }
+}
+/* Caption and Arbiter switch share a single compact baseline. */
+.ck-menu-setup-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 6px;
+}
+.ck-menu-setup-foot > .ck-menu-caption {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.35;
+}
+.ck-menu-setup-foot > .ck-arbiter-timer-toggle {
+  flex: 0 0 auto;
+  margin: 0;
+}
+@media (max-width: 380px) {
+  .ck-menu-setup-foot { gap: 5px; }
+  .ck-menu-setup-foot > .ck-menu-caption { font-size: 9px; }
+  .ck-menu-setup-foot > .ck-arbiter-timer-toggle { gap: 5px; font-size: 10px; }
+}
+
+/* 2026-10: keep caption and Arbiter toggle aligned on a single mobile row. */
+.ck-menu-setup .ck-menu-setup-foot {display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;justify-content:initial!important;column-gap:8px!important;row-gap:0!important;width:100%;margin-top:8px!important;padding:0!important;}
+.ck-menu-setup .ck-menu-setup-foot .ck-menu-caption {grid-column:1;grid-row:1;min-width:0;max-width:none;margin:0!important;padding:0!important;align-self:center!important;line-height:1.25!important;white-space:normal;}
+.ck-menu-setup .ck-menu-setup-foot .ck-arbiter-timer-toggle {grid-column:2;grid-row:1;display:inline-flex!important;position:static!important;float:none!important;align-items:center!important;align-self:center!important;justify-self:end!important;min-width:0;margin:0!important;padding:0!important;line-height:1.25!important;white-space:nowrap;}
+@media(max-width:420px){.ck-menu-setup .ck-menu-setup-foot{column-gap:5px!important}.ck-menu-setup .ck-menu-setup-foot .ck-menu-caption{font-size:9px!important}.ck-menu-setup .ck-menu-setup-foot .ck-arbiter-timer-toggle{font-size:10px!important;gap:5px!important}}
+
+.ck-menu-music-view{display:flex;flex-direction:column;align-items:stretch;gap:5px}.ck-menu-music-view>button{justify-content:center}.ck-menu-tools #lobby-piece-view-toggle{font-size:11px;font-weight:800;min-height:30px;padding:4px 8px}

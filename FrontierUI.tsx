@@ -1,3 +1,5 @@
+import {useBoardSprite} from '../context/PieceView.tsx';
+import {readMatchNotice,writeMatchNotice} from '../utils/matchNotices.ts';
 import {Link2} from 'lucide-react';
 import {Modal,Button,PopupLayer} from './UI.tsx';
 import React from 'react';
@@ -7,6 +9,8 @@ export function FrontierArt({ type, className = '' }: {
     type: string;
     className?: string;
 }) {
+    const sprite=useBoardSprite(type);
+    if(sprite)return <img className={`frontier-art piece-3d-art ${className}`} src={sprite} alt='' draggable={false}/>;
     if (['bag','key','chest'].includes(type))return <img className={`frontier-art frontier-original ${className}`} src={`/art/frontier/${type}-item.png`} alt=''/>;
     if (type === 'traverse')
         return <img className={`frontier-art frontier-original ${className}`} src="/art/frontier/traverse.png" alt=""/>;
@@ -42,6 +46,8 @@ export function FrontierIntro({onClose}:{onClose:()=>void}) {
  </dialog></PopupLayer>;
 }
 export function GolemIdleArt({type,weakened=false}:{type:string;weakened?:boolean}) {
+ const sprite=useBoardSprite(type);
+ if(sprite)return <div className={`golem-idle-art golem-3d-art ${weakened?'golem-weakened':''}`}><img className='piece-3d-art' src={sprite} alt='' draggable={false}/></div>;
  return <div className={`golem-idle-art ${weakened?'golem-weakened':''}`}><FrontierArt type={type} className="golem-idle-base"/><FrontierArt type={type} className="golem-idle-body"/><span className="golem-core-pulse"/><i className="golem-idle-spark"/><i className="golem-idle-spark second"/></div>;
 }
 export function FlightWing({side}:{side:'left'|'right'}) {
@@ -57,7 +63,7 @@ export function FrontierExpandOffer({state,color,enabled,paused,onOpenChange,sen
  React.useEffect(()=>{onOpenChange(visible);},[visible,onOpenChange]);
  React.useEffect(()=>()=>onOpenChange(false),[onOpenChange]);
  if(!visible)return null;
- return <Modal className="frontier-expand-offer"><section className="lens-discard-dialog" role="dialog" aria-modal="true" aria-labelledby="expand-offer-title"><FrontierArt type="traverse" className="lens-confirm-art"/><h2 id="expand-offer-title">Open the Arcane Frontier?</h2><p>Your army has <strong>{color==='w'?state.whitePoints:state.blackPoints} points</strong>. You may expand the board now.</p><small>Free action · The Expand Board button stays available if you wait.</small><div><Button onClick={()=>setDismissed(true)}>Not yet</Button><Button variant="primary" disabled={!canExpand(state,color)} onClick={()=>{if(canExpand(state,color)){send({type:'expand_frontier'});setDismissed(true);}}}>Expand now</Button></div></section></Modal>;
+ return <Modal className="frontier-expand-offer"><section className="lens-discard-dialog" role="dialog" aria-modal="true" aria-labelledby="expand-offer-title"><FrontierArt type="traverse" className="lens-confirm-art"/><h2 id="expand-offer-title">Open the Arcane Frontier?</h2><p>Your army has <strong>{color==='w'?state.whitePoints:state.blackPoints} points</strong>. You may expand the board now.</p><small>Free action · The Unveil the Mystic Field button stays available if you wait.</small><div><Button onClick={()=>setDismissed(true)}>Not yet</Button><Button variant="primary" disabled={!canExpand(state,color)} onClick={()=>{if(canExpand(state,color)){send({type:'expand_frontier'});setDismissed(true);}}}>Unveil the Mystic Field</Button></div></section></Modal>;
 }
 export function ItemActivateButton({name,disabled,onActivate}:{name:string;disabled:boolean;onActivate:()=>void}) {
  return <button className="ui-button ui-button--primary" disabled={disabled} aria-label={`Activate ${name}`} onClick={onActivate}>Activate</button>;
@@ -67,14 +73,19 @@ export function FrontierInventory({state,color,disabled,send,onIntro,onDeployGol
  onUseLens:()=>void;onUseWings:()=>void;onUseFeather:()=>void;onUseBoardItem:(item:'star'|'banner'|'sigil')=>void;
 }) {
  const [item,setItem]=React.useState<FrontierItem|null>(null);
+ const [testOpen,setTestOpen]=React.useState(false);
+ const [chestDrop,setChestDrop]=React.useState('random');
+ const [bossDrop,setBossDrop]=React.useState('random');
  const [passive,setPassive]=React.useState<'bag'|'key'|null>(null);
  const f=state.frontier;if(!f)return null;
  const owned=f.inventories[color].find(i=>i.type===item&&i.remaining!==0);
  const cooldown=owned?Math.max(0,(owned.readyAfter||0)-f.ownerTurns[color]):0;
  const unavailable=!owned||cooldown>0||owned.usedTurn===state.turnNumber;
  const activate=()=>{if(!item)return;if(item==='lens')onUseLens();else if(item==='wings')onUseWings();else if(item==='feather')onUseFeather();else if(item==='core')onDeployGolem();else if(['star','banner','sigil'].includes(item))onUseBoardItem(item as 'star'|'banner'|'sigil');setItem(null);};
- return <section className="frontier-inventory"><h3>Arcane Frontier <button onClick={onIntro} aria-label="Expansion introduction">ⓘ</button></h3>
- {!f.expanded?<><button className="ui-button" disabled={disabled||!canExpand(state,color)} onClick={()=>send({type:'expand_frontier'})}>Expand Board<small>FREE ACTION · ≤25 army points</small></button><p className="frontier-status">{disabled?'Available on your turn.':!canExpand(state,color)?'Unlocks at 25 or fewer army points.':'Ready to expand.'}</p><button className="ui-button frontier-test-expand" disabled={disabled||!canExpand(state,color,true)} onClick={()=>send({type:'expand_frontier',test:true})}>Expand now — Test<small>Temporary testing control</small></button></>:<p className="frontier-status">Mystic Field {f.ready?'active':'preparing — one turn each'}</p>}
+ return <section className="frontier-inventory">
+ {testOpen&&<Modal><section className="ground-dialog frontier-test-rewards" role="dialog" aria-modal="true" aria-label="Test expansion rewards"><h2>Unveil the Mystic Field — Test</h2><label>Chest reward<select value={chestDrop} onChange={e=>setChestDrop(e.target.value)}>{['random','lens','wings','star','banner',...(state.expansions?.championsOfTheMonolith!==false?['sigil']:[]),'mimic'].map(value=><option key={value} value={value}>{value==='random'?'Random':value==='mimic'?'Mimic':ITEM_NAMES[value as FrontierItem]}</option>)}</select></label><label>Boss drop<select value={bossDrop} onChange={e=>setBossDrop(e.target.value)}>{['random','eye','feather','core'].map(value=><option key={value} value={value}>{value==='random'?'Random':ITEM_NAMES[value as FrontierItem]}</option>)}</select></label><div><Button aria-label="Close dialog" onClick={()=>setTestOpen(false)}>Cancel</Button><Button disabled={disabled||!canExpand(state,color,true)} onClick={()=>{send({type:'expand_frontier',test:true,...(chestDrop!=='random'?{chestDrop:chestDrop as 'lens'|'wings'|'star'|'banner'|'sigil'|'mimic'}:{}),...(bossDrop!=='random'?{bossDrop:bossDrop as 'eye'|'feather'|'core'}:{})});setTestOpen(false);}}>Unveil</Button></div></section></Modal>}
+<h3>Arcane Frontier <button onClick={onIntro} aria-label="Expansion introduction">ⓘ</button></h3>
+ {!f.expanded?<><button className="ui-button mystic-unveil-button" aria-label="Unveil the Mystic Field" disabled={disabled||!canExpand(state,color)} onClick={()=>send({type:'expand_frontier'})}><img src="/art/frontier/unveil-mystic-field-button.webp" alt="Unveil the Mystic Field"/><small>FREE ACTION · ≤25 army points</small></button><p className="frontier-status">{disabled?'Available on your turn.':!canExpand(state,color)?'Unlocks at 25 or fewer army points.':'Ready to expand.'}</p><button className="ui-button frontier-test-expand" disabled={disabled||!canExpand(state,color,true)} onClick={()=>setTestOpen(true)}>Unveil — Test<small>Temporary testing control</small></button></>:<p className="frontier-status">Mystic Field {f.ready?'active':'preparing — one turn each'}</p>}
  <div className="frontier-item-list">{f.bags[color]&&<button aria-pressed={passive==='bag'} onClick={()=>{setPassive(passive==='bag'?null:'bag');setItem(null);}}><FrontierArt type="bag"/><span>Backpack</span><small>Hand capacity: 7</small></button>}{f.keys[color]>0&&<button aria-pressed={passive==='key'} onClick={()=>{setPassive(passive==='key'?null:'key');setItem(null);}}><FrontierArt type="key"/><span>Key</span><small>×{f.keys[color]}</small></button>}{f.inventories[color].filter(i=>i.remaining!==0).map(i=>{const turns=Math.max(0,(i.readyAfter||0)-f.ownerTurns[color]);return <button key={i.id} aria-pressed={item===i.type} onClick={()=>{setPassive(null);setItem(item===i.type?null:i.type);}}><FrontierArt type={i.type}/><span>{ITEM_NAMES[i.type]}</span>{['wings','star'].includes(i.type)&&<small className="frontier-cooldown" aria-label={turns?`${turns} owner turns remaining`:'Ready'}>{turns?`${turns} turns`:'Ready'}</small>}</button>;})}</div>
  {passive&&<div className="frontier-item-detail"><strong>{passive==='bag'?'Backpack':'Key'}</strong><p>{passive==='bag'?'Automatically increases your hand capacity to 7 cards while owned.':'Automatically consumed when your piece lands on a Chest to open it.'}</p><small>Passive item · {passive==='bag'?'Hand capacity: 7':`×${f.keys[color]}`}</small></div>}
  {item&&owned&&<div className="frontier-item-detail"><strong>{ITEM_NAMES[item]}</strong><p>{ITEM_TEXT[item]}</p>{item!=='eye'&&<ItemActivateButton name={ITEM_NAMES[item]} disabled={disabled||unavailable||(item==='lens'&&state.jokerLocked[color])||(item==='feather'&&!featherReviveChoice(state,color))||(item==='sigil'&&!state.champions[color])} onActivate={activate}/>}</div>}
@@ -83,18 +94,26 @@ export function FrontierInventory({state,color,disabled,send,onIntro,onDeployGol
 
 type RewardEvent=NonNullable<GameState['frontier']>['events'][number];
 export function frontierRewardEvents(state:GameState,seen:Set<string>,recentOnly=false,now=Date.now()):RewardEvent[]{
- const candidates=new Map<string,RewardEvent>(),times=new Map<string,number>();
- for(const log of [...state.historyLog].reverse()){times.set(log.id,log.timestamp);if(log.frontierEvent)candidates.set(log.id,{id:log.id,detail:log.detail,...log.frontierEvent});}
+ const candidates=new Map<string,RewardEvent>(),times=new Map<string,number>(),turns=new Map<string,number>();
+ for(const log of [...state.historyLog].reverse()){times.set(log.id,log.timestamp);turns.set(log.id,log.turnNumber);if(log.frontierEvent)candidates.set(log.id,{id:log.id,detail:log.detail,...log.frontierEvent});}
  for(const event of [...(state.frontier?.events||[])].reverse())candidates.set(event.id,event);
  const fresh:RewardEvent[]=[];
  for(const event of candidates.values()){
   if(seen.has(event.id))continue;seen.add(event.id);
+  if(!['loot','eye','mimic','bag','key'].includes(event.kind))continue;
   if(!event.item&&!['mimic','bag','key'].includes(event.kind))continue;
+  if(event.kind==='loot'&&event.detail.includes('already owns'))continue;
   if(recentOnly&&now-(times.get(event.id)||0)>30000)continue;
+  // A drop stays on the board; announce acquisition once to each client.
+  // History and live events can describe the same acquisition with different IDs.
+  const turn=turns.get(event.id);
+  const key=turn===undefined?`reward:${event.id}`:'reward:'+JSON.stringify([turn,['loot','eye'].includes(event.kind)?'acquisition':event.kind,event.item,event.recipient]);
+  if(seen.has(key))continue;seen.add(key);
   fresh.push(event);
  }
  return fresh;
 }
+const dismissedFrontierRewards=new Map<string,Set<string>>();
 export function FrontierDropNotices({state,paused=false}:{state:GameState;paused?:boolean}){
  const match=React.useRef(''),seen=React.useRef(new Set<string>()),timers=React.useRef(new Set<ReturnType<typeof setTimeout>>());
  const dialogRef=React.useRef<HTMLDialogElement>(null);const [queue,setQueue]=React.useState<RewardEvent[]>([]);
@@ -102,16 +121,18 @@ export function FrontierDropNotices({state,paused=false}:{state:GameState;paused
  React.useEffect(()=>{
   const f=state.frontier;if(!f?.expanded){match.current='';seen.current.clear();timers.current.forEach(clearTimeout);timers.current.clear();setQueue([]);return;}
   const first=match.current!==f.id;
-  if(first){match.current=f.id;seen.current.clear();timers.current.forEach(clearTimeout);timers.current.clear();setQueue([]);}
-  const fresh=frontierRewardEvents(state,seen.current,first);
+  if(first){match.current=f.id;seen.current=new Set(readMatchNotice<string[]>('items:'+f.id,[]));timers.current.forEach(clearTimeout);timers.current.clear();setQueue([]);}
+  const dismissed=dismissedFrontierRewards.get(f.id)||new Set<string>();
+  const fresh=frontierRewardEvents(state,seen.current,first).filter(event=>!dismissed.has(event.id));
+  writeMatchNotice('items:'+f.id,[...seen.current]);
   if(!fresh.length)return;
   if(fresh.some(e=>e.kind==='mimic')){const timer=setTimeout(()=>{setQueue(q=>[...q,...fresh]);timers.current.delete(timer);},2200);timers.current.add(timer);}
   else setQueue(q=>[...q,...fresh]);
  },[state.frontier,state.historyLog]);
- const e=queue[0];const dismiss=()=>setQueue(q=>q.slice(1));
- React.useEffect(()=>{const dialog=dialogRef.current;if(!e||paused||!dialog)return;if(!dialog.open)dialog.showModal();return()=>{if(dialog.open)dialog.close();};},[e?.id,paused]);
- if(!e||paused)return null;
- return <PopupLayer><dialog ref={dialogRef} className="frontier-drop-dialog" aria-labelledby="frontier-drop-title" onCancel={event=>{event.preventDefault();dismiss();}}><FrontierArt type={e.item||(['bag','key'].includes(e.kind)?e.kind:'mimic')} className="frontier-drop-art"/><h2 id="frontier-drop-title">{e.kind==='mimic'?'Mimic revealed!':e.kind==='drop'?'Item dropped!':'Item obtained!'}</h2><p>{e.detail}</p>{e.item&&<small>{ITEM_TEXT[e.item]}</small>}<Button aria-label="Close dialog" onClick={dismiss}>Got it{queue.length>1?` · ${queue.length-1} more`:''}</Button></dialog></PopupLayer>;
+ const e=queue[0];const dismiss=()=>{if(e){const dismissed=dismissedFrontierRewards.get(match.current)||new Set<string>();dismissed.add(e.id);dismissedFrontierRewards.set(match.current,dismissed);}dialogRef.current?.close();setQueue(q=>q.slice(1));};
+ React.useEffect(()=>{const dialog=dialogRef.current;if(!e||!dialog)return;if(!dialog.open)dialog.showModal();return()=>{if(dialog.open)dialog.close();};},[e?.id]);
+ if(!e)return null;
+ return <PopupLayer><dialog ref={dialogRef} className="frontier-drop-dialog" aria-labelledby="frontier-drop-title" onClick={event=>{if(event.target===event.currentTarget){const rect=event.currentTarget.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dismiss();}}} onCancel={event=>{event.preventDefault();dismiss();}}><FrontierArt type={e.item||(['bag','key'].includes(e.kind)?e.kind:'mimic')} className="frontier-drop-art"/><h2 id="frontier-drop-title">{e.kind==='mimic'?'Mimic revealed!':e.kind==='drop'?'Item dropped!':'Item obtained!'}</h2><p>{e.detail}</p>{e.item&&<small>{ITEM_TEXT[e.item]}</small>}<Button aria-label="Close dialog" onClick={dismiss}>Got it{queue.length>1?` · ${queue.length-1} more`:''}</Button></dialog></PopupLayer>;
 }
 
 export function GolemActionPanel({state,color,square,disabled,onSelfDestruct,onCancel}:{state:GameState;color:PlayerColor;square:string;disabled:boolean;onSelfDestruct:()=>void;onCancel:()=>void}) {

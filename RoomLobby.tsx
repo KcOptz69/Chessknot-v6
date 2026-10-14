@@ -1,3 +1,6 @@
+import {usePieceView} from '../context/PieceView.tsx';
+import {ExpansionDetails, type ExpansionDetailsKey} from './ExpansionDetails.tsx';
+import {FrontierIntro} from './FrontierUI.tsx';
 import type {RuleSectionId} from './rulebookData.ts';
 import { useLoopMusic } from '../utils/music.ts';
 import { Modal } from "./UI";
@@ -18,7 +21,7 @@ import { useTheme } from "../context/ThemeContext.tsx";
 interface RoomLobbyProps {
   roomTools?: React.ReactNode;
   onClaimArbiter?:()=>void;
-  onReturnAsPlayer?:()=>void;
+  onReturnAsPlayer?:(color?: "w" | "b")=>void;
   roomId: string;
   mode: "online" | "pass_and_play";
   players: Record<string, RoomPlayer>;
@@ -63,6 +66,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
   onSetPlayerReady,
 }) => {
   const { isDark, toggleTheme } = useTheme();
+  const {view:pieceView,setView:setPieceView}=usePieceView();
   const [musicEnabled, setMusicEnabled] = React.useState(() => localStorage.getItem('chessknot_menu_music') !== 'false');
   useLoopMusic(musicEnabled ? 'menu-music' : null, 0.42);
   const [copied, setCopied] = React.useState(false);
@@ -87,6 +91,8 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
   const [isRenameModalOpen, setIsRenameModalOpen] = React.useState(false);
   const [renameTarget, setRenameTarget] = React.useState<string | undefined>();
   const [isSetupOpen, setIsSetupOpen] = React.useState(false);
+  const [frontierDetails,setFrontierDetails]=React.useState(false);
+  const [expansionDetails,setExpansionDetails]=React.useState<ExpansionDetailsKey|null>(null);
   const [futurePack, setFuturePack] = React.useState<{
     title: string;
     description: string;
@@ -171,6 +177,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
     const nextVal = !isShiftedParadigmActive;
     onUpdateConfig({
       expansions: {
+        ...lobbyConfig.expansions,
         treacherousGrounds: isGroundsActive,
         shiftedParadigm: nextVal,
         treacherousGroundsSelected:
@@ -186,6 +193,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
     const nextVal = !isChampionsOfTheMonolithActive;
     onUpdateConfig({
       expansions: {
+        ...lobbyConfig.expansions,
         treacherousGrounds: isGroundsActive,
         shiftedParadigm: isShiftedParadigmActive,
         championsOfTheMonolith: nextVal,
@@ -201,6 +209,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
     const nextVal = !isTheAwakeningActive;
     onUpdateConfig({
       expansions: {
+        ...lobbyConfig.expansions,
         treacherousGrounds: isGroundsActive,
         shiftedParadigm: isShiftedParadigmActive,
         championsOfTheMonolith: isChampionsOfTheMonolithActive,
@@ -216,6 +225,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
     const nextVal = !isGroundsActive;
     onUpdateConfig({
       expansions: {
+        ...lobbyConfig.expansions,
         treacherousGrounds: nextVal,
         shiftedParadigm: isShiftedParadigmActive,
         championsOfTheMonolith: isChampionsOfTheMonolithActive,
@@ -296,6 +306,8 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
       id: "arcane-frontier",
       title: "Arcane Frontier",
       art: "frontier",
+      enabled: lobbyConfig.expansions?.arcaneFrontier!==false,
+      toggle: ()=>{if(isHost)onUpdateConfig({expansions:{...lobbyConfig.expansions,arcaneFrontier:lobbyConfig.expansions?.arcaneFrontier===false}});},
       description: "An expanded board, a Golem Boss, and items to discover.",
     },
     {
@@ -339,6 +351,8 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
 
   return (
     <div className="ck-menu">
+      {frontierDetails&&<FrontierIntro onClose={()=>setFrontierDetails(false)}/>}
+      {expansionDetails&&<ExpansionDetails expansion={expansionDetails} onClose={()=>setExpansionDetails(null)}/>}
       <header className="ck-menu-header">
         <div className="ck-menu-brand">
           <img src="/logo.png?v=5-blue-knot" alt="ChessKnot logo" />
@@ -356,6 +370,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
             <BookOpen size={17} />
             <span>Rules</span>
           </button>
+          <div className="ck-menu-music-view">
           <button
             id="lobby-music-toggle"
             aria-label={musicEnabled ? "Turn menu music off" : "Turn menu music on"}
@@ -365,6 +380,8 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
           >
             {musicEnabled ? <Music size={18} /> : <VolumeX size={18} />}
           </button>
+          <button id="lobby-piece-view-toggle" type="button" aria-label={`Piece view: ${pieceView.toUpperCase()}. Switch to ${pieceView==='3d'?'2D':'3D'}`} aria-pressed={pieceView==='3d'} onClick={()=>setPieceView(pieceView==='3d'?'2d':'3d')}>{pieceView.toUpperCase()}</button>
+          </div>
           <button
             id="lobby-theme-toggle"
             onClick={toggleTheme}
@@ -417,8 +434,8 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                   <button
                     className="ck-menu-pack-art"
                     onClick={() =>
-                      available
-                        ? onOpenRules(({shifted:'expansion1',champions:'expansion2',awakening:'expansion3',grounds:'expansion4'} as Record<string,RuleSectionId>)[pack.key])
+                      pack.key==='frontier'?setFrontierDetails(true):available
+                        ? setExpansionDetails(pack.key as ExpansionDetailsKey)
                         : setFuturePack(pack)
                     }
                     aria-label={`Details about ${pack.title}`}
@@ -447,8 +464,8 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                     <button
                       className="ck-menu-icon-button"
                       onClick={() =>
-                        available
-                          ? onOpenRules(({shifted:'expansion1',champions:'expansion2',awakening:'expansion3',grounds:'expansion4'} as Record<string,RuleSectionId>)[pack.key])
+                        pack.key==='frontier'?setFrontierDetails(true):available
+                          ? setExpansionDetails(pack.key as ExpansionDetailsKey)
                           : setFuturePack(pack)
                       }
                       aria-label={`Details about ${pack.title}`}
@@ -533,13 +550,25 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                 </div>
 </>
           </div>
-          <div className="ck-menu-players" aria-label="Players in room">
-            {(['w','b'] as const).map(color=>{const p=playerList.find(p=>p.color===color&&p.connected);return <div key={color}><User size={15}/><strong>{p?.name||`Waiting for ${color==='w'?'White':'Black'} player`}</strong>{p&&(p.id===myPlayerId||isHost)&&<button className="ck-menu-icon-button" aria-label={`Rename ${p.name}`} onClick={()=>openRename(p.id,p.name)}><Edit2 size={13}/></button>}<span>{p?.isHost?'Host':p?.isReady?'Ready':p?'Not ready':''}</span><i className={p?.isHost||p?.isReady?'is-ready':''}/></div>;})}
-          </div>
-          <div className="ck-menu-arbiter-combined">
-            <div className="ck-menu-arbiter-identity"><strong>{myColor==='spectator'?(myPlayer?.name||'Viewer'):(arbiter?.name||'Arbiter')}</strong><span>{myPlayer?.role==='arbiter'?'Arbiter':myColor==='spectator'?'Spectator':arbiter?'Arbiter':'Arbiter seat open'}</span>{myColor==='spectator'&&<button aria-label="Rename your username" onClick={()=>openRename(myPlayerId,myPlayer?.name||'Viewer')}><Edit2 size={13}/></button>}</div>
-            <label className="arbiter-lobby-option ck-arbiter-toggle"><span>Allow Arbiter</span><input type="checkbox" role="switch" aria-label="Allow Arbiter" checked={!!lobbyConfig.allowArbiter} disabled={!isHost} onChange={e=>onUpdateConfig({allowArbiter:e.target.checked})}/><span className="ck-arbiter-toggle-track" aria-hidden="true" /></label>
-            {myPlayer?.role==='arbiter'?<button type="button" className="ck-arbiter-role-button" onClick={onReturnAsPlayer}>Switch to player</button>:lobbyConfig.allowArbiter&&!arbiter&&<button type="button" className="ck-arbiter-role-button" onClick={onClaimArbiter}>Become Arbiter</button>}
+          <div className="ck-menu-players ck-menu-seats" aria-label="Seats in room">
+            {(['w','b'] as const).map(color=>{
+              const p=playerList.find(p=>p.color===color);
+              const canClaim=!p&&myPlayer?.role==='arbiter';
+              return <div key={color}>
+                <User size={15}/>
+                <strong>{p?.name||`Waiting for ${color==='w'?'White':'Black'} player`}</strong>
+                {p&&(p.id===myPlayerId||isHost)&&<button className="ck-menu-icon-button" aria-label={`Rename ${p.name}`} onClick={()=>openRename(p.id,p.name)}><Edit2 size={13}/></button>}
+                {canClaim?<button type="button" className="ck-seat-claim" onClick={()=>onReturnAsPlayer?.(color)}>CLAIM</button>:<span>{p&&!p.connected?'Reconnecting…':p?.isHost?'Host':p?.isReady?'Ready':p?'Not ready':''}</span>}
+                <i className={p?.connected&&(p.isHost||p.isReady)?'is-ready':''}/>
+              </div>;
+            })}
+            {lobbyConfig.allowArbiter&&<div className="ck-arbiter-seat-row">
+              <User size={15}/>
+              <strong>{arbiter?.name||'Waiting for Arbiter'}</strong>
+              {arbiter?.id===myPlayerId&&<button className="ck-menu-icon-button" aria-label="Rename Arbiter" onClick={()=>openRename(myPlayerId,arbiter.name)}><Edit2 size={13}/></button>}
+              {!arbiter&&myPlayer?.role!=='arbiter'&&<button type="button" className="ck-seat-claim" onClick={onClaimArbiter}>CLAIM</button>}
+              <i className={arbiter?.connected?'is-ready':''}/>
+            </div>}
           </div>
           <div className="ck-menu-setting-rows">
             <div className="ck-menu-side">
@@ -614,8 +643,10 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
               >
                 <Timer size={16} />
               </button>
+              
             </div>
           </div>
+          <div className="ck-menu-setup-foot">
           <p className="ck-menu-caption">
             {lobbyConfig.clockEnabled
               ? `${lobbyConfig.initialMinutes} min + ${lobbyConfig.incrementSeconds}s per move`
@@ -623,6 +654,8 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
             {isGroundsActive &&
               ` · Tiles: ${lobbyConfig.expansions?.treacherousGroundsSelected?.length === 2 ? lobbyConfig.expansions.treacherousGroundsSelected.map((t) => GROUND_NAMES[t as GroundType]).join(" & ") : "Random"}`}
           </p>
+          <label className="ck-arbiter-toggle ck-arbiter-timer-toggle"><span>Allow Arbiter</span><input type="checkbox" role="switch" aria-label="Allow Arbiter" checked={!!lobbyConfig.allowArbiter} disabled={!isHost} onChange={e=>onUpdateConfig({allowArbiter:e.target.checked})}/><span className="ck-arbiter-toggle-track" aria-hidden="true" /></label>
+          </div>
         </section>
         <footer className="ck-menu-launch">
           {isHost ? (
@@ -632,7 +665,6 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
               onClick={onStartGame}
               disabled={!canStart}
             >
-              <Swords size={19} />
               Start Match
             </button>
           ) : myColor !== "spectator" ? (
@@ -643,12 +675,11 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                 aria-pressed={isMyReady}
                 onClick={() => onSetPlayerReady?.(!isMyReady)}
               >
-                <CheckSquare size={18} />
-                {isMyReady ? "Ready!" : "Ready"}
+                Ready
               </button>
               {onExitLobby && (
                 <button
-                  className="ck-menu-exit"
+                  className="ck-menu-exit ck-leave-button"
                   id="lobby-btn-exit"
                   onClick={onExitLobby}
                 >
@@ -657,7 +688,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
               )}
             </>
           ) : (
-            <button className="ck-menu-exit" onClick={onExitLobby}>Quit viewing</button>
+            <button className="ck-menu-exit ck-leave-button" onClick={onExitLobby}>Quit viewing</button>
           )}
           <p className="ck-menu-caption">
             {isHost
@@ -1032,6 +1063,7 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                       configuredGrounds.length === 2 ? configuredGrounds : [];
                     onUpdateConfig({
                       expansions: {
+        ...lobbyConfig.expansions,
                         shiftedParadigm: isShiftedParadigmActive,
                         championsOfTheMonolith: isChampionsOfTheMonolithActive,
                         theAwakening: isTheAwakeningActive,
